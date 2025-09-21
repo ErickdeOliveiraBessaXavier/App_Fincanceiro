@@ -14,16 +14,272 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      acordos: {
+        Row: {
+          created_at: string
+          created_by: string
+          desconto: number | null
+          id: string
+          observacoes: string | null
+          parcelas: number | null
+          titulo_id: string
+          updated_at: string
+          valor_acordo: number
+          valor_original: number
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          desconto?: number | null
+          id?: string
+          observacoes?: string | null
+          parcelas?: number | null
+          titulo_id: string
+          updated_at?: string
+          valor_acordo: number
+          valor_original: number
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          desconto?: number | null
+          id?: string
+          observacoes?: string | null
+          parcelas?: number | null
+          titulo_id?: string
+          updated_at?: string
+          valor_acordo?: number
+          valor_original?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acordos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_logs: {
+        Row: {
+          acao: string
+          created_at: string
+          descricao: string
+          id: string
+          recurso_id: string | null
+          recurso_tipo: string
+          user_id: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          descricao: string
+          id?: string
+          recurso_id?: string | null
+          recurso_tipo: string
+          user_id: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          descricao?: string
+          id?: string
+          recurso_id?: string | null
+          recurso_tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      campaign_logs: {
+        Row: {
+          campanha_id: string
+          cliente: string
+          contato: string
+          erro_mensagem: string | null
+          id: string
+          sent_at: string
+          status: string
+          titulo_id: string
+        }
+        Insert: {
+          campanha_id: string
+          cliente: string
+          contato: string
+          erro_mensagem?: string | null
+          id?: string
+          sent_at?: string
+          status?: string
+          titulo_id: string
+        }
+        Update: {
+          campanha_id?: string
+          cliente?: string
+          contato?: string
+          erro_mensagem?: string | null
+          id?: string
+          sent_at?: string
+          status?: string
+          titulo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_logs_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_logs_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campanhas: {
+        Row: {
+          canal: string
+          created_at: string
+          created_by: string
+          filtros: Json | null
+          id: string
+          mensagem: string
+          nome: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canal: string
+          created_at?: string
+          created_by: string
+          filtros?: Json | null
+          id?: string
+          mensagem: string
+          nome: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canal?: string
+          created_at?: string
+          created_by?: string
+          filtros?: Json | null
+          id?: string
+          mensagem?: string
+          nome?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      titulos: {
+        Row: {
+          cliente: string
+          contato: string | null
+          cpf_cnpj: string
+          created_at: string
+          created_by: string
+          descricao: string | null
+          id: string
+          status: string
+          updated_at: string
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          cliente: string
+          contato?: string | null
+          cpf_cnpj: string
+          created_at?: string
+          created_by: string
+          descricao?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          cliente?: string
+          contato?: string | null
+          cpf_cnpj?: string
+          created_at?: string
+          created_by?: string
+          descricao?: string | null
+          id?: string
+          status?: string
+          updated_at?: string
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operador"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +406,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operador"],
+    },
   },
 } as const
