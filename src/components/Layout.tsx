@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
+import { NotificationBell } from '@/components/NotificationBell';
 
 interface LayoutProps {
   children: ReactNode;
@@ -29,9 +30,12 @@ export function Layout({ children }: LayoutProps) {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center border-b bg-background px-4">
-            <SidebarTrigger className="mr-4" />
-            <h1 className="text-lg font-semibold">Sistema de Cobrança</h1>
+          <header className="h-12 flex items-center justify-between border-b bg-background px-4">
+            <div className="flex items-center">
+              <SidebarTrigger className="mr-4" />
+              <h1 className="text-lg font-semibold">Sistema de Cobrança</h1>
+            </div>
+            <NotificationBell />
           </header>
           
           <main className="flex-1 p-6 bg-muted/30">

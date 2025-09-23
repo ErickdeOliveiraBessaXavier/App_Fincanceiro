@@ -6,6 +6,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import Dashboard from "./pages/Dashboard";
+import Clientes from "./pages/Clientes";
 import Titulos from "./pages/Titulos";
 import Acordos from "./pages/Acordos";
 import Campanhas from "./pages/Campanhas";
@@ -27,6 +28,7 @@ const App = () => (
           <Routes>
             <Route path="/auth" element={<Auth />} />
             <Route path="/" element={<Layout><Dashboard /></Layout>} />
+            <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
             <Route path="/titulos" element={<Layout><Titulos /></Layout>} />
             <Route path="/acordos" element={<Layout><Acordos /></Layout>} />
             <Route path="/campanhas" element={<Layout><Campanhas /></Layout>} />

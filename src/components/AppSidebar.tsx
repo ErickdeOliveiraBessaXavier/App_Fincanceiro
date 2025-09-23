@@ -6,7 +6,8 @@ import {
   Users, 
   BarChart3, 
   Upload,
-  LogOut 
+  LogOut,
+  UserCheck
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
@@ -26,6 +27,7 @@ import { Button } from "@/components/ui/button";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
+  { title: "Clientes", url: "/clientes", icon: UserCheck },
   { title: "Títulos", url: "/titulos", icon: FileText },
   { title: "Acordos", url: "/acordos", icon: Handshake },
   { title: "Campanhas", url: "/campanhas", icon: Megaphone },
