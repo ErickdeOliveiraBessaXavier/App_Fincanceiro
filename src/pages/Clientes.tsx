@@ -8,7 +8,17 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
+// Atualize a interface Cliente para incluir todos os campos
 interface Cliente {
   id: string;
   nome: string;
@@ -16,8 +26,14 @@ interface Cliente {
   telefone?: string;
   email?: string;
   endereco_completo?: string;
+  cep?: string;
+  cidade?: string;
+  estado?: string;
   status: string;
+  observacoes?: string;
+  created_by: string;
   created_at: string;
+  updated_at: string;
   // Dados calculados
   total_titulos?: number;
   total_valor?: number;
@@ -41,6 +57,18 @@ export default function Clientes() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newCliente, setNewCliente] = useState({
+    nome: '',
+    cpf_cnpj: '',
+    telefone: '',
+    email: '',
+    endereco_completo: '',
+    cep: '',
+    cidade: '',
+    estado: '',
+    observacoes: ''
+  });
   const { toast } = useToast();
 
   useEffect(() => {
@@ -110,6 +138,52 @@ export default function Clientes() {
     }
   };
 
+  const handleCreateCliente = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) throw new Error('Usuário não autenticado');
+
+      const { data, error } = await supabase
+        .from('clientes')
+        .insert([
+          { 
+            ...newCliente,
+            status: 'ativo',
+            created_by: user.id
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Cliente criado com sucesso.",
+      });
+      setIsCreateModalOpen(false);
+      fetchClientes();
+      setNewCliente({
+        nome: '',
+        cpf_cnpj: '',
+        telefone: '',
+        email: '',
+        endereco_completo: '',
+        cep: '',
+        cidade: '',
+        estado: '',
+        observacoes: ''
+      });
+    } catch (error) {
+      console.error('Erro ao criar cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível criar o cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'ativo': return 'bg-green-100 text-green-800';
@@ -176,11 +250,81 @@ export default function Clientes() {
           <h1 className="text-2xl font-bold">Clientes</h1>
           <p className="text-muted-foreground">Gerencie os clientes e seu histórico</p>
         </div>
-        <Button>
+        <Button onClick={() => setIsCreateModalOpen(true)}>
           <Plus className="h-4 w-4 mr-2" />
           Novo Cliente
         </Button>
       </div>
+
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Novo Cliente</DialogTitle>
+            <DialogDescription>
+              Preencha os dados do novo cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="name" className="text-right">
+                Nome
+              </Label>
+              <Input id="name" value={newCliente.nome} onChange={(e) => setNewCliente({ ...newCliente, nome: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cpf_cnpj" className="text-right">
+                CPF/CNPJ
+              </Label>
+              <Input id="cpf_cnpj" value={newCliente.cpf_cnpj} onChange={(e) => setNewCliente({ ...newCliente, cpf_cnpj: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="telefone" className="text-right">
+                Telefone
+              </Label>
+              <Input id="telefone" value={newCliente.telefone} onChange={(e) => setNewCliente({ ...newCliente, telefone: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="email" className="text-right">
+                Email
+              </Label>
+              <Input id="email" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cep" className="text-right">
+                CEP
+              </Label>
+              <Input id="cep" value={newCliente.cep} onChange={(e) => setNewCliente({ ...newCliente, cep: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="cidade" className="text-right">
+                Cidade
+              </Label>
+              <Input id="cidade" value={newCliente.cidade} onChange={(e) => setNewCliente({ ...newCliente, cidade: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="estado" className="text-right">
+                Estado
+              </Label>
+              <Input id="estado" value={newCliente.estado} onChange={(e) => setNewCliente({ ...newCliente, estado: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="endereco" className="text-right">
+                Endereço
+              </Label>
+              <Input id="endereco" value={newCliente.endereco_completo} onChange={(e) => setNewCliente({ ...newCliente, endereco_completo: e.target.value })} className="col-span-3" />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="observacoes" className="text-right">
+                Observações
+              </Label>
+              <Input id="observacoes" value={newCliente.observacoes} onChange={(e) => setNewCliente({ ...newCliente, observacoes: e.target.value })} className="col-span-3" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleCreateCliente}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="grid gap-4 md:grid-cols-5">
         <Card>
