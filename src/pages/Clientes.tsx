@@ -361,8 +361,9 @@ export default function Clientes() {
         </Card>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
+      <div className="space-y-6">
+        {/* Mobile Layout */}
+        <div className="block lg:hidden">
           <Card>
             <CardHeader>
               <CardTitle>Lista de Clientes</CardTitle>
@@ -394,71 +395,96 @@ export default function Clientes() {
                 </select>
               </div>
 
-              <div className="rounded-md border overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Cliente</TableHead>
-                      <TableHead>CPF/CNPJ</TableHead>
-                      <TableHead>Contato</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Títulos</TableHead>
-                      <TableHead>Valor Total</TableHead>
-                      <TableHead>Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredClientes.map((cliente) => (
-                      <TableRow 
-                        key={cliente.id}
-                        className={selectedCliente?.id === cliente.id ? "bg-muted/50" : ""}
+              {/* Mobile Card View */}
+              <div className="space-y-4">
+                {filteredClientes.map((cliente) => (
+                  <Card 
+                    key={cliente.id} 
+                    className={`p-4 cursor-pointer border-2 transition-colors ${
+                      selectedCliente?.id === cliente.id 
+                        ? "border-primary bg-primary/5" 
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => setSelectedCliente(cliente)}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-base">{cliente.nome}</h3>
+                        <p className="text-sm text-muted-foreground">{cliente.cpf_cnpj}</p>
+                      </div>
+                      <Badge className={getStatusColor(cliente.status)} variant="secondary">
+                        {cliente.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+                    
+                    <div className="space-y-2 mb-3">
+                      {cliente.telefone && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Phone className="h-3 w-3 text-muted-foreground" />
+                          <span>{cliente.telefone}</span>
+                        </div>
+                      )}
+                      {cliente.email && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <Mail className="h-3 w-3 text-muted-foreground" />
+                          <span className="truncate">{cliente.email}</span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm pt-3 border-t">
+                      <div>
+                        <span className="text-muted-foreground">Títulos: </span>
+                        <span className="font-medium">{cliente.total_titulos}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Total: </span>
+                        <span className="font-medium">{formatCurrency(cliente.total_valor || 0)}</span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex gap-2 justify-end mt-3 pt-3 border-t">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCliente(cliente);
+                        }}
                       >
-                        <TableCell className="font-medium">{cliente.nome}</TableCell>
-                        <TableCell>{cliente.cpf_cnpj}</TableCell>
-                        <TableCell>
-                          <div className="text-sm">
-                            {cliente.telefone && <div>{cliente.telefone}</div>}
-                            {cliente.email && <div className="text-muted-foreground">{cliente.email}</div>}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge className={getStatusColor(cliente.status)}>
-                            {cliente.status.replace('_', ' ')}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{cliente.total_titulos}</TableCell>
-                        <TableCell>{formatCurrency(cliente.total_valor || 0)}</TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => setSelectedCliente(cliente)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </Card>
+                ))}
               </div>
             </CardContent>
           </Card>
-        </div>
 
-        <div>
-          {selectedCliente ? (
+          {/* Mobile Cliente Details Panel */}
+          {selectedCliente && (
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  {selectedCliente.nome}
-                </CardTitle>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    <CardTitle className="text-lg">{selectedCliente.nome}</CardTitle>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => setSelectedCliente(null)}
+                  >
+                    ✕
+                  </Button>
+                </div>
                 <CardDescription>
                   Detalhes e histórico do cliente
                 </CardDescription>
@@ -470,7 +496,7 @@ export default function Clientes() {
                     <TabsTrigger value="historico">Histórico</TabsTrigger>
                   </TabsList>
                   
-                  <TabsContent value="detalhes" className="space-y-4">
+                  <TabsContent value="detalhes" className="space-y-4 mt-4">
                     <div className="space-y-3">
                       <div>
                         <label className="text-sm font-medium">CPF/CNPJ</label>
@@ -498,84 +524,279 @@ export default function Clientes() {
                         </div>
                       )}
                       
-                      <div>
-                        <label className="text-sm font-medium">Status</label>
-                        <div className="mt-1">
-                          <Badge className={getStatusColor(selectedCliente.status)}>
-                            {selectedCliente.status.replace('_', ' ')}
-                          </Badge>
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                        <div>
+                          <label className="text-sm font-medium">Total de Títulos</label>
+                          <p className="text-lg font-bold text-primary">{selectedCliente.total_titulos}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Valor Total</label>
+                          <p className="text-lg font-bold text-primary">{formatCurrency(selectedCliente.total_valor || 0)}</p>
                         </div>
                       </div>
-                      
-                      <div className="pt-3 border-t">
-                        <div className="grid grid-cols-2 gap-4 text-center">
-                          <div>
-                            <p className="text-lg font-bold">{selectedCliente.total_titulos}</p>
-                            <p className="text-sm text-muted-foreground">Títulos</p>
-                          </div>
-                          <div>
-                            <p className="text-lg font-bold">{formatCurrency(selectedCliente.total_valor || 0)}</p>
-                            <p className="text-sm text-muted-foreground">Valor Total</p>
-                          </div>
-                        </div>
+
+                      <div className="flex gap-2 pt-4">
+                        <Button size="sm" className="flex-1">
+                          <Phone className="h-4 w-4 mr-2" />
+                          Ligar
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1">
+                          <Mail className="h-4 w-4 mr-2" />
+                          Email
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex-1">
+                          <MessageSquare className="h-4 w-4 mr-2" />
+                          WhatsApp
+                        </Button>
                       </div>
                     </div>
                   </TabsContent>
                   
-                  <TabsContent value="historico" className="space-y-4">
+                  <TabsContent value="historico" className="space-y-4 mt-4">
                     <div className="space-y-3">
-                      {comunicacoes.length === 0 ? (
+                      {comunicacoes.length > 0 ? (
+                        comunicacoes.map((comunicacao) => (
+                          <div key={comunicacao.id} className="border rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-2">
+                              {getTipoIcon(comunicacao.tipo)}
+                              <span className="text-sm font-medium capitalize">{comunicacao.tipo}</span>
+                              <span className="text-xs text-muted-foreground ml-auto">
+                                {formatDateTime(comunicacao.created_at)}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
+                            {comunicacao.mensagem && (
+                              <p className="text-xs text-muted-foreground mb-2">{comunicacao.mensagem}</p>
+                            )}
+                            {comunicacao.resultado && (
+                              <div className="text-xs">
+                                <span className="font-medium">Resultado: </span>
+                                <span className="text-muted-foreground">{comunicacao.resultado}</span>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
                           Nenhuma comunicação registrada
                         </p>
-                      ) : (
-                        comunicacoes.map((comunicacao) => (
-                          <div key={comunicacao.id} className="flex items-start gap-3 p-3 border rounded-lg">
-                            <div className="p-2 rounded-full bg-muted">
-                              {getTipoIcon(comunicacao.tipo)}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2 mb-1">
-                                <span className="text-sm font-medium capitalize">{comunicacao.tipo}</span>
-                                {comunicacao.resultado && (
-                                  <Badge variant="outline" className="text-xs">
-                                    {comunicacao.resultado}
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm font-medium">{comunicacao.assunto}</p>
-                              {comunicacao.mensagem && (
-                                <p className="text-sm text-muted-foreground mt-1">{comunicacao.mensagem}</p>
-                              )}
-                              <p className="text-xs text-muted-foreground mt-2">
-                                {formatDateTime(comunicacao.data_contato || comunicacao.created_at)}
-                              </p>
-                            </div>
-                          </div>
-                        ))
                       )}
                     </div>
-                    
-                    <Button variant="outline" className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nova Comunicação
-                    </Button>
                   </TabsContent>
                 </Tabs>
               </CardContent>
             </Card>
-          ) : (
+          )}
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
             <Card>
-              <CardContent className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <User className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <p className="text-muted-foreground">
-                    Selecione um cliente para ver os detalhes
-                  </p>
+              <CardHeader>
+                <CardTitle>Lista de Clientes</CardTitle>
+                <CardDescription>
+                  {filteredClientes.length} clientes encontrados
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 mb-6">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <Input
+                      placeholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10"
+                    />
+                  </div>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="px-3 py-2 border border-input rounded-md bg-background"
+                  >
+                    <option value="todos">Todos os Status</option>
+                    <option value="ativo">Ativo</option>
+                    <option value="inadimplente">Inadimplente</option>
+                    <option value="em_acordo">Em Acordo</option>
+                    <option value="quitado">Quitado</option>
+                  </select>
+                </div>
+
+                <div className="rounded-md border overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Cliente</TableHead>
+                        <TableHead>CPF/CNPJ</TableHead>
+                        <TableHead>Contato</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Títulos</TableHead>
+                        <TableHead>Valor Total</TableHead>
+                        <TableHead>Ações</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredClientes.map((cliente) => (
+                        <TableRow 
+                          key={cliente.id}
+                          className={selectedCliente?.id === cliente.id ? "bg-muted/50" : ""}
+                        >
+                          <TableCell className="font-medium">{cliente.nome}</TableCell>
+                          <TableCell>{cliente.cpf_cnpj}</TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {cliente.telefone && <div>{cliente.telefone}</div>}
+                              {cliente.email && <div className="text-muted-foreground">{cliente.email}</div>}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={getStatusColor(cliente.status)}>
+                              {cliente.status.replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{cliente.total_titulos}</TableCell>
+                          <TableCell>{formatCurrency(cliente.total_valor || 0)}</TableCell>
+                          <TableCell>
+                            <div className="flex gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => setSelectedCliente(cliente)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </div>
               </CardContent>
             </Card>
-          )}
+          </div>
+
+          <div>
+            {selectedCliente ? (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <User className="h-5 w-5" />
+                    {selectedCliente.nome}
+                  </CardTitle>
+                  <CardDescription>
+                    Detalhes e histórico do cliente
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="detalhes" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+                      <TabsTrigger value="historico">Histórico</TabsTrigger>
+                    </TabsList>
+                    
+                    <TabsContent value="detalhes" className="space-y-4">
+                      <div className="space-y-3">
+                        <div>
+                          <label className="text-sm font-medium">CPF/CNPJ</label>
+                          <p className="text-sm text-muted-foreground">{selectedCliente.cpf_cnpj}</p>
+                        </div>
+                        
+                        {selectedCliente.telefone && (
+                          <div>
+                            <label className="text-sm font-medium">Telefone</label>
+                            <p className="text-sm text-muted-foreground">{selectedCliente.telefone}</p>
+                          </div>
+                        )}
+                        
+                        {selectedCliente.email && (
+                          <div>
+                            <label className="text-sm font-medium">E-mail</label>
+                            <p className="text-sm text-muted-foreground">{selectedCliente.email}</p>
+                          </div>
+                        )}
+                        
+                        {selectedCliente.endereco_completo && (
+                          <div>
+                            <label className="text-sm font-medium">Endereço</label>
+                            <p className="text-sm text-muted-foreground">{selectedCliente.endereco_completo}</p>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between items-center pt-4 border-t">
+                          <div>
+                            <label className="text-sm font-medium">Total de Títulos</label>
+                            <p className="text-2xl font-bold text-primary">{selectedCliente.total_titulos}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium">Valor Total</label>
+                            <p className="text-2xl font-bold text-primary">{formatCurrency(selectedCliente.total_valor || 0)}</p>
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 pt-4">
+                          <Button size="sm" className="flex-1">
+                            <Phone className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <Mail className="h-4 w-4" />
+                          </Button>
+                          <Button variant="outline" size="sm" className="flex-1">
+                            <MessageSquare className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </TabsContent>
+                    
+                    <TabsContent value="historico" className="space-y-4">
+                      <div className="space-y-3">
+                        {comunicacoes.length > 0 ? (
+                          comunicacoes.map((comunicacao) => (
+                            <div key={comunicacao.id} className="border rounded-lg p-3">
+                              <div className="flex items-center gap-2 mb-2">
+                                {getTipoIcon(comunicacao.tipo)}
+                                <span className="text-sm font-medium capitalize">{comunicacao.tipo}</span>
+                                <span className="text-xs text-muted-foreground ml-auto">
+                                  {formatDateTime(comunicacao.created_at)}
+                                </span>
+                              </div>
+                              <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
+                              {comunicacao.mensagem && (
+                                <p className="text-xs text-muted-foreground mb-2">{comunicacao.mensagem}</p>
+                              )}
+                              {comunicacao.resultado && (
+                                <div className="text-xs">
+                                  <span className="font-medium">Resultado: </span>
+                                  <span className="text-muted-foreground">{comunicacao.resultado}</span>
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-sm text-muted-foreground text-center py-4">
+                            Nenhuma comunicação registrada
+                          </p>
+                        )}
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="flex items-center justify-center py-12">
+                  <div className="text-center text-muted-foreground">
+                    <User className="h-12 w-12 mx-auto mb-4" />
+                    <p>Selecione um cliente para ver os detalhes</p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
     </div>
