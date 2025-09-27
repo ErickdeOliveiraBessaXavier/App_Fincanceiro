@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, memo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
@@ -9,7 +9,7 @@ interface LayoutProps {
   children: ReactNode;
 }
 
-export function Layout({ children }: LayoutProps) {
+export const Layout = memo(({ children }: LayoutProps) => {
   const { user, loading } = useAuth();
 
   if (loading) {
@@ -45,4 +45,4 @@ export function Layout({ children }: LayoutProps) {
       </div>
     </SidebarProvider>
   );
-}
+});

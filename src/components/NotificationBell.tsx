@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo } from 'react';
 import { Bell, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ interface Notificacao {
   created_at: string;
 }
 
-export function NotificationBell() {
+export const NotificationBell = memo(() => {
   const [notificacoes, setNotificacoes] = useState<Notificacao[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
@@ -224,4 +224,4 @@ export function NotificationBell() {
       </PopoverContent>
     </Popover>
   );
-}
+});

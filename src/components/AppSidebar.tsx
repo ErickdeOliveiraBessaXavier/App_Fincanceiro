@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { 
   Home, 
   FileText, 
@@ -36,7 +37,7 @@ const menuItems = [
   { title: "Usuários", url: "/usuarios", icon: Users },
 ];
 
-export function AppSidebar() {
+export const AppSidebar = memo(() => {
   const { state } = useSidebar();
   const location = useLocation();
   const { signOut } = useAuth();
@@ -93,4 +94,4 @@ export function AppSidebar() {
       </SidebarFooter>
     </Sidebar>
   );
-}
+});

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Search, Filter, Eye, Edit, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,11 +72,11 @@ export default function Titulos() {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
-  const filteredTitulos = titulos.filter(titulo =>
+  const filteredTitulos = useMemo(() => titulos.filter(titulo =>
     titulo.cliente.toLowerCase().includes(searchTerm.toLowerCase()) ||
     titulo.cpf_cnpj.includes(searchTerm) ||
     titulo.status.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  ), [titulos, searchTerm]);
 
   if (loading) {
     return (
@@ -123,7 +123,7 @@ export default function Titulos() {
             </Button>
           </div>
 
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -265,55 +265,55 @@ export default function Clientes() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="name" className="text-right">
                 Nome
               </Label>
               <Input id="name" value={newCliente.nome} onChange={(e) => setNewCliente({ ...newCliente, nome: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="cpf_cnpj" className="text-right">
                 CPF/CNPJ
               </Label>
               <Input id="cpf_cnpj" value={newCliente.cpf_cnpj} onChange={(e) => setNewCliente({ ...newCliente, cpf_cnpj: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="telefone" className="text-right">
                 Telefone
               </Label>
               <Input id="telefone" value={newCliente.telefone} onChange={(e) => setNewCliente({ ...newCliente, telefone: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="email" className="text-right">
                 Email
               </Label>
               <Input id="email" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="cep" className="text-right">
                 CEP
               </Label>
               <Input id="cep" value={newCliente.cep} onChange={(e) => setNewCliente({ ...newCliente, cep: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="cidade" className="text-right">
                 Cidade
               </Label>
               <Input id="cidade" value={newCliente.cidade} onChange={(e) => setNewCliente({ ...newCliente, cidade: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="estado" className="text-right">
                 Estado
               </Label>
               <Input id="estado" value={newCliente.estado} onChange={(e) => setNewCliente({ ...newCliente, estado: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="endereco" className="text-right">
                 Endereço
               </Label>
               <Input id="endereco" value={newCliente.endereco_completo} onChange={(e) => setNewCliente({ ...newCliente, endereco_completo: e.target.value })} className="col-span-3" />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
               <Label htmlFor="observacoes" className="text-right">
                 Observações
               </Label>
@@ -407,7 +407,7 @@ export default function Clientes() {
                 </select>
               </div>
 
-              <div className="rounded-md border">
+              <div className="rounded-md border overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>

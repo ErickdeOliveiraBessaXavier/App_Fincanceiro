@@ -49,13 +49,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signUp = async (email: string, password: string, nome: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        emailRedirectTo: redirectUrl,
         data: {
           nome: nome
         }
@@ -71,8 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       toast({
         title: "Cadastro realizado",
-        description: "Verifique seu email para confirmar a conta.",
+        description: "Login automático em andamento...",
       });
+      // Automatically sign in the user after successful sign up
+      await signIn(email, password);
     }
     
     return { error };
