@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Eye, Edit, Phone, Mail, MessageSquare, FileText, User } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,6 +50,13 @@ interface Comunicacao {
   created_at: string;
 }
 
+interface FormErrors {
+  nome?: string;
+  cpf_cnpj?: string;
+  telefone?: string;
+  email?: string;
+}
+
 export default function Clientes() {
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
@@ -69,6 +76,24 @@ export default function Clientes() {
     estado: '',
     observacoes: ''
   });
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCliente, setEditingCliente] = useState({
+    id: '',
+    nome: '',
+    cpf_cnpj: '',
+    telefone: '',
+    email: '',
+    endereco_completo: '',
+    cep: '',
+    cidade: '',
+    estado: '',
+    observacoes: '',
+    status: ''
+  });
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -92,7 +117,7 @@ export default function Clientes() {
             id,
             valor
           )
-        `);
+        `); // Removed .is('deleted', null)
 
       if (statusFilter !== 'todos') {
         query = query.eq('status', statusFilter);
@@ -138,7 +163,47 @@ export default function Clientes() {
     }
   };
 
+  const validateForm = () => {
+    const errors: FormErrors = {};
+    let isValid = true;
+
+    if (!newCliente.nome.trim()) {
+      errors.nome = 'Nome é obrigatório';
+      isValid = false;
+    }
+
+    if (!newCliente.cpf_cnpj.trim()) {
+      errors.cpf_cnpj = 'CPF/CNPJ é obrigatório';
+      isValid = false;
+    } else if (!/^\d{11}$|^\d{14}$/.test(newCliente.cpf_cnpj.replace(/\D/g, ''))) {
+      errors.cpf_cnpj = 'CPF/CNPJ inválido';
+      isValid = false;
+    }
+
+    if (newCliente.telefone && !/^\d{10,11}$/.test(newCliente.telefone.replace(/\D/g, ''))) {
+      errors.telefone = 'Telefone inválido';
+      isValid = false;
+    }
+
+    if (newCliente.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newCliente.email)) {
+      errors.email = 'E-mail inválido';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
   const handleCreateCliente = async () => {
+    if (!validateForm()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha os campos obrigatórios corretamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -179,6 +244,128 @@ export default function Clientes() {
       toast({
         title: "Erro",
         description: "Não foi possível criar o cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const validateEditForm = () => {
+    const errors: FormErrors = {};
+    let isValid = true;
+
+    if (!editingCliente.nome.trim()) {
+      errors.nome = 'Nome é obrigatório';
+      isValid = false;
+    }
+
+    if (!editingCliente.cpf_cnpj.trim()) {
+      errors.cpf_cnpj = 'CPF/CNPJ é obrigatório';
+      isValid = false;
+    } else if (!/^\d{11}$|^\d{14}$/.test(editingCliente.cpf_cnpj.replace(/\D/g, ''))) {
+      errors.cpf_cnpj = 'CPF/CNPJ inválido';
+      isValid = false;
+    }
+
+    if (editingCliente.telefone && !/^\d{10,11}$/.test(editingCliente.telefone.replace(/\D/g, ''))) {
+      errors.telefone = 'Telefone inválido';
+      isValid = false;
+    }
+
+    if (editingCliente.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editingCliente.email)) {
+      errors.email = 'E-mail inválido';
+      isValid = false;
+    }
+
+    setFormErrors(errors);
+    return isValid;
+  };
+
+  const handleEditCliente = async () => {
+    if (!validateEditForm()) {
+      toast({
+        title: "Erro",
+        description: "Por favor, preencha os campos obrigatórios corretamente.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .update({
+          nome: editingCliente.nome,
+          cpf_cnpj: editingCliente.cpf_cnpj,
+          telefone: editingCliente.telefone,
+          email: editingCliente.email,
+          endereco_completo: editingCliente.endereco_completo,
+          cep: editingCliente.cep,
+          cidade: editingCliente.cidade,
+          estado: editingCliente.estado,
+          observacoes: editingCliente.observacoes,
+          status: editingCliente.status
+        })
+        .eq('id', editingCliente.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: "Cliente atualizado com sucesso.",
+      });
+      setIsEditModalOpen(false);
+      fetchClientes();
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o cliente.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteCliente = async () => {
+    if (!clienteToDelete) return;
+
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .delete()  // Changed from update to delete
+        .eq('id', clienteToDelete.id);
+
+      if (error) throw error;
+
+      // Update local state to remove the client from view
+      setClientes(prevClientes => 
+        prevClientes.filter(c => c.id !== clienteToDelete.id)
+      );
+
+      toast({
+        title: "Sucesso",
+        description: "Cliente excluído com sucesso.",
+      });
+      
+      // Limpa os estados relacionados
+      setIsDeleteModalOpen(false);
+      setClienteToDelete(null);
+      
+      // Se o cliente excluído for o selecionado, limpa a seleção
+      if (selectedCliente?.id === clienteToDelete.id) {
+        setSelectedCliente(null);
+        setIsDetailsModalOpen(false);
+      }
+      
+      // Se o cliente excluído estiver sendo editado, fecha o modal de edição
+      if (editingCliente.id === clienteToDelete.id) {
+        setIsEditModalOpen(false);
+      }
+
+    } catch (error) {
+      console.error('Erro ao excluir cliente:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o cliente.",
         variant: "destructive",
       });
     }
@@ -258,7 +445,7 @@ export default function Clientes() {
       </div>
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Cliente</DialogTitle>
             <DialogDescription>
@@ -267,21 +454,62 @@ export default function Clientes() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="name">Nome</Label>
-              <Input id="name" value={newCliente.nome} onChange={(e) => setNewCliente({ ...newCliente, nome: e.target.value })} />
+              <Label htmlFor="name" className="flex items-center gap-1">
+                Nome
+                <span className="text-red-500">*</span>
+              </Label>
+              <Input 
+                id="name" 
+                value={newCliente.nome} 
+                onChange={(e) => setNewCliente({ ...newCliente, nome: e.target.value })}
+                className={formErrors.nome ? "border-red-500" : ""}
+              />
+              {formErrors.nome && (
+                <span className="text-xs text-red-500">{formErrors.nome}</span>
+              )}
             </div>
+            
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
-              <Input id="cpf_cnpj" value={newCliente.cpf_cnpj} onChange={(e) => setNewCliente({ ...newCliente, cpf_cnpj: e.target.value })} />
+              <Label htmlFor="cpf_cnpj" className="flex items-center gap-1">
+                CPF/CNPJ
+                <span className="text-red-500">*</span>
+              </Label>
+              <Input 
+                id="cpf_cnpj" 
+                value={newCliente.cpf_cnpj} 
+                onChange={(e) => setNewCliente({ ...newCliente, cpf_cnpj: e.target.value })}
+                className={formErrors.cpf_cnpj ? "border-red-500" : ""}
+              />
+              {formErrors.cpf_cnpj && (
+                <span className="text-xs text-red-500">{formErrors.cpf_cnpj}</span>
+              )}
             </div>
+
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid grid-cols-1 gap-2">
                 <Label htmlFor="telefone">Telefone</Label>
-                <Input id="telefone" value={newCliente.telefone} onChange={(e) => setNewCliente({ ...newCliente, telefone: e.target.value })} />
+                <Input 
+                  id="telefone" 
+                  value={newCliente.telefone} 
+                  onChange={(e) => setNewCliente({ ...newCliente, telefone: e.target.value })}
+                  className={formErrors.telefone ? "border-red-500" : ""}
+                />
+                {formErrors.telefone && (
+                  <span className="text-xs text-red-500">{formErrors.telefone}</span>
+                )}
               </div>
               <div className="grid grid-cols-1 gap-2">
                 <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} />
+                <Input 
+                  id="email" 
+                  type="email" 
+                  value={newCliente.email} 
+                  onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })}
+                  className={formErrors.email ? "border-red-500" : ""}
+                />
+                {formErrors.email && (
+                  <span className="text-xs text-red-500">{formErrors.email}</span>
+                )}
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -309,6 +537,278 @@ export default function Clientes() {
           </div>
           <DialogFooter>
             <Button onClick={handleCreateCliente}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto">
+          {selectedCliente && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <User className="h-5 w-5" />
+                  {selectedCliente.nome}
+                </DialogTitle>
+                <DialogDescription>
+                  Detalhes e histórico do cliente
+                </DialogDescription>
+              </DialogHeader>
+
+              <Tabs defaultValue="detalhes" className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
+                  <TabsTrigger value="historico">Histórico</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="detalhes" className="space-y-4">
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-sm font-medium">CPF/CNPJ</label>
+                      <p className="text-sm text-muted-foreground">{selectedCliente.cpf_cnpj}</p>
+                    </div>
+                    
+                    {selectedCliente.telefone && (
+                      <div>
+                        <label className="text-sm font-medium">Telefone</label>
+                        <p className="text-sm text-muted-foreground">{selectedCliente.telefone}</p>
+                      </div>
+                    )}
+                    
+                    {selectedCliente.email && (
+                      <div>
+                        <label className="text-sm font-medium">E-mail</label>
+                        <p className="text-sm text-muted-foreground">{selectedCliente.email}</p>
+                      </div>
+                    )}
+                    
+                    {selectedCliente.endereco_completo && (
+                      <div>
+                        <label className="text-sm font-medium">Endereço</label>
+                        <p className="text-sm text-muted-foreground">{selectedCliente.endereco_completo}</p>
+                      </div>
+                    )}
+                    
+                    <div className="flex justify-between items-center pt-4 border-t">
+                      <div>
+                        <label className="text-sm font-medium">Total de Títulos</label>
+                        <p className="text-2xl font-bold text-primary">{selectedCliente.total_titulos}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">Valor Total</label>
+                        <p className="text-2xl font-bold text-primary">{formatCurrency(selectedCliente.total_valor || 0)}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-2 pt-4">
+                      <Button className="flex-1">
+                        <Phone className="h-4 w-4 mr-2" />
+                        Ligar
+                      </Button>
+                      <Button variant="outline" className="flex-1">
+                        <Mail className="h-4 w-4 mr-2" />
+                        Email
+                      </Button>
+                      <Button variant="outline" className="flex-1">
+                        <MessageSquare className="h-4 w-4 mr-2" />
+                        WhatsApp
+                      </Button>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="historico" className="space-y-4">
+                  <div className="space-y-3">
+                    {comunicacoes.length > 0 ? (
+                      comunicacoes.map((comunicacao) => (
+                        <div key={comunicacao.id} className="border rounded-lg p-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            {getTipoIcon(comunicacao.tipo)}
+                            <span className="text-sm font-medium capitalize">{comunicacao.tipo}</span>
+                            <span className="text-xs text-muted-foreground ml-auto">
+                              {formatDateTime(comunicacao.created_at)}
+                            </span>
+                          </div>
+                          <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
+                          {comunicacao.mensagem && (
+                            <p className="text-xs text-muted-foreground mb-2">{comunicacao.mensagem}</p>
+                          )}
+                          {comunicacao.resultado && (
+                            <div className="text-xs">
+                              <span className="font-medium">Resultado: </span>
+                              <span className="text-muted-foreground">{comunicacao.resultado}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nenhuma comunicação registrada
+                      </p>
+                    )}
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Editar Cliente</DialogTitle>
+            <DialogDescription>
+              Atualize os dados do cliente.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="edit-name" className="flex items-center gap-1">
+                Nome<span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="edit-name"
+                value={editingCliente.nome}
+                onChange={(e) => setEditingCliente({ ...editingCliente, nome: e.target.value })}
+                className={formErrors.nome ? "border-red-500" : ""}
+              />
+              {formErrors.nome && (
+                <span className="text-xs text-red-500">{formErrors.nome}</span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="edit-cpf-cnpj" className="flex items-center gap-1">
+                CPF/CNPJ<span className="text-red-500">*</span>
+              </Label>
+              <Input
+                id="edit-cpf-cnpj"
+                value={editingCliente.cpf_cnpj}
+                onChange={(e) => setEditingCliente({ ...editingCliente, cpf_cnpj: e.target.value })}
+                className={formErrors.cpf_cnpj ? "border-red-500" : ""}
+              />
+              {formErrors.cpf_cnpj && (
+                <span className="text-xs text-red-500">{formErrors.cpf_cnpj}</span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="edit-telefone">Telefone</Label>
+                <Input
+                  id="edit-telefone"
+                  value={editingCliente.telefone}
+                  onChange={(e) => setEditingCliente({ ...editingCliente, telefone: e.target.value })}
+                  className={formErrors.telefone ? "border-red-500" : ""}
+                />
+                {formErrors.telefone && (
+                  <span className="text-xs text-red-500">{formErrors.telefone}</span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editingCliente.email}
+                  onChange={(e) => setEditingCliente({ ...editingCliente, email: e.target.value })}
+                  className={formErrors.email ? "border-red-500" : ""}
+                />
+                {formErrors.email && (
+                  <span className="text-xs text-red-500">{formErrors.email}</span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="edit-cep">CEP</Label>
+                <Input
+                  id="edit-cep"
+                  value={editingCliente.cep}
+                  onChange={(e) => setEditingCliente({ ...editingCliente, cep: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="edit-cidade">Cidade</Label>
+                <Input
+                  id="edit-cidade"
+                  value={editingCliente.cidade}
+                  onChange={(e) => setEditingCliente({ ...editingCliente, cidade: e.target.value })}
+                />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="edit-estado">Estado</Label>
+                <Input
+                  id="edit-estado"
+                  value={editingCliente.estado}
+                  onChange={(e) => setEditingCliente({ ...editingCliente, estado: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="edit-endereco">Endereço</Label>
+              <Input
+                id="edit-endereco"
+                value={editingCliente.endereco_completo}
+                onChange={(e) => setEditingCliente({ ...editingCliente, endereco_completo: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="edit-observacoes">Observações</Label>
+              <Input
+                id="edit-observacoes"
+                value={editingCliente.observacoes}
+                onChange={(e) => setEditingCliente({ ...editingCliente, observacoes: e.target.value })}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="edit-status">Status</Label>
+              <select
+                id="edit-status"
+                value={editingCliente.status}
+                onChange={(e) => setEditingCliente({ ...editingCliente, status: e.target.value })}
+                className="px-3 py-2 border border-input rounded-md bg-background"
+              >
+                <option value="ativo">Ativo</option>
+                <option value="inadimplente">Inadimplente</option>
+                <option value="em_acordo">Em Acordo</option>
+                <option value="quitado">Quitado</option>
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleEditCliente}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o cliente {clienteToDelete?.nome}? 
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteCliente}
+            >
+              Excluir
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -400,12 +900,7 @@ export default function Clientes() {
                 {filteredClientes.map((cliente) => (
                   <Card 
                     key={cliente.id} 
-                    className={`p-4 cursor-pointer border-2 transition-colors ${
-                      selectedCliente?.id === cliente.id 
-                        ? "border-primary bg-primary/5" 
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => setSelectedCliente(cliente)}
+                    className="p-4 cursor-pointer border-2 transition-colors border-border hover:border-primary/50"
                   >
                     <div className="flex justify-between items-start mb-3">
                       <div className="flex-1">
@@ -450,6 +945,7 @@ export default function Clientes() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setSelectedCliente(cliente);
+                          setIsDetailsModalOpen(true);
                         }}
                       >
                         <Eye className="h-3 w-3" />
@@ -457,9 +953,36 @@ export default function Clientes() {
                       <Button 
                         variant="ghost" 
                         size="sm"
-                        onClick={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setEditingCliente({
+                            id: cliente.id,
+                            nome: cliente.nome,
+                            cpf_cnpj: cliente.cpf_cnpj,
+                            telefone: cliente.telefone || '',
+                            email: cliente.email || '',
+                            endereco_completo: cliente.endereco_completo || '',
+                            cep: cliente.cep || '',
+                            cidade: cliente.cidade || '',
+                            estado: cliente.estado || '',
+                            observacoes: cliente.observacoes || '',
+                            status: cliente.status
+                          });
+                          setIsEditModalOpen(true);
+                        }}
                       >
                         <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setClienteToDelete(cliente);
+                          setIsDeleteModalOpen(true);
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 text-red-500" />
                       </Button>
                     </div>
                   </Card>
@@ -467,336 +990,125 @@ export default function Clientes() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Mobile Cliente Details Panel */}
-          {selectedCliente && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    <CardTitle className="text-lg">{selectedCliente.nome}</CardTitle>
-                  </div>
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => setSelectedCliente(null)}
-                  >
-                    ✕
-                  </Button>
-                </div>
-                <CardDescription>
-                  Detalhes e histórico do cliente
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="detalhes" className="w-full">
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-                    <TabsTrigger value="historico">Histórico</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="detalhes" className="space-y-4 mt-4">
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-sm font-medium">CPF/CNPJ</label>
-                        <p className="text-sm text-muted-foreground">{selectedCliente.cpf_cnpj}</p>
-                      </div>
-                      
-                      {selectedCliente.telefone && (
-                        <div>
-                          <label className="text-sm font-medium">Telefone</label>
-                          <p className="text-sm text-muted-foreground">{selectedCliente.telefone}</p>
-                        </div>
-                      )}
-                      
-                      {selectedCliente.email && (
-                        <div>
-                          <label className="text-sm font-medium">E-mail</label>
-                          <p className="text-sm text-muted-foreground">{selectedCliente.email}</p>
-                        </div>
-                      )}
-                      
-                      {selectedCliente.endereco_completo && (
-                        <div>
-                          <label className="text-sm font-medium">Endereço</label>
-                          <p className="text-sm text-muted-foreground">{selectedCliente.endereco_completo}</p>
-                        </div>
-                      )}
-                      
-                      <div className="grid grid-cols-2 gap-4 pt-4 border-t">
-                        <div>
-                          <label className="text-sm font-medium">Total de Títulos</label>
-                          <p className="text-lg font-bold text-primary">{selectedCliente.total_titulos}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium">Valor Total</label>
-                          <p className="text-lg font-bold text-primary">{formatCurrency(selectedCliente.total_valor || 0)}</p>
-                        </div>
-                      </div>
-
-                      <div className="flex gap-2 pt-4">
-                        <Button size="sm" className="flex-1">
-                          <Phone className="h-4 w-4 mr-2" />
-                          Ligar
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <Mail className="h-4 w-4 mr-2" />
-                          Email
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex-1">
-                          <MessageSquare className="h-4 w-4 mr-2" />
-                          WhatsApp
-                        </Button>
-                      </div>
-                    </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="historico" className="space-y-4 mt-4">
-                    <div className="space-y-3">
-                      {comunicacoes.length > 0 ? (
-                        comunicacoes.map((comunicacao) => (
-                          <div key={comunicacao.id} className="border rounded-lg p-3">
-                            <div className="flex items-center gap-2 mb-2">
-                              {getTipoIcon(comunicacao.tipo)}
-                              <span className="text-sm font-medium capitalize">{comunicacao.tipo}</span>
-                              <span className="text-xs text-muted-foreground ml-auto">
-                                {formatDateTime(comunicacao.created_at)}
-                              </span>
-                            </div>
-                            <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
-                            {comunicacao.mensagem && (
-                              <p className="text-xs text-muted-foreground mb-2">{comunicacao.mensagem}</p>
-                            )}
-                            {comunicacao.resultado && (
-                              <div className="text-xs">
-                                <span className="font-medium">Resultado: </span>
-                                <span className="text-muted-foreground">{comunicacao.resultado}</span>
-                              </div>
-                            )}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-sm text-muted-foreground text-center py-4">
-                          Nenhuma comunicação registrada
-                        </p>
-                      )}
-                    </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Lista de Clientes</CardTitle>
-                <CardDescription>
-                  {filteredClientes.length} clientes encontrados
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex gap-4 mb-6">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                    <Input
-                      placeholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-input rounded-md bg-background"
-                  >
-                    <option value="todos">Todos os Status</option>
-                    <option value="ativo">Ativo</option>
-                    <option value="inadimplente">Inadimplente</option>
-                    <option value="em_acordo">Em Acordo</option>
-                    <option value="quitado">Quitado</option>
-                  </select>
+        <div className="hidden lg:block">
+          <Card>
+            <CardHeader>
+              <CardTitle>Lista de Clientes</CardTitle>
+              <CardDescription>
+                {filteredClientes.length} clientes encontrados
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="flex gap-4 mb-6">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    placeholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="px-3 py-2 border border-input rounded-md bg-background"
+                >
+                  <option value="todos">Todos os Status</option>
+                  <option value="ativo">Ativo</option>
+                  <option value="inadimplente">Inadimplente</option>
+                  <option value="em_acordo">Em Acordo</option>
+                  <option value="quitado">Quitado</option>
+                </select>
+              </div>
 
-                <div className="rounded-md border overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Cliente</TableHead>
-                        <TableHead>CPF/CNPJ</TableHead>
-                        <TableHead>Contato</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Títulos</TableHead>
-                        <TableHead>Valor Total</TableHead>
-                        <TableHead>Ações</TableHead>
+              <div className="rounded-md border overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>CPF/CNPJ</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Títulos</TableHead>
+                      <TableHead>Valor Total</TableHead>
+                      <TableHead>Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredClientes.map((cliente) => (
+                      <TableRow key={cliente.id}>
+                        <TableCell className="font-medium">{cliente.nome}</TableCell>
+                        <TableCell>{cliente.cpf_cnpj}</TableCell>
+                        <TableCell>
+                          <div className="text-sm">
+                            {cliente.telefone && <div>{cliente.telefone}</div>}
+                            {cliente.email && <div className="text-muted-foreground">{cliente.email}</div>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={getStatusColor(cliente.status)}>
+                            {cliente.status.replace('_', ' ')}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{cliente.total_titulos}</TableCell>
+                        <TableCell>{formatCurrency(cliente.total_valor || 0)}</TableCell>
+                        <TableCell>
+                          <div className="flex gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setSelectedCliente(cliente);
+                                setIsDetailsModalOpen(true);
+                              }}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setEditingCliente({
+                                  id: cliente.id,
+                                  nome: cliente.nome,
+                                  cpf_cnpj: cliente.cpf_cnpj,
+                                  telefone: cliente.telefone || '',
+                                  email: cliente.email || '',
+                                  endereco_completo: cliente.endereco_completo || '',
+                                  cep: cliente.cep || '',
+                                  cidade: cliente.cidade || '',
+                                  estado: cliente.estado || '',
+                                  observacoes: cliente.observacoes || '',
+                                  status: cliente.status
+                                });
+                                setIsEditModalOpen(true);
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => {
+                                setClienteToDelete(cliente);
+                                setIsDeleteModalOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredClientes.map((cliente) => (
-                        <TableRow 
-                          key={cliente.id}
-                          className={selectedCliente?.id === cliente.id ? "bg-muted/50" : ""}
-                        >
-                          <TableCell className="font-medium">{cliente.nome}</TableCell>
-                          <TableCell>{cliente.cpf_cnpj}</TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {cliente.telefone && <div>{cliente.telefone}</div>}
-                              {cliente.email && <div className="text-muted-foreground">{cliente.email}</div>}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge className={getStatusColor(cliente.status)}>
-                              {cliente.status.replace('_', ' ')}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{cliente.total_titulos}</TableCell>
-                          <TableCell>{formatCurrency(cliente.total_valor || 0)}</TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm"
-                                onClick={() => setSelectedCliente(cliente)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div>
-            {selectedCliente ? (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <User className="h-5 w-5" />
-                    {selectedCliente.nome}
-                  </CardTitle>
-                  <CardDescription>
-                    Detalhes e histórico do cliente
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Tabs defaultValue="detalhes" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="detalhes">Detalhes</TabsTrigger>
-                      <TabsTrigger value="historico">Histórico</TabsTrigger>
-                    </TabsList>
-                    
-                    <TabsContent value="detalhes" className="space-y-4">
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-sm font-medium">CPF/CNPJ</label>
-                          <p className="text-sm text-muted-foreground">{selectedCliente.cpf_cnpj}</p>
-                        </div>
-                        
-                        {selectedCliente.telefone && (
-                          <div>
-                            <label className="text-sm font-medium">Telefone</label>
-                            <p className="text-sm text-muted-foreground">{selectedCliente.telefone}</p>
-                          </div>
-                        )}
-                        
-                        {selectedCliente.email && (
-                          <div>
-                            <label className="text-sm font-medium">E-mail</label>
-                            <p className="text-sm text-muted-foreground">{selectedCliente.email}</p>
-                          </div>
-                        )}
-                        
-                        {selectedCliente.endereco_completo && (
-                          <div>
-                            <label className="text-sm font-medium">Endereço</label>
-                            <p className="text-sm text-muted-foreground">{selectedCliente.endereco_completo}</p>
-                          </div>
-                        )}
-                        
-                        <div className="flex justify-between items-center pt-4 border-t">
-                          <div>
-                            <label className="text-sm font-medium">Total de Títulos</label>
-                            <p className="text-2xl font-bold text-primary">{selectedCliente.total_titulos}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm font-medium">Valor Total</label>
-                            <p className="text-2xl font-bold text-primary">{formatCurrency(selectedCliente.total_valor || 0)}</p>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-2 pt-4">
-                          <Button size="sm" className="flex-1">
-                            <Phone className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <Mail className="h-4 w-4" />
-                          </Button>
-                          <Button variant="outline" size="sm" className="flex-1">
-                            <MessageSquare className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    </TabsContent>
-                    
-                    <TabsContent value="historico" className="space-y-4">
-                      <div className="space-y-3">
-                        {comunicacoes.length > 0 ? (
-                          comunicacoes.map((comunicacao) => (
-                            <div key={comunicacao.id} className="border rounded-lg p-3">
-                              <div className="flex items-center gap-2 mb-2">
-                                {getTipoIcon(comunicacao.tipo)}
-                                <span className="text-sm font-medium capitalize">{comunicacao.tipo}</span>
-                                <span className="text-xs text-muted-foreground ml-auto">
-                                  {formatDateTime(comunicacao.created_at)}
-                                </span>
-                              </div>
-                              <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
-                              {comunicacao.mensagem && (
-                                <p className="text-xs text-muted-foreground mb-2">{comunicacao.mensagem}</p>
-                              )}
-                              {comunicacao.resultado && (
-                                <div className="text-xs">
-                                  <span className="font-medium">Resultado: </span>
-                                  <span className="text-muted-foreground">{comunicacao.resultado}</span>
-                                </div>
-                              )}
-                            </div>
-                          ))
-                        ) : (
-                          <p className="text-sm text-muted-foreground text-center py-4">
-                            Nenhuma comunicação registrada
-                          </p>
-                        )}
-                      </div>
-                    </TabsContent>
-                  </Tabs>
-                </CardContent>
-              </Card>
-            ) : (
-              <Card>
-                <CardContent className="flex items-center justify-center py-12">
-                  <div className="text-center text-muted-foreground">
-                    <User className="h-12 w-12 mx-auto mb-4" />
-                    <p>Selecione um cliente para ver os detalhes</p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
