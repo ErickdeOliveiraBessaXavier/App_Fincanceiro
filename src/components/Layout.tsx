@@ -30,15 +30,15 @@ export const Layout = memo(({ children }: LayoutProps) => {
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center justify-between border-b bg-background px-4">
+          <header className="h-12 flex items-center justify-between border-b bg-background px-2 sm:px-4">
             <div className="flex items-center">
-              <SidebarTrigger className="mr-4" />
-              <h1 className="text-lg font-semibold">Sistema de Cobrança</h1>
+              <SidebarTrigger className="mr-2 sm:mr-4" />
+              <h1 className="text-sm sm:text-lg font-semibold truncate">Sistema de Cobrança</h1>
             </div>
             <NotificationBell />
           </header>
           
-          <main className="flex-1 p-6 bg-muted/30">
+          <main className="flex-1 p-2 sm:p-4 lg:p-6 bg-muted/30">
             {children}
           </main>
         </div>

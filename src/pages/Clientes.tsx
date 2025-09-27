@@ -245,19 +245,20 @@ export default function Clientes() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Clientes</h1>
-          <p className="text-muted-foreground">Gerencie os clientes e seu histórico</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Gerencie os clientes e seu histórico</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
+        <Button onClick={() => setIsCreateModalOpen(true)} className="self-start sm:self-auto">
           <Plus className="h-4 w-4 mr-2" />
-          Novo Cliente
+          <span className="hidden sm:inline">Novo Cliente</span>
+          <span className="sm:hidden">Novo</span>
         </Button>
       </div>
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Cliente</DialogTitle>
             <DialogDescription>
@@ -265,59 +266,45 @@ export default function Clientes() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="name" className="text-right">
-                Nome
-              </Label>
-              <Input id="name" value={newCliente.nome} onChange={(e) => setNewCliente({ ...newCliente, nome: e.target.value })} className="col-span-3" />
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="name">Nome</Label>
+              <Input id="name" value={newCliente.nome} onChange={(e) => setNewCliente({ ...newCliente, nome: e.target.value })} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="cpf_cnpj" className="text-right">
-                CPF/CNPJ
-              </Label>
-              <Input id="cpf_cnpj" value={newCliente.cpf_cnpj} onChange={(e) => setNewCliente({ ...newCliente, cpf_cnpj: e.target.value })} className="col-span-3" />
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="cpf_cnpj">CPF/CNPJ</Label>
+              <Input id="cpf_cnpj" value={newCliente.cpf_cnpj} onChange={(e) => setNewCliente({ ...newCliente, cpf_cnpj: e.target.value })} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="telefone" className="text-right">
-                Telefone
-              </Label>
-              <Input id="telefone" value={newCliente.telefone} onChange={(e) => setNewCliente({ ...newCliente, telefone: e.target.value })} className="col-span-3" />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="telefone">Telefone</Label>
+                <Input id="telefone" value={newCliente.telefone} onChange={(e) => setNewCliente({ ...newCliente, telefone: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input id="email" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} />
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="email" className="text-right">
-                Email
-              </Label>
-              <Input id="email" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} className="col-span-3" />
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="cep">CEP</Label>
+                <Input id="cep" value={newCliente.cep} onChange={(e) => setNewCliente({ ...newCliente, cep: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="cidade">Cidade</Label>
+                <Input id="cidade" value={newCliente.cidade} onChange={(e) => setNewCliente({ ...newCliente, cidade: e.target.value })} />
+              </div>
+              <div className="grid grid-cols-1 gap-2">
+                <Label htmlFor="estado">Estado</Label>
+                <Input id="estado" value={newCliente.estado} onChange={(e) => setNewCliente({ ...newCliente, estado: e.target.value })} />
+              </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="cep" className="text-right">
-                CEP
-              </Label>
-              <Input id="cep" value={newCliente.cep} onChange={(e) => setNewCliente({ ...newCliente, cep: e.target.value })} className="col-span-3" />
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="endereco">Endereço</Label>
+              <Input id="endereco" value={newCliente.endereco_completo} onChange={(e) => setNewCliente({ ...newCliente, endereco_completo: e.target.value })} />
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="cidade" className="text-right">
-                Cidade
-              </Label>
-              <Input id="cidade" value={newCliente.cidade} onChange={(e) => setNewCliente({ ...newCliente, cidade: e.target.value })} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="estado" className="text-right">
-                Estado
-              </Label>
-              <Input id="estado" value={newCliente.estado} onChange={(e) => setNewCliente({ ...newCliente, estado: e.target.value })} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="endereco" className="text-right">
-                Endereço
-              </Label>
-              <Input id="endereco" value={newCliente.endereco_completo} onChange={(e) => setNewCliente({ ...newCliente, endereco_completo: e.target.value })} className="col-span-3" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-4 items-center gap-4">
-              <Label htmlFor="observacoes" className="text-right">
-                Observações
-              </Label>
-              <Input id="observacoes" value={newCliente.observacoes} onChange={(e) => setNewCliente({ ...newCliente, observacoes: e.target.value })} className="col-span-3" />
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="observacoes">Observações</Label>
+              <Input id="observacoes" value={newCliente.observacoes} onChange={(e) => setNewCliente({ ...newCliente, observacoes: e.target.value })} />
             </div>
           </div>
           <DialogFooter>
@@ -326,7 +313,7 @@ export default function Clientes() {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-4 md:grid-cols-5">
+      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -384,11 +371,11 @@ export default function Clientes() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 mb-6">
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                   <Input
-                    placeholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
+                    placeholder="Buscar por nome, CPF/CNPJ, email..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10"
@@ -397,7 +384,7 @@ export default function Clientes() {
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border border-input rounded-md bg-background"
+                  className="px-3 py-2 border border-input rounded-md bg-background text-sm"
                 >
                   <option value="todos">Todos os Status</option>
                   <option value="ativo">Ativo</option>

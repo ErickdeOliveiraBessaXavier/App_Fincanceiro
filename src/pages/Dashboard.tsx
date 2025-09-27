@@ -78,71 +78,71 @@ const Dashboard = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">
+        <h1 className="mobile-heading font-bold">Dashboard</h1>
+        <p className="text-muted-foreground mobile-text">
           Visão geral do sistema de cobrança
         </p>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Títulos</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Total de Títulos</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalTitulos}</div>
+            <div className="text-xl sm:text-2xl font-bold">{stats.totalTitulos}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Valor Total</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(stats.valorTotal)}</div>
+            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(stats.valorTotal)}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Títulos Vencidos</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Títulos Vencidos</CardTitle>
             <Clock className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{stats.titulosVencidos}</div>
+            <div className="text-xl sm:text-2xl font-bold text-destructive">{stats.titulosVencidos}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Títulos Pagos</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Títulos Pagos</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">{stats.titulosPagos}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-500">{stats.titulosPagos}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Recuperado</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Valor Recuperado</CardTitle>
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-500">{formatCurrency(stats.valorRecuperado)}</div>
+            <div className="text-xl sm:text-2xl font-bold text-green-500">{formatCurrency(stats.valorRecuperado)}</div>
           </CardContent>
         </Card>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
         <Card>
           <CardHeader>
             <CardTitle>Taxa de Inadimplência</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-destructive">
+            <div className="text-2xl sm:text-3xl font-bold text-destructive">
               {stats.totalTitulos > 0 
                 ? ((stats.titulosVencidos / stats.totalTitulos) * 100).toFixed(1) 
                 : 0}%
@@ -158,7 +158,7 @@ const Dashboard = () => {
             <CardTitle>Taxa de Recuperação</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-green-500">
+            <div className="text-2xl sm:text-3xl font-bold text-green-500">
               {stats.valorTotal > 0 
                 ? ((stats.valorRecuperado / stats.valorTotal) * 100).toFixed(1) 
                 : 0}%
