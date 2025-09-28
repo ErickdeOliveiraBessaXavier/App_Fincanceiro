@@ -15,6 +15,7 @@ create table public.clientes (
   updated_at timestamp with time zone not null default now(),
   constraint clientes_pkey primary key (id),
   constraint clientes_cpf_cnpj_key unique (cpf_cnpj),
+  constraint clientes_created_by_fkey foreign KEY (created_by) references auth.users (id),
   constraint clientes_status_check check (
     (
       status = any (
@@ -34,6 +35,8 @@ create index IF not exists idx_clientes_cpf_cnpj on public.clientes using btree 
 create index IF not exists idx_clientes_status on public.clientes using btree (status) TABLESPACE pg_default;
 
 create index IF not exists idx_clientes_nome on public.clientes using btree (nome) TABLESPACE pg_default;
+
+create index IF not exists idx_clientes_created_by on public.clientes using btree (created_by) TABLESPACE pg_default;
 
 create trigger update_clientes_updated_at BEFORE
 update on clientes for EACH row

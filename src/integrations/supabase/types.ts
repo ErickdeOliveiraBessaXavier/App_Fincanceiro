@@ -16,44 +16,72 @@ export type Database = {
     Tables: {
       acordos: {
         Row: {
+          cliente_id: string
           created_at: string
           created_by: string
-          desconto: number | null
+          data_acordo: string
+          data_inicio: string
+          data_vencimento_primeira_parcela: string
+          desconto: number
           id: string
           observacoes: string | null
-          parcelas: number | null
+          parcelas: number
+          status: string
+          taxa_juros: number | null
           titulo_id: string
           updated_at: string
           valor_acordo: number
           valor_original: number
+          valor_parcela: number
         }
         Insert: {
+          cliente_id: string
           created_at?: string
           created_by: string
-          desconto?: number | null
+          data_acordo?: string
+          data_inicio?: string
+          data_vencimento_primeira_parcela: string
+          desconto?: number
           id?: string
           observacoes?: string | null
-          parcelas?: number | null
+          parcelas?: number
+          status?: string
+          taxa_juros?: number | null
           titulo_id: string
           updated_at?: string
           valor_acordo: number
           valor_original: number
+          valor_parcela: number
         }
         Update: {
+          cliente_id?: string
           created_at?: string
           created_by?: string
-          desconto?: number | null
+          data_acordo?: string
+          data_inicio?: string
+          data_vencimento_primeira_parcela?: string
+          desconto?: number
           id?: string
           observacoes?: string | null
-          parcelas?: number | null
+          parcelas?: number
+          status?: string
+          taxa_juros?: number | null
           titulo_id?: string
           updated_at?: string
           valor_acordo?: number
           valor_original?: number
+          valor_parcela?: number
         }
         Relationships: [
           {
-            foreignKeyName: "acordos_titulo_id_fkey"
+            foreignKeyName: "fk_cliente"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_titulo"
             columns: ["titulo_id"]
             isOneToOne: false
             referencedRelation: "titulos"
@@ -131,29 +159,7 @@ export type Database = {
           titulo_id?: string | null
           url_arquivo?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "anexos_acordo_id_fkey"
-            columns: ["acordo_id"]
-            isOneToOne: false
-            referencedRelation: "acordos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anexos_cliente_id_fkey"
-            columns: ["cliente_id"]
-            isOneToOne: false
-            referencedRelation: "clientes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "anexos_titulo_id_fkey"
-            columns: ["titulo_id"]
-            isOneToOne: false
-            referencedRelation: "titulos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       campaign_logs: {
         Row: {
@@ -192,13 +198,6 @@ export type Database = {
             columns: ["campanha_id"]
             isOneToOne: false
             referencedRelation: "campanhas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "campaign_logs_titulo_id_fkey"
-            columns: ["titulo_id"]
-            isOneToOne: false
-            referencedRelation: "titulos"
             referencedColumns: ["id"]
           },
         ]
@@ -330,15 +329,7 @@ export type Database = {
           resultado?: string | null
           tipo?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "comunicacoes_cliente_id_fkey"
-            columns: ["cliente_id"]
-            isOneToOne: false
-            referencedRelation: "clientes"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       notificacoes: {
         Row: {
@@ -379,6 +370,59 @@ export type Database = {
         }
         Relationships: []
       }
+      parcelas_acordo: {
+        Row: {
+          acordo_id: string
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string
+          id: string
+          numero_parcela: number
+          observacoes: string | null
+          status: string
+          updated_at: string
+          valor: number
+          valor_juros: number
+          valor_total: number
+        }
+        Insert: {
+          acordo_id: string
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          id?: string
+          numero_parcela: number
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor: number
+          valor_juros?: number
+          valor_total: number
+        }
+        Update: {
+          acordo_id?: string
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          id?: string
+          numero_parcela?: number
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+          valor_juros?: number
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_acordo"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -408,42 +452,33 @@ export type Database = {
       }
       titulos: {
         Row: {
-          cliente: string
-          cliente_id: string | null
-          contato: string | null
-          cpf_cnpj: string
+          cliente_id: string
           created_at: string
           created_by: string
-          descricao: string | null
           id: string
+          observacoes: string | null
           status: string
           updated_at: string
           valor: number
           vencimento: string
         }
         Insert: {
-          cliente: string
-          cliente_id?: string | null
-          contato?: string | null
-          cpf_cnpj: string
+          cliente_id: string
           created_at?: string
           created_by: string
-          descricao?: string | null
           id?: string
+          observacoes?: string | null
           status?: string
           updated_at?: string
           valor: number
           vencimento: string
         }
         Update: {
-          cliente?: string
-          cliente_id?: string | null
-          contato?: string | null
-          cpf_cnpj?: string
+          cliente_id?: string
           created_at?: string
           created_by?: string
-          descricao?: string | null
           id?: string
+          observacoes?: string | null
           status?: string
           updated_at?: string
           valor?: number
@@ -451,7 +486,7 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "titulos_cliente_id_fkey"
+            foreignKeyName: "fk_cliente"
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
@@ -485,6 +520,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_overdue_parcelas: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

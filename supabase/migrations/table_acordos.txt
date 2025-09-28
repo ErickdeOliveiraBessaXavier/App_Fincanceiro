@@ -1,0 +1,68 @@
+create table public.acordos (
+  id uuid not null default gen_random_uuid (),
+  titulo_id uuid not null,
+  cliente_id uuid not null,
+  valor_original numeric(10, 2) not null,
+  valor_acordo numeric(10, 2) not null,
+  desconto numeric(5, 2) not null default 0,
+  parcelas integer not null default 1,
+  valor_parcela numeric(10, 2) not null,
+  taxa_juros numeric(5, 2) null default 0,
+  data_acordo date not null default CURRENT_DATE,
+  data_inicio date not null default CURRENT_DATE,
+  data_vencimento_primeira_parcela date not null,
+  status text not null default 'ativo'::text,
+  observacoes text null,
+  created_by uuid not null,
+  created_at timestamp with time zone not null default now(),
+  updated_at timestamp with time zone not null default now(),
+  constraint acordos_pkey primary key (id),
+  constraint fk_cliente foreign KEY (cliente_id) references clientes (id) on delete CASCADE,
+  constraint fk_created_by foreign KEY (created_by) references auth.users (id),
+  constraint fk_titulo foreign KEY (titulo_id) references titulos (id) on delete CASCADE,
+  constraint acordos_valor_check check (
+    (
+      (valor_acordo > (0)::numeric)
+      and (valor_original > (0)::numeric)
+    )
+  ),
+  constraint acordos_taxa_juros_check check (
+    (
+      (taxa_juros >= (0)::numeric)
+      and (taxa_juros <= (100)::numeric)
+    )
+  ),
+  constraint acordos_parcelas_check check ((parcelas > 0)),
+  constraint acordos_status_check check (
+    (
+      status = any (
+        array[
+          'ativo'::text,
+          'cumprido'::text,
+          'quebrado'::text,
+          'cancelado'::text
+        ]
+      )
+    )
+  ),
+  constraint acordos_desconto_check check (
+    (
+      (desconto >= (0)::numeric)
+      and (desconto <= (100)::numeric)
+    )
+  )
+) TABLESPACE pg_default;
+
+create index IF not exists idx_acordos_titulo_id on public.acordos using btree (titulo_id) TABLESPACE pg_default;
+
+create index IF not exists idx_acordos_cliente_id on public.acordos using btree (cliente_id) TABLESPACE pg_default;
+
+create index IF not exists idx_acordos_status on public.acordos using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_acordos_data_acordo on public.acordos using btree (data_acordo) TABLESPACE pg_default;
+
+create index IF not exists idx_acordos_created_by on public.acordos using btree (created_by) TABLESPACE pg_default;
+
+create trigger update_acordos_updated_at BEFORE
+update on acordos for EACH row
+execute FUNCTION update_updated_at_column ();

@@ -16,49 +16,49 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import type { Database } from '@/integrations/supabase/types';
 
-interface Titulo {
-  id: string;
-  cliente_id: string;
-  valor: number;
-  vencimento: string;
-  status: 'em_aberto' | 'pago' | 'vencido' | 'acordo';
-  observacoes?: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  // Dados relacionados
-  cliente: {
-    id: string;
-    nome: string;
-    cpf_cnpj: string;
-    telefone?: string;
-    email?: string;
-  };
-}
+// Tipos derivados do esquema do banco de dados gerado pelo Supabase
+type TituloRow = Database['public']['Tables']['titulos']['Row'];
 
+// Interface para o estado do formulário de criação de título.
+// É diferente do tipo de inserção, pois `created_by` é adicionado no momento do envio.
 interface NovoTitulo {
   cliente_id: string;
   valor: number;
   vencimento: string;
   status: 'em_aberto' | 'pago' | 'vencido' | 'acordo';
-  observacoes?: string;
+  observacoes?: string | null;
 }
 
+// Interface principal para um Título, estendendo a linha da tabela e adicionando o cliente aninhado
+export interface Titulo extends TituloRow {
+  cliente: {
+    id: string;
+    nome: string;
+    cpf_cnpj: string;
+    telefone?: string | null;
+    email?: string | null;
+  };
+}
+
+// Interface para os erros do formulário
 interface FormErrors {
   cliente_id?: string;
   valor?: string;
   vencimento?: string;
 }
 
+// Interface para o estado de um título que está sendo editado
 interface TituloEditando {
   id: string;
   cliente_id: string;
   valor: number;
   vencimento: string;
   status: 'em_aberto' | 'pago' | 'vencido' | 'acordo';
-  observacoes?: string;
+  observacoes?: string | null;
 }
+
 
 export default function Titulos() {
   const [titulos, setTitulos] = useState<Titulo[]>([]);
@@ -100,15 +100,7 @@ export default function Titulos() {
       const { data: rawData, error } = await supabase
         .from('titulos')
         .select(`
-          id,
-          cliente_id,
-          valor,
-          vencimento,
-          status,
-          observacoes,
-          created_by,
-          created_at,
-          updated_at,
+          *,
           cliente:clientes (
             id,
             nome,
@@ -119,34 +111,47 @@ export default function Titulos() {
         `)
         .order('vencimento', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erro na query:', error);
+        throw error;
+      }
 
-      // Type assertion to ensure the data matches our interface
-      const typedData = (rawData as any[])?.map(item => ({
-        id: item.id,
-        cliente_id: item.cliente_id,
-        valor: item.valor,
-        vencimento: item.vencimento,
-        status: item.status as 'em_aberto' | 'pago' | 'vencido' | 'acordo',
-        observacoes: item.observacoes,
-        created_by: item.created_by,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        cliente: {
-          id: item.cliente.id,
-          nome: item.cliente.nome,
-          cpf_cnpj: item.cliente.cpf_cnpj,
-          telefone: item.cliente.telefone,
-          email: item.cliente.email
-        }
-      })) || [];
+      // Verificar se rawData existe e tem o formato correto
+      const typedData = (rawData || []).map((item: any) => {
+        console.log('Item da API:', item); // Para debug
+        return {
+          id: item.id,
+          cliente_id: item.cliente_id,
+          valor: item.valor,
+          vencimento: item.vencimento,
+          status: item.status as 'em_aberto' | 'pago' | 'vencido' | 'acordo',
+          observacoes: item.observacoes || '',
+          created_by: item.created_by,
+          created_at: item.created_at,
+          updated_at: item.updated_at,
+          cliente: item.cliente ? {
+            id: item.cliente.id,
+            nome: item.cliente.nome,
+            cpf_cnpj: item.cliente.cpf_cnpj,
+            telefone: item.cliente.telefone || '',
+            email: item.cliente.email || ''
+          } : {
+            id: item.cliente_id || '',
+            nome: 'Cliente não encontrado',
+            cpf_cnpj: '',
+            telefone: '',
+            email: ''
+          }
+        };
+      });
 
-      setTitulos(typedData);
+      console.log('Dados processados:', typedData); // Para debug
+      setTitulos(typedData as Titulo[]);
     } catch (error) {
       console.error('Erro ao carregar títulos:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os títulos",
+        description: `Não foi possível carregar os títulos: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -158,7 +163,8 @@ export default function Titulos() {
     try {
       const { data, error } = await supabase
         .from('clientes')
-        .select('id, nome, cpf_cnpj')
+        .select('id, nome, cpf_cnpj, status')
+        .in('status', ['ativo', 'inadimplente', 'em_acordo']) // Incluir mais status
         .order('nome');
 
       if (error) throw error;
@@ -245,46 +251,47 @@ export default function Titulos() {
       
       if (!user) throw new Error('Usuário não autenticado');
 
-      const { data, error } = await supabase
+      // Inserir o título usando exatamente os campos da tabela
+      const { data: insertedData, error: insertError } = await supabase
         .from('titulos')
-        .insert([{ 
-          ...newTitulo,
+        .insert({
+          cliente_id: newTitulo.cliente_id,
+          valor: newTitulo.valor,
+          vencimento: newTitulo.vencimento,
+          status: newTitulo.status,
+          observacoes: newTitulo.observacoes || null,
           created_by: user.id
-        }])
-        .select(`
-          id,
-          cliente_id,
-          valor,
-          vencimento,
-          status,
-          observacoes,
-          created_by,
-          created_at,
-          updated_at,
-          cliente:clientes (
-            id,
-            nome,
-            cpf_cnpj,
-            telefone,
-            email
-          )
-        `)
+        })
+        .select()
         .single();
 
-      if (error) throw error;
+      if (insertError) throw insertError;
 
-      // Garantir que o dado retornado corresponda à interface Titulo
+      // Buscar dados do cliente para completar a interface
+      const { data: clienteData } = await supabase
+        .from('clientes')
+        .select('id, nome, cpf_cnpj, telefone, email')
+        .eq('id', newTitulo.cliente_id)
+        .single();
+
+      // Criar objeto compatível com a interface
       const novoTitulo: Titulo = {
-        id: data.id,
-        cliente_id: data.cliente_id,
-        valor: data.valor,
-        vencimento: data.vencimento,
-        status: data.status,
-        observacoes: data.observacoes,
-        created_by: data.created_by,
-        created_at: data.created_at,
-        updated_at: data.updated_at,
-        cliente: data.cliente
+        id: insertedData.id,
+        cliente_id: insertedData.cliente_id,
+        valor: insertedData.valor,
+        vencimento: insertedData.vencimento,
+        status: insertedData.status as 'em_aberto' | 'pago' | 'vencido' | 'acordo',
+        observacoes: insertedData.observacoes || '',
+        created_by: insertedData.created_by,
+        created_at: insertedData.created_at,
+        updated_at: insertedData.updated_at,
+        cliente: clienteData || {
+          id: newTitulo.cliente_id,
+          nome: 'Cliente não encontrado',
+          cpf_cnpj: '',
+          telefone: '',
+          email: ''
+        }
       };
 
       setTitulos(prev => [novoTitulo, ...prev]);
@@ -296,6 +303,7 @@ export default function Titulos() {
         status: 'em_aberto',
         observacoes: ''
       });
+      setFormErrors({});
 
       toast({
         title: "Sucesso",
@@ -305,7 +313,7 @@ export default function Titulos() {
       console.error('Erro ao criar título:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar o título",
+        description: `Não foi possível criar o título: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -345,59 +353,50 @@ export default function Titulos() {
     }
 
     try {
-      const { data, error } = await supabase
+      // Atualizar o título e retornar o registro atualizado para obter o `updated_at` do banco
+      const { data: updatedData, error: updateError } = await supabase
         .from('titulos')
         .update({
           cliente_id: editingTitulo.cliente_id,
           valor: editingTitulo.valor,
           vencimento: editingTitulo.vencimento,
           status: editingTitulo.status,
-          observacoes: editingTitulo.observacoes
+          observacoes: editingTitulo.observacoes || null
         })
         .eq('id', editingTitulo.id)
-        .select(`
-          id,
-          cliente_id,
-          valor,
-          vencimento,
-          status,
-          observacoes,
-          created_by,
-          created_at,
-          updated_at,
-          cliente:clientes (
-            id,
-            nome,
-            cpf_cnpj,
-            telefone,
-            email
-          )
-        `)
+        .select()
         .single();
 
-      if (error) throw error;
+      if (updateError) throw updateError;
+      if (!updatedData) throw new Error("Não foi possível obter os dados atualizados do título.");
 
-      // Update the local state with the updated titulo
-      if (data) {
-        const updatedTitulo: Titulo = {
-          id: data.id,
-          cliente_id: data.cliente_id,
-          valor: data.valor,
-          vencimento: data.vencimento,
-          status: data.status,
-          observacoes: data.observacoes,
-          created_by: data.created_by,
-          created_at: data.created_at,
-          updated_at: data.updated_at,
-          cliente: data.cliente
-        };
+      // Buscar dados do cliente para atualizar a interface
+      const { data: clienteData } = await supabase
+        .from('clientes')
+        .select('id, nome, cpf_cnpj, telefone, email')
+        .eq('id', editingTitulo.cliente_id)
+        .single();
 
-        setTitulos(prev => prev.map(t => 
-          t.id === updatedTitulo.id ? updatedTitulo : t
-        ));
-      }
+      // Atualizar estado local com os dados retornados pelo banco de dados
+      const updatedTitulo: Titulo = {
+        ...updatedData,
+        status: updatedData.status as 'em_aberto' | 'pago' | 'vencido' | 'acordo',
+        observacoes: updatedData.observacoes || '',
+        cliente: clienteData || {
+          id: editingTitulo.cliente_id,
+          nome: 'Cliente não encontrado',
+          cpf_cnpj: '',
+          telefone: '',
+          email: ''
+        }
+      };
+
+      setTitulos(prev => prev.map(t => 
+        t.id === updatedTitulo.id ? updatedTitulo : t
+      ));
 
       setIsEditModalOpen(false);
+      setFormErrors({});
       toast({
         title: "Sucesso",
         description: "Título atualizado com sucesso",
@@ -406,7 +405,7 @@ export default function Titulos() {
       console.error('Erro ao atualizar título:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível atualizar o título",
+        description: `Não foi possível atualizar o título: ${error.message}`,
         variant: "destructive",
       });
     }
@@ -525,7 +524,7 @@ export default function Titulos() {
                       cliente_id: titulo.cliente_id,
                       valor: titulo.valor,
                       vencimento: new Date(titulo.vencimento).toISOString().split('T')[0],
-                      status: titulo.status,
+                      status: titulo.status as 'em_aberto' | 'pago' | 'vencido' | 'acordo',
                       observacoes: titulo.observacoes || ''
                     });
                     setIsEditModalOpen(true);
@@ -594,7 +593,7 @@ export default function Titulos() {
                             cliente_id: titulo.cliente_id,
                             valor: titulo.valor,
                             vencimento: new Date(titulo.vencimento).toISOString().split('T')[0],
-                            status: titulo.status,
+                            status: titulo.status as 'em_aberto' | 'pago' | 'vencido' | 'acordo',
                             observacoes: titulo.observacoes || ''
                           });
                           setIsEditModalOpen(true);
@@ -817,6 +816,7 @@ export default function Titulos() {
         </DialogContent>
       </Dialog>
 
+      {/* Remove o modal duplicado de delete - manter apenas um */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
@@ -840,35 +840,9 @@ export default function Titulos() {
             }}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDeleteTitulo}>Excluir</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Você tem certeza que deseja excluir este título?
-              {tituloToDelete && (
-                <div className="mt-4 rounded-md border bg-muted p-3 text-sm">
-                  <p><span className="font-semibold">Cliente:</span> {tituloToDelete.cliente.nome}</p>
-                  <p><span className="font-semibold">Valor:</span> {formatCurrency(tituloToDelete.valor)}</p>
-                  <p><span className="font-semibold">Vencimento:</span> {formatDate(tituloToDelete.vencimento)}</p>
-                </div>
-              )}
-              Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              setIsDeleteModalOpen(false);
-              setTituloToDelete(null);
-            }}>
-              Cancelar
+            <Button variant="destructive" onClick={handleDeleteTitulo}>
+              Excluir
             </Button>
-            <Button variant="destructive" onClick={handleDeleteTitulo}>Excluir</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
