@@ -87,6 +87,13 @@ export type Database = {
             referencedRelation: "titulos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_titulo"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       activity_logs: {
@@ -182,6 +189,13 @@ export type Database = {
             columns: ["titulo_id"]
             isOneToOne: false
             referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
             referencedColumns: ["id"]
           },
         ]
@@ -398,6 +412,73 @@ export type Database = {
         }
         Relationships: []
       }
+      eventos_parcela: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          efeito: number
+          estornado: boolean | null
+          estornado_por_id: string | null
+          id: string
+          meio_pagamento: string | null
+          metadata: Json | null
+          parcela_id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          efeito: number
+          estornado?: boolean | null
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_id: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          efeito?: number
+          estornado?: boolean | null
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
+            referencedRelation: "eventos_parcela"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "mv_parcelas_consolidadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacoes: {
         Row: {
           created_at: string
@@ -436,6 +517,48 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      parcelas: {
+        Row: {
+          created_at: string | null
+          id: string
+          numero_parcela: number
+          titulo_id: string
+          valor_nominal: number
+          vencimento: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          numero_parcela: number
+          titulo_id: string
+          valor_nominal: number
+          vencimento: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          numero_parcela?: number
+          titulo_id?: string
+          valor_nominal?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       parcelas_acordo: {
         Row: {
@@ -522,46 +645,37 @@ export type Database = {
           cliente_id: string
           created_at: string
           created_by: string
+          descricao: string | null
           id: string
-          numero_parcela: number | null
-          observacoes: string | null
-          status: string
-          titulo_pai_id: string | null
-          total_parcelas: number | null
+          metadata: Json | null
+          numero_documento: string | null
           updated_at: string
-          valor: number
-          valor_original: number | null
-          vencimento: string
+          valor_original: number
+          vencimento_original: string
         }
         Insert: {
           cliente_id: string
           created_at?: string
           created_by: string
+          descricao?: string | null
           id?: string
-          numero_parcela?: number | null
-          observacoes?: string | null
-          status?: string
-          titulo_pai_id?: string | null
-          total_parcelas?: number | null
+          metadata?: Json | null
+          numero_documento?: string | null
           updated_at?: string
-          valor: number
-          valor_original?: number | null
-          vencimento: string
+          valor_original: number
+          vencimento_original: string
         }
         Update: {
           cliente_id?: string
           created_at?: string
           created_by?: string
+          descricao?: string | null
           id?: string
-          numero_parcela?: number | null
-          observacoes?: string | null
-          status?: string
-          titulo_pai_id?: string | null
-          total_parcelas?: number | null
+          metadata?: Json | null
+          numero_documento?: string | null
           updated_at?: string
-          valor?: number
-          valor_original?: number | null
-          vencimento?: string
+          valor_original?: number
+          vencimento_original?: string
         }
         Relationships: [
           {
@@ -569,13 +683,6 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "titulos_titulo_pai_id_fkey"
-            columns: ["titulo_pai_id"]
-            isOneToOne: false
-            referencedRelation: "titulos"
             referencedColumns: ["id"]
           },
         ]
@@ -603,10 +710,104 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      mv_parcelas_consolidadas: {
+        Row: {
+          data_ultimo_pagamento: string | null
+          descontos: number | null
+          id: string | null
+          juros: number | null
+          multa: number | null
+          numero_parcela: number | null
+          saldo_atual: number | null
+          status: string | null
+          titulo_id: string | null
+          total_eventos: number | null
+          total_pago: number | null
+          valor_nominal: number | null
+          vencimento: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_titulos_completos: {
+        Row: {
+          cliente_cpf_cnpj: string | null
+          cliente_email: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          cliente_telefone: string | null
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          id: string | null
+          metadata: Json | null
+          numero_documento: string | null
+          parcelas_pagas: number | null
+          parcelas_pendentes: number | null
+          parcelas_vencidas: number | null
+          proximo_vencimento: string | null
+          quantidade_parcelas: number | null
+          saldo_devedor: number | null
+          status: string | null
+          tipo: string | null
+          total_descontos: number | null
+          total_juros: number | null
+          total_multa: number | null
+          total_pago: number | null
+          updated_at: string | null
+          valor_original: number | null
+          vencimento_original: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_cliente"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      aplicar_encargo_parcela: {
+        Args: {
+          p_created_by?: string
+          p_descricao?: string
+          p_parcela_id: string
+          p_tipo: string
+          p_valor: number
+        }
+        Returns: Json
+      }
       check_overdue_parcelas: { Args: never; Returns: undefined }
+      conceder_desconto_parcela: {
+        Args: {
+          p_created_by?: string
+          p_descricao?: string
+          p_parcela_id: string
+          p_valor: number
+        }
+        Returns: Json
+      }
+      estornar_evento_parcela: {
+        Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
+        Returns: Json
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -615,6 +816,17 @@ export type Database = {
         Returns: boolean
       }
       migrate_existing_titulos_to_clientes: { Args: never; Returns: undefined }
+      refresh_mv_parcelas: { Args: never; Returns: undefined }
+      registrar_pagamento_parcela: {
+        Args: {
+          p_created_by?: string
+          p_descricao?: string
+          p_meio_pagamento: string
+          p_parcela_id: string
+          p_valor: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "operador"

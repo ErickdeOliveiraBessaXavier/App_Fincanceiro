@@ -50,6 +50,26 @@ interface TituloPorStatus {
   value: number;
 }
 
+// Interface para dados da view consolidada
+interface TituloConsolidado {
+  id: string;
+  cliente_id: string;
+  valor_original: number;
+  vencimento_original: string;
+  cliente_nome: string;
+  cliente_cpf_cnpj: string;
+  quantidade_parcelas: number;
+  tipo: string;
+  saldo_devedor: number;
+  total_pago: number;
+  parcelas_pagas: number;
+  parcelas_vencidas: number;
+  parcelas_pendentes: number;
+  status: string;
+  proximo_vencimento: string | null;
+  updated_at: string;
+}
+
 const COLORS = ['#f59e0b', '#22c55e', '#ef4444', '#3b82f6'];
 
 const Dashboard = () => {
@@ -77,35 +97,34 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Buscar títulos com clientes
+      // Buscar dados da view consolidada
       const { data: titulos, error } = await supabase
-        .from('titulos')
-        .select('*, cliente:clientes(id, nome, cpf_cnpj)');
+        .from('vw_titulos_completos')
+        .select('*');
 
       if (error) throw error;
 
+      const titulosData = (titulos || []) as TituloConsolidado[];
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const totalTitulos = titulos?.length || 0;
-      const valorTotal = titulos?.reduce((sum, titulo) => sum + Number(titulo.valor), 0) || 0;
+      const totalTitulos = titulosData.length;
+      const valorTotal = titulosData.reduce((sum, t) => sum + Number(t.valor_original), 0);
       
-      // Títulos vencidos (não pagos)
-      const titulosVencidosArr = titulos?.filter(titulo => 
-        new Date(titulo.vencimento) < today && titulo.status !== 'pago'
-      ) || [];
+      // Títulos inadimplentes
+      const titulosVencidosArr = titulosData.filter(t => t.status === 'inadimplente');
       const titulosVencidos = titulosVencidosArr.length;
       
-      // Títulos pagos
-      const titulosPagosArr = titulos?.filter(titulo => titulo.status === 'pago') || [];
+      // Títulos quitados
+      const titulosPagosArr = titulosData.filter(t => t.status === 'quitado');
       const titulosPagos = titulosPagosArr.length;
-      const valorRecuperado = titulosPagosArr.reduce((sum, titulo) => sum + Number(titulo.valor), 0);
+      const valorRecuperado = titulosPagosArr.reduce((sum, t) => sum + Number(t.total_pago), 0);
 
       // Valor recuperado no mês atual
       const inicioMes = new Date(today.getFullYear(), today.getMonth(), 1);
       const valorRecuperadoMes = titulosPagosArr
         .filter(t => new Date(t.updated_at) >= inicioMes)
-        .reduce((sum, t) => sum + Number(t.valor), 0);
+        .reduce((sum, t) => sum + Number(t.total_pago), 0);
 
       setStats({
         totalTitulos,
@@ -116,27 +135,34 @@ const Dashboard = () => {
         valorRecuperadoMes,
       });
 
-      // Aging Report - Calcular faixas de atraso
-      const aging = calculateAging(titulosVencidosArr, today);
+      // Aging Report - baseado em parcelas vencidas
+      const { data: parcelasData } = await supabase
+        .from('mv_parcelas_consolidadas')
+        .select('*')
+        .eq('status', 'vencida');
+
+      const parcelasVencidas = parcelasData || [];
+      const aging = calculateAging(parcelasVencidas, today);
       setAgingData(aging);
 
-      // Próximos vencimentos (7 dias)
+      // Próximos vencimentos (7 dias) - parcelas pendentes
       const seteDias = new Date(today);
       seteDias.setDate(seteDias.getDate() + 7);
       
-      const proximos = titulos
-        ?.filter(t => {
-          const venc = new Date(t.vencimento);
-          return venc >= today && venc <= seteDias && t.status !== 'pago';
+      const proximos = titulosData
+        .filter(t => {
+          if (!t.proximo_vencimento) return false;
+          const venc = new Date(t.proximo_vencimento);
+          return venc >= today && venc <= seteDias && t.status === 'ativo';
         })
         .map(t => ({
           id: t.id,
-          clienteNome: t.cliente?.nome || 'Desconhecido',
-          valor: Number(t.valor),
-          vencimento: t.vencimento,
-          diasRestantes: Math.ceil((new Date(t.vencimento).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          clienteNome: t.cliente_nome || 'Desconhecido',
+          valor: Number(t.saldo_devedor),
+          vencimento: t.proximo_vencimento!,
+          diasRestantes: Math.ceil((new Date(t.proximo_vencimento!).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
         }))
-        .sort((a, b) => a.diasRestantes - b.diasRestantes) || [];
+        .sort((a, b) => a.diasRestantes - b.diasRestantes);
       
       setProximosVencimentos(proximos);
 
@@ -144,13 +170,13 @@ const Dashboard = () => {
       const devedoresMap = new Map<string, { nome: string; valor: number; count: number }>();
       titulosVencidosArr.forEach(t => {
         const clienteId = t.cliente_id;
-        const clienteNome = t.cliente?.nome || 'Desconhecido';
+        const clienteNome = t.cliente_nome || 'Desconhecido';
         const existing = devedoresMap.get(clienteId);
         if (existing) {
-          existing.valor += Number(t.valor);
+          existing.valor += Number(t.saldo_devedor);
           existing.count += 1;
         } else {
-          devedoresMap.set(clienteId, { nome: clienteNome, valor: Number(t.valor), count: 1 });
+          devedoresMap.set(clienteId, { nome: clienteNome, valor: Number(t.saldo_devedor), count: 1 });
         }
       });
 
@@ -171,17 +197,17 @@ const Dashboard = () => {
       setRecuperacaoMensal(recuperacao);
 
       // Títulos por status
-      const statusCount = (titulos || []).reduce((acc, titulo) => {
-        const status = titulo.status || 'em_aberto';
+      const statusCount = titulosData.reduce((acc, titulo) => {
+        const status = titulo.status || 'ativo';
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
       const statusLabels: Record<string, string> = {
-        'em_aberto': 'Em Aberto',
-        'pago': 'Pago',
-        'vencido': 'Vencido',
-        'acordo': 'Acordo'
+        'ativo': 'Ativo',
+        'quitado': 'Quitado',
+        'inadimplente': 'Inadimplente',
+        'sem_parcelas': 'Sem Parcelas'
       };
 
       setTitulosPorStatus(
@@ -198,7 +224,7 @@ const Dashboard = () => {
     }
   };
 
-  const calculateAging = (titulosVencidos: any[], today: Date): AgingData[] => {
+  const calculateAging = (parcelasVencidas: any[], today: Date): AgingData[] => {
     const ranges = [
       { label: '0-30 dias', min: 0, max: 30, color: '#f59e0b' },
       { label: '31-60 dias', min: 31, max: 60, color: '#f97316' },
@@ -207,8 +233,8 @@ const Dashboard = () => {
     ];
 
     return ranges.map(range => {
-      const filtered = titulosVencidos.filter(t => {
-        const diasAtraso = Math.floor((today.getTime() - new Date(t.vencimento).getTime()) / (1000 * 60 * 60 * 24));
+      const filtered = parcelasVencidas.filter(p => {
+        const diasAtraso = Math.floor((today.getTime() - new Date(p.vencimento).getTime()) / (1000 * 60 * 60 * 24));
         return diasAtraso >= range.min && diasAtraso <= range.max;
       });
 
@@ -216,13 +242,13 @@ const Dashboard = () => {
         label: range.label,
         range: `${range.min}-${range.max === 9999 ? '∞' : range.max}`,
         count: filtered.length,
-        value: filtered.reduce((sum, t) => sum + Number(t.valor), 0),
+        value: filtered.reduce((sum, p) => sum + Number(p.saldo_atual), 0),
         color: range.color
       };
     });
   };
 
-  const calculateRecuperacaoMensal = (titulosPagos: any[]): RecuperacaoMensal[] => {
+  const calculateRecuperacaoMensal = (titulosPagos: TituloConsolidado[]): RecuperacaoMensal[] => {
     return Array.from({ length: 6 }, (_, i) => {
       const date = new Date();
       date.setMonth(date.getMonth() - (5 - i));
@@ -230,7 +256,7 @@ const Dashboard = () => {
       
       const valor = titulosPagos
         .filter(t => t.updated_at?.startsWith(monthYear))
-        .reduce((sum, t) => sum + Number(t.valor), 0);
+        .reduce((sum, t) => sum + Number(t.total_pago), 0);
 
       return {
         month: date.toLocaleDateString('pt-BR', { month: 'short' }),
@@ -291,7 +317,7 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Títulos Vencidos</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Inadimplentes</CardTitle>
             <Clock className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
@@ -301,7 +327,7 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Títulos Pagos</CardTitle>
+            <CardTitle className="text-xs sm:text-sm font-medium">Quitados</CardTitle>
             <CheckCircle className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
@@ -404,7 +430,7 @@ const Dashboard = () => {
                 : 0}%
             </div>
             <p className="text-sm text-muted-foreground mt-2">
-              Percentual de títulos em atraso
+              Percentual de títulos inadimplentes
             </p>
           </CardContent>
         </Card>
