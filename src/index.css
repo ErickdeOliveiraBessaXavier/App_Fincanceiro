@@ -54,15 +54,15 @@
     /* Radius - More rounded for modern look */
     --radius: 0.75rem;
 
-    /* Sidebar - Violet gradient base */
-    --sidebar-background: 262 60% 98%;
-    --sidebar-foreground: 262 30% 30%;
-    --sidebar-primary: 262 83% 58%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 262 40% 92%;
-    --sidebar-accent-foreground: 262 60% 35%;
-    --sidebar-border: 262 20% 92%;
-    --sidebar-ring: 262 83% 58%;
+    /* Sidebar - Solid violet background */
+    --sidebar-background: 262 60% 50%;
+    --sidebar-foreground: 0 0% 100%;
+    --sidebar-primary: 0 0% 100%;
+    --sidebar-primary-foreground: 262 60% 50%;
+    --sidebar-accent: 262 50% 58%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 262 50% 55%;
+    --sidebar-ring: 0 0% 100%;
 
     /* Custom gradient tokens */
     --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%) 0%, hsl(280 75% 50%) 100%);
