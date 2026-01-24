@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, FileText, Clock, CheckCircle, TrendingUp } from 'lucide-react';
+import { DollarSign, FileText, Clock, CheckCircle, TrendingUp, AlertTriangle } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AgingReport from '@/components/dashboard/AgingReport';
 import ProximosVencimentos from '@/components/dashboard/ProximosVencimentos';
@@ -50,7 +50,6 @@ interface TituloPorStatus {
   value: number;
 }
 
-// Interface para dados da view consolidada
 interface TituloConsolidado {
   id: string;
   cliente_id: string;
@@ -70,7 +69,7 @@ interface TituloConsolidado {
   updated_at: string;
 }
 
-const COLORS = ['#f59e0b', '#22c55e', '#ef4444', '#3b82f6'];
+const COLORS = ['hsl(262, 83%, 58%)', 'hsl(142, 71%, 45%)', 'hsl(0, 84%, 60%)', 'hsl(25, 95%, 53%)'];
 
 const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
@@ -88,7 +87,6 @@ const Dashboard = () => {
   const [titulosPorStatus, setTitulosPorStatus] = useState<TituloPorStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Meta mensal configurável (pode ser alterada depois)
   const META_MENSAL = 50000;
 
   useEffect(() => {
@@ -97,7 +95,6 @@ const Dashboard = () => {
 
   const fetchDashboardData = async () => {
     try {
-      // Buscar dados da view consolidada
       const { data: titulos, error } = await supabase
         .from('vw_titulos_completos')
         .select('*');
@@ -111,16 +108,13 @@ const Dashboard = () => {
       const totalTitulos = titulosData.length;
       const valorTotal = titulosData.reduce((sum, t) => sum + Number(t.valor_original), 0);
       
-      // Títulos inadimplentes
       const titulosVencidosArr = titulosData.filter(t => t.status === 'inadimplente');
       const titulosVencidos = titulosVencidosArr.length;
       
-      // Títulos quitados
       const titulosPagosArr = titulosData.filter(t => t.status === 'quitado');
       const titulosPagos = titulosPagosArr.length;
       const valorRecuperado = titulosPagosArr.reduce((sum, t) => sum + Number(t.total_pago), 0);
 
-      // Valor recuperado no mês atual
       const inicioMes = new Date(today.getFullYear(), today.getMonth(), 1);
       const valorRecuperadoMes = titulosPagosArr
         .filter(t => new Date(t.updated_at) >= inicioMes)
@@ -135,7 +129,6 @@ const Dashboard = () => {
         valorRecuperadoMes,
       });
 
-      // Aging Report - baseado em parcelas vencidas
       const { data: parcelasData } = await supabase
         .from('mv_parcelas_consolidadas')
         .select('*')
@@ -145,7 +138,6 @@ const Dashboard = () => {
       const aging = calculateAging(parcelasVencidas, today);
       setAgingData(aging);
 
-      // Próximos vencimentos (7 dias) - parcelas pendentes
       const seteDias = new Date(today);
       seteDias.setDate(seteDias.getDate() + 7);
       
@@ -166,7 +158,6 @@ const Dashboard = () => {
       
       setProximosVencimentos(proximos);
 
-      // Top Devedores
       const devedoresMap = new Map<string, { nome: string; valor: number; count: number }>();
       titulosVencidosArr.forEach(t => {
         const clienteId = t.cliente_id;
@@ -192,11 +183,9 @@ const Dashboard = () => {
 
       setTopDevedores(devedores);
 
-      // Recuperação mensal (últimos 6 meses)
       const recuperacao = calculateRecuperacaoMensal(titulosPagosArr);
       setRecuperacaoMensal(recuperacao);
 
-      // Títulos por status
       const statusCount = titulosData.reduce((acc, titulo) => {
         const status = titulo.status || 'ativo';
         acc[status] = (acc[status] || 0) + 1;
@@ -226,10 +215,10 @@ const Dashboard = () => {
 
   const calculateAging = (parcelasVencidas: any[], today: Date): AgingData[] => {
     const ranges = [
-      { label: '0-30 dias', min: 0, max: 30, color: '#f59e0b' },
-      { label: '31-60 dias', min: 31, max: 60, color: '#f97316' },
-      { label: '61-90 dias', min: 61, max: 90, color: '#ef4444' },
-      { label: '+90 dias', min: 91, max: 9999, color: '#dc2626' },
+      { label: '0-30 dias', min: 0, max: 30, color: 'hsl(38, 92%, 50%)' },
+      { label: '31-60 dias', min: 31, max: 60, color: 'hsl(25, 95%, 53%)' },
+      { label: '61-90 dias', min: 61, max: 90, color: 'hsl(0, 84%, 60%)' },
+      { label: '+90 dias', min: 91, max: 9999, color: 'hsl(0, 72%, 51%)' },
     ];
 
     return ranges.map(range => {
@@ -277,7 +266,10 @@ const Dashboard = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">Carregando dados...</p>
+        </div>
       </div>
     );
   }
@@ -285,75 +277,101 @@ const Dashboard = () => {
   const totalVencido = agingData.reduce((sum, a) => sum + a.value, 0);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="mobile-heading font-bold">Dashboard</h1>
-        <p className="text-muted-foreground mobile-text">
-          Visão geral do sistema de cobrança
-        </p>
+    <div className="space-y-8 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
+          <p className="text-muted-foreground mt-1">
+            Visão geral do sistema de cobrança
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground bg-muted px-4 py-2 rounded-xl">
+          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
+        </div>
       </div>
 
-      {/* Cards principais */}
+      {/* KPI Cards */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-        <Card>
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Total de Títulos</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total de Títulos</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{stats.totalTitulos}</div>
+            <div className="text-2xl sm:text-3xl font-bold">{stats.totalTitulos}</div>
+            <p className="text-xs text-muted-foreground mt-1">títulos cadastrados</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Valor Total</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Valor Total</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-primary" />
+            </div>
           </CardHeader>
           <CardContent>
             <div className="text-xl sm:text-2xl font-bold">{formatCurrency(stats.valorTotal)}</div>
+            <p className="text-xs text-muted-foreground mt-1">em carteira</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Inadimplentes</CardTitle>
-            <Clock className="h-4 w-4 text-destructive" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Inadimplentes</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-destructive/10 flex items-center justify-center">
+              <AlertTriangle className="h-4 w-4 text-destructive" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-destructive">{stats.titulosVencidos}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-destructive">{stats.titulosVencidos}</div>
+            <p className="text-xs text-muted-foreground mt-1">requerem atenção</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Quitados</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Quitados</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
+              <CheckCircle className="h-4 w-4 text-success" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-500">{stats.titulosPagos}</div>
+            <div className="text-2xl sm:text-3xl font-bold text-success">{stats.titulosPagos}</div>
+            <p className="text-xs text-muted-foreground mt-1">pagamentos recebidos</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium">Valor Recuperado</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-500" />
+            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Valor Recuperado</CardTitle>
+            <div className="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
+              <TrendingUp className="h-4 w-4 text-success" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-green-500">{formatCurrency(stats.valorRecuperado)}</div>
+            <div className="text-xl sm:text-2xl font-bold text-success">{formatCurrency(stats.valorRecuperado)}</div>
+            <p className="text-xs text-muted-foreground mt-1">total recuperado</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Aging Report + Próximos Vencimentos */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <AgingReport data={agingData} totalValue={totalVencido} />
         <ProximosVencimentos vencimentos={proximosVencimentos} />
       </div>
 
       {/* Top Devedores + Meta de Recuperação */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <TopDevedores devedores={topDevedores} />
         <MetaRecuperacao 
           valorRecuperado={stats.valorRecuperadoMes} 
@@ -363,26 +381,33 @@ const Dashboard = () => {
       </div>
 
       {/* Gráficos */}
-      <div className="grid gap-4 grid-cols-1 lg:grid-cols-2">
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Evolução da Recuperação</CardTitle>
+            <CardTitle className="text-lg font-semibold">Evolução da Recuperação</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={280}>
               <LineChart data={recuperacaoMensal}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="month" />
-                <YAxis tickFormatter={(v) => `R$ ${(v/1000).toFixed(0)}k`} />
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                <YAxis tickFormatter={(v) => `R$ ${(v/1000).toFixed(0)}k`} stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <Tooltip 
                   formatter={(value: number) => [formatCurrency(value), 'Recuperado']}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                  }}
                 />
                 <Line 
                   type="monotone" 
                   dataKey="valor" 
-                  stroke="hsl(var(--primary))" 
-                  strokeWidth={2}
-                  dot={{ fill: 'hsl(var(--primary))' }}
+                  stroke="hsl(262, 83%, 58%)" 
+                  strokeWidth={3}
+                  dot={{ fill: 'hsl(262, 83%, 58%)', strokeWidth: 2, r: 5 }}
+                  activeDot={{ r: 7, fill: 'hsl(262, 83%, 58%)' }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -391,26 +416,33 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Títulos por Status</CardTitle>
+            <CardTitle className="text-lg font-semibold">Títulos por Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={250}>
+            <ResponsiveContainer width="100%" height={280}>
               <PieChart>
                 <Pie
                   data={titulosPorStatus}
                   cx="50%"
                   cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
+                  innerRadius={70}
+                  outerRadius={100}
+                  paddingAngle={4}
                   dataKey="value"
                   label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
                 >
                   {titulosPorStatus.map((_, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--card))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '12px'
+                  }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </CardContent>
@@ -418,13 +450,14 @@ const Dashboard = () => {
       </div>
 
       {/* Taxas */}
-      <div className="grid gap-4 grid-cols-1 md:grid-cols-2">
-        <Card>
+      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 to-transparent pointer-events-none" />
           <CardHeader>
-            <CardTitle>Taxa de Inadimplência</CardTitle>
+            <CardTitle className="text-lg font-semibold">Taxa de Inadimplência</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold text-destructive">
+            <div className="text-4xl font-bold text-destructive">
               {stats.totalTitulos > 0 
                 ? ((stats.titulosVencidos / stats.totalTitulos) * 100).toFixed(1) 
                 : 0}%
@@ -435,12 +468,13 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
           <CardHeader>
-            <CardTitle>Taxa de Recuperação</CardTitle>
+            <CardTitle className="text-lg font-semibold">Taxa de Recuperação</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold text-green-500">
+            <div className="text-4xl font-bold text-success">
               {stats.valorTotal > 0 
                 ? ((stats.valorRecuperado / stats.valorTotal) * 100).toFixed(1) 
                 : 0}%
