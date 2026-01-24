@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,6 +59,7 @@ interface FormErrors {
 }
 
 export default function Clientes() {
+  const navigate = useNavigate();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [comunicacoes, setComunicacoes] = useState<Comunicacao[]>([]);
@@ -940,6 +942,17 @@ export default function Clientes() {
                     
                     <div className="flex gap-2 justify-end mt-3 pt-3 border-t">
                       <Button 
+                        variant="default" 
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/telecobranca/${cliente.id}`);
+                        }}
+                      >
+                        <Phone className="h-3 w-3 mr-1" />
+                        Telecobrança
+                      </Button>
+                      <Button 
                         variant="ghost" 
                         size="sm"
                         onClick={(e) => {
@@ -982,7 +995,7 @@ export default function Clientes() {
                           setIsDeleteModalOpen(true);
                         }}
                       >
-                        <Trash2 className="h-3 w-3 text-red-500" />
+                        <Trash2 className="h-3 w-3 text-destructive" />
                       </Button>
                     </div>
                   </Card>
@@ -1059,6 +1072,14 @@ export default function Clientes() {
                         <TableCell>
                           <div className="flex gap-2">
                             <Button 
+                              variant="default" 
+                              size="sm"
+                              onClick={() => navigate(`/telecobranca/${cliente.id}`)}
+                            >
+                              <Phone className="h-4 w-4 mr-1" />
+                              Telecobrança
+                            </Button>
+                            <Button 
                               variant="ghost" 
                               size="sm"
                               onClick={() => {
@@ -1098,7 +1119,7 @@ export default function Clientes() {
                                 setIsDeleteModalOpen(true);
                               }}
                             >
-                              <Trash2 className="h-4 w-4 text-red-500" />
+                              <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>
                         </TableCell>

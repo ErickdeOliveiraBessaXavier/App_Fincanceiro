@@ -15,6 +15,7 @@ const Campanhas = React.lazy(() => import("./pages/Campanhas"));
 const ImportarCSV = React.lazy(() => import("./pages/ImportarCSV"));
 const Relatorios = React.lazy(() => import("./pages/Relatorios"));
 const Usuarios = React.lazy(() => import("./pages/Usuarios"));
+const Telecobranca = React.lazy(() => import("./pages/Telecobranca"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
@@ -38,6 +39,7 @@ const App = () => (
               <Route path="/importar" element={<Layout><ImportarCSV /></Layout>} />
               <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
               <Route path="/usuarios" element={<Layout><Usuarios /></Layout>} />
+              <Route path="/telecobranca/:clienteId" element={<Layout><Telecobranca /></Layout>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
