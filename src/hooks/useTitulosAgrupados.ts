@@ -43,6 +43,7 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
     try {
       setLoading(true);
 
+      // Buscar TODOS os títulos para poder agrupar corretamente
       let query = supabase
         .from('titulos')
         .select(`
@@ -59,7 +60,6 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
             cpf_cnpj
           )
         `)
-        .in('status', ['em_aberto', 'vencido'])
         .order('vencimento');
 
       if (clienteIdFiltro) {
@@ -70,19 +70,102 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
 
       if (error) throw error;
 
-      // Agrupar por cliente e depois por dívida (titulo_pai_id)
+      // Separar títulos pai e parcelas filhas
+      const titulosPai = new Set<string>();
+      const parcelasFilhas = new Map<string, any[]>();
+      const titulosAvulsos: any[] = [];
+
+      // Primeiro passo: identificar estrutura
+      (rawData || []).forEach((item: any) => {
+        if (item.titulo_pai_id) {
+          // É uma parcela filha
+          titulosPai.add(item.titulo_pai_id);
+          if (!parcelasFilhas.has(item.titulo_pai_id)) {
+            parcelasFilhas.set(item.titulo_pai_id, []);
+          }
+          parcelasFilhas.get(item.titulo_pai_id)!.push(item);
+        } else if (item.total_parcelas && item.total_parcelas > 1) {
+          // É título pai (tem parcelas mas não é filho de ninguém)
+          titulosPai.add(item.id);
+        } else {
+          // Título avulso (sem parcelas)
+          titulosAvulsos.push(item);
+        }
+      });
+
+      // Agrupar por cliente e dívida
       const clientesMap = new Map<string, ClienteComDividas>();
       const dividasMap = new Map<string, TituloAgrupado>();
 
-      (rawData || []).forEach((item: any) => {
+      // Processar parcelas filhas (agrupadas pelo titulo_pai_id)
+      parcelasFilhas.forEach((parcelas, tituloPaiId) => {
+        parcelas.forEach((item: any) => {
+          const cliente = item.cliente;
+          if (!cliente) return;
+
+          // Só processar se status for em_aberto ou vencido
+          if (item.status !== 'em_aberto' && item.status !== 'vencido') return;
+
+          // Inicializar cliente
+          if (!clientesMap.has(cliente.id)) {
+            clientesMap.set(cliente.id, {
+              id: cliente.id,
+              nome: cliente.nome,
+              cpf_cnpj: cliente.cpf_cnpj,
+              dividas: [],
+              valor_total: 0
+            });
+          }
+
+          const dividaKey = `${cliente.id}-${tituloPaiId}`;
+
+          if (!dividasMap.has(dividaKey)) {
+            dividasMap.set(dividaKey, {
+              id: tituloPaiId,
+              cliente: { id: cliente.id, nome: cliente.nome, cpf_cnpj: cliente.cpf_cnpj },
+              valor_total: 0,
+              total_parcelas: item.total_parcelas || 1,
+              parcelas_abertas: 0,
+              parcelas_pagas: 0,
+              titulos: [],
+              vencimento_mais_antigo: item.vencimento,
+              tem_vencido: false
+            });
+          }
+
+          const divida = dividasMap.get(dividaKey)!;
+
+          divida.titulos.push({
+            id: item.id,
+            valor: item.valor,
+            vencimento: item.vencimento,
+            status: item.status,
+            numero_parcela: item.numero_parcela,
+            total_parcelas: item.total_parcelas,
+            titulo_pai_id: item.titulo_pai_id
+          });
+
+          divida.valor_total += item.valor;
+          divida.parcelas_abertas++;
+
+          if (item.status === 'vencido') {
+            divida.tem_vencido = true;
+          }
+
+          if (new Date(item.vencimento) < new Date(divida.vencimento_mais_antigo)) {
+            divida.vencimento_mais_antigo = item.vencimento;
+          }
+        });
+      });
+
+      // Processar títulos avulsos
+      titulosAvulsos.forEach((item: any) => {
         const cliente = item.cliente;
         if (!cliente) return;
 
-        // Determinar o ID do grupo (titulo_pai_id ou próprio id para avulsos)
-        const grupoId = item.titulo_pai_id || item.id;
-        const isParcelaFilha = item.titulo_pai_id !== null;
+        // Só processar se status for em_aberto ou vencido
+        if (item.status !== 'em_aberto' && item.status !== 'vencido') return;
 
-        // Inicializar cliente se não existir
         if (!clientesMap.has(cliente.id)) {
           clientesMap.set(cliente.id, {
             id: cliente.id,
@@ -93,55 +176,27 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
           });
         }
 
-        // Chave única para a dívida (cliente + grupo)
-        const dividaKey = `${cliente.id}-${grupoId}`;
+        const dividaKey = `${cliente.id}-${item.id}`;
 
-        // Inicializar dívida se não existir
-        if (!dividasMap.has(dividaKey)) {
-          dividasMap.set(dividaKey, {
-            id: grupoId,
-            cliente: {
-              id: cliente.id,
-              nome: cliente.nome,
-              cpf_cnpj: cliente.cpf_cnpj
-            },
-            valor_total: 0,
-            total_parcelas: item.total_parcelas || 1,
-            parcelas_abertas: 0,
-            parcelas_pagas: 0,
-            titulos: [],
-            vencimento_mais_antigo: item.vencimento,
-            tem_vencido: false
-          });
-        }
-
-        const divida = dividasMap.get(dividaKey)!;
-
-        // Adicionar título à lista
-        divida.titulos.push({
+        dividasMap.set(dividaKey, {
           id: item.id,
-          valor: item.valor,
-          vencimento: item.vencimento,
-          status: item.status,
-          numero_parcela: item.numero_parcela,
-          total_parcelas: item.total_parcelas,
-          titulo_pai_id: item.titulo_pai_id
+          cliente: { id: cliente.id, nome: cliente.nome, cpf_cnpj: cliente.cpf_cnpj },
+          valor_total: item.valor,
+          total_parcelas: 1,
+          parcelas_abertas: 1,
+          parcelas_pagas: 0,
+          titulos: [{
+            id: item.id,
+            valor: item.valor,
+            vencimento: item.vencimento,
+            status: item.status,
+            numero_parcela: null,
+            total_parcelas: null,
+            titulo_pai_id: null
+          }],
+          vencimento_mais_antigo: item.vencimento,
+          tem_vencido: item.status === 'vencido'
         });
-
-        // Atualizar valores
-        if (item.status === 'em_aberto' || item.status === 'vencido') {
-          divida.valor_total += item.valor;
-          divida.parcelas_abertas++;
-        }
-
-        if (item.status === 'vencido') {
-          divida.tem_vencido = true;
-        }
-
-        // Atualizar vencimento mais antigo
-        if (new Date(item.vencimento) < new Date(divida.vencimento_mais_antigo)) {
-          divida.vencimento_mais_antigo = item.vencimento;
-        }
       });
 
       // Associar dívidas aos clientes
