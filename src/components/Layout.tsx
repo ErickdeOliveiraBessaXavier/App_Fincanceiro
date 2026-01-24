@@ -14,8 +14,11 @@ export const Layout = memo(({ children }: LayoutProps) => {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        </div>
       </div>
     );
   }
@@ -26,20 +29,26 @@ export const Layout = memo(({ children }: LayoutProps) => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full">
+      <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         
         <div className="flex-1 flex flex-col">
-          <header className="h-12 flex items-center justify-between border-b bg-background px-2 sm:px-4">
-            <div className="flex items-center">
-              <SidebarTrigger className="mr-2 sm:mr-4" />
-              <h1 className="text-sm sm:text-lg font-semibold truncate">Sistema de Cobrança</h1>
+          <header className="sticky top-0 z-30 h-16 flex items-center justify-between border-b bg-card/80 backdrop-blur-md px-4 sm:px-6">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted" />
+              <div className="hidden sm:block">
+                <h1 className="text-lg font-semibold text-foreground">Sistema de Cobrança</h1>
+              </div>
             </div>
-            <NotificationBell />
+            <div className="flex items-center gap-3">
+              <NotificationBell />
+            </div>
           </header>
           
-          <main className="flex-1 p-2 sm:p-4 lg:p-6 bg-muted/30">
-            {children}
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in">
+            <div className="mx-auto max-w-7xl">
+              {children}
+            </div>
           </main>
         </div>
       </div>
