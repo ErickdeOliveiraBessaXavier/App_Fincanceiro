@@ -117,9 +117,9 @@ export default function Clientes() {
           *,
           titulos (
             id,
-            valor
+            valor_original
           )
-        `); // Removed .is('deleted', null)
+        `);
 
       if (statusFilter !== 'todos') {
         query = query.eq('status', statusFilter);
@@ -133,7 +133,7 @@ export default function Clientes() {
       const clientesComDados = data?.map(cliente => ({
         ...cliente,
         total_titulos: cliente.titulos?.length || 0,
-        total_valor: cliente.titulos?.reduce((sum: number, titulo: any) => sum + titulo.valor, 0) || 0
+        total_valor: cliente.titulos?.reduce((sum: number, titulo: any) => sum + (titulo.valor_original || 0), 0) || 0
       })) || [];
 
       setClientes(clientesComDados);
