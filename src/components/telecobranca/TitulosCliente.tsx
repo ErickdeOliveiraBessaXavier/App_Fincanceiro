@@ -16,6 +16,7 @@ interface Titulo {
   observacoes?: string | null;
   numero_parcela?: number | null;
   total_parcelas?: number | null;
+  titulo_pai_id?: string | null;
 }
 
 interface TitulosClienteProps {
@@ -160,7 +161,13 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
                           <Button 
                             size="sm" 
                             variant="outline"
-                            onClick={() => navigate('/acordos')}
+                            onClick={() => navigate('/acordos', {
+                              state: {
+                                clienteId,
+                                tituloIds: [titulo.titulo_pai_id || titulo.id],
+                                valorTotal: totalEmAberto
+                              }
+                            })}
                           >
                             <Handshake className="h-4 w-4 mr-1" />
                             Acordo
