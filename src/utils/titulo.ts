@@ -1,4 +1,4 @@
-// Utilitários simplificados para a nova arquitetura Event Sourcing
+// Utilitários para a nova arquitetura Event Sourcing
 // A lógica principal agora está no banco de dados
 
 export type TituloStatus = 'ativo' | 'quitado' | 'inadimplente' | 'sem_parcelas';
@@ -66,7 +66,7 @@ export interface Parcela {
 }
 
 export const StatusUtils = {
-  getColor: (status: TituloStatus | ParcelaStatus): string => {
+  getColor: (status: TituloStatus | ParcelaStatus | string): string => {
     switch (status) {
       case 'pendente':
       case 'ativo': return 'bg-yellow-100 text-yellow-800';
@@ -79,7 +79,7 @@ export const StatusUtils = {
     }
   },
 
-  getLabel: (status: TituloStatus | ParcelaStatus): string => {
+  getLabel: (status: TituloStatus | ParcelaStatus | string): string => {
     const labels: Record<string, string> = {
       'ativo': 'Ativo',
       'quitado': 'Quitado',
