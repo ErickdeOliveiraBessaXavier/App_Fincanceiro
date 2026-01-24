@@ -119,6 +119,73 @@ export type Database = {
         }
         Relationships: []
       }
+      agendamentos: {
+        Row: {
+          acordo_id: string | null
+          cliente_id: string
+          created_at: string | null
+          created_by: string
+          data_agendamento: string
+          descricao: string | null
+          id: string
+          resultado: string | null
+          status: string
+          tipo_evento: string
+          titulo_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          acordo_id?: string | null
+          cliente_id: string
+          created_at?: string | null
+          created_by: string
+          data_agendamento: string
+          descricao?: string | null
+          id?: string
+          resultado?: string | null
+          status?: string
+          tipo_evento: string
+          titulo_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          acordo_id?: string | null
+          cliente_id?: string
+          created_at?: string | null
+          created_by?: string
+          data_agendamento?: string
+          descricao?: string | null
+          id?: string
+          resultado?: string | null
+          status?: string
+          tipo_evento?: string
+          titulo_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       anexos: {
         Row: {
           acordo_id: string | null
