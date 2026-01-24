@@ -29,12 +29,12 @@ export const Layout = memo(({ children }: LayoutProps) => {
 
   return (
     <SidebarProvider>
-      <div className="flex min-h-screen w-full bg-sidebar">
+      <div className="flex h-screen w-full bg-sidebar overflow-hidden">
         <AppSidebar />
         
         {/* Main content area with inset effect */}
         <div className="flex-1 flex flex-col m-3 ml-0 rounded-3xl bg-background shadow-xl overflow-hidden">
-          <header className="sticky top-0 z-30 h-16 flex items-center justify-between bg-card/80 backdrop-blur-md px-4 sm:px-6 border-b border-border/50">
+          <header className="shrink-0 h-16 flex items-center justify-between bg-card/80 backdrop-blur-md px-4 sm:px-6 border-b border-border/50">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted" />
               <div className="hidden sm:block">
@@ -46,7 +46,7 @@ export const Layout = memo(({ children }: LayoutProps) => {
             </div>
           </header>
           
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in overflow-auto">
+          <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in overflow-y-auto">
             <div className="mx-auto max-w-7xl">
               {children}
             </div>
