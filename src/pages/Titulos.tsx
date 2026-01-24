@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Eye, ChevronDown, ChevronRight, User } from 'lucide-react';
+import { Plus, Search, Eye, ChevronDown, ChevronRight, User, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,9 @@ export default function Titulos() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTitulo, setSelectedTitulo] = useState<TituloConsolidado | null>(null);
+  const [tituloToDelete, setTituloToDelete] = useState<TituloConsolidado | null>(null);
   const [parcelasTitulo, setParcelasTitulo] = useState<Parcela[]>([]);
   const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
   const [expandedTitulos, setExpandedTitulos] = useState<Set<string>>(new Set());
@@ -222,6 +224,59 @@ export default function Titulos() {
     setSelectedTitulo(titulo);
     await fetchParcelasTitulo(titulo.id);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleDeleteTitulo = async () => {
+    if (!tituloToDelete) return;
+
+    try {
+      // Primeiro deletar eventos das parcelas
+      const { data: parcelas } = await supabase
+        .from('parcelas')
+        .select('id')
+        .eq('titulo_id', tituloToDelete.id);
+
+      if (parcelas && parcelas.length > 0) {
+        const parcelaIds = parcelas.map(p => p.id);
+        await supabase
+          .from('eventos_parcela')
+          .delete()
+          .in('parcela_id', parcelaIds);
+      }
+
+      // Deletar parcelas
+      await supabase
+        .from('parcelas')
+        .delete()
+        .eq('titulo_id', tituloToDelete.id);
+
+      // Deletar título
+      const { error } = await supabase
+        .from('titulos')
+        .delete()
+        .eq('id', tituloToDelete.id);
+
+      if (error) throw error;
+
+      // Refresh materialized view
+      await supabase.rpc('refresh_mv_parcelas');
+
+      toast({
+        title: "Sucesso",
+        description: "Título excluído com sucesso",
+      });
+
+      setIsDeleteModalOpen(false);
+      setTituloToDelete(null);
+      fetchTitulos();
+    } catch (error) {
+      console.error('Erro ao excluir título:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível excluir o título",
+        variant: "destructive",
+      });
+    }
   };
 
   // Agrupar títulos por cliente
@@ -442,13 +497,25 @@ export default function Titulos() {
                             <StatusBadge status={titulo.status || 'ativo'} />
                           </TableCell>
                           <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => openDetails(titulo)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => openDetails(titulo)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setTituloToDelete(titulo);
+                                  setIsDeleteModalOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
 
@@ -641,24 +708,48 @@ export default function Titulos() {
               <div>
                 <Label className="text-muted-foreground">Parcelas</Label>
                 <div className="mt-2 space-y-2">
-                  {parcelasTitulo.map((parcela) => (
-                    <div key={parcela.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <span className="font-medium">Parcela {parcela.numero_parcela}</span>
-                        <span className="text-muted-foreground ml-2">
-                          Venc: {FormatUtils.date(parcela.vencimento)}
-                        </span>
+                  {parcelasTitulo
+                    .filter(p => p.titulo_id === selectedTitulo.id)
+                    .map((parcela) => (
+                      <div key={parcela.id} className="flex justify-between items-center p-3 border rounded-lg">
+                        <div>
+                          <span className="font-medium">Parcela {parcela.numero_parcela}</span>
+                          <span className="text-muted-foreground ml-2">
+                            Venc: {FormatUtils.date(parcela.vencimento)}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span>{FormatUtils.currency(parcela.saldo_atual || 0)}</span>
+                          <StatusBadge status={parcela.status || 'pendente'} />
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span>{FormatUtils.currency(parcela.saldo_atual || 0)}</span>
-                        <StatusBadge status={parcela.status || 'pendente'} />
-                      </div>
-                    </div>
-                  ))}
+                    ))}
                 </div>
               </div>
             </div>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Confirmar Exclusão */}
+      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o título{' '}
+              <span className="font-medium">{tituloToDelete?.numero_documento}</span>?
+              Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDeleteTitulo}>
+              Excluir
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
