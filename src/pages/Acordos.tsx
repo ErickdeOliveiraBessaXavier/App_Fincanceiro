@@ -40,6 +40,7 @@ interface Acordo {
     id: string;
     valor_original: number;
     vencimento_original: string;
+    numero_documento?: string;
   };
   cliente: {
     id: string;
@@ -157,7 +158,8 @@ export default function Acordos() {
           titulo:titulos (
             id,
             valor_original,
-            vencimento_original
+            vencimento_original,
+            numero_documento
           ),
           cliente:clientes (
             id,
@@ -537,6 +539,7 @@ export default function Acordos() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
+                  <TableHead className="hidden sm:table-cell">N. Título</TableHead>
                   <TableHead className="hidden md:table-cell">Valor Original</TableHead>
                   <TableHead>Valor Acordo</TableHead>
                   <TableHead className="hidden lg:table-cell">Parcelas</TableHead>
@@ -554,6 +557,9 @@ export default function Acordos() {
                           {acordo.cliente?.cpf_cnpj}
                         </div>
                       </div>
+                    </TableCell>
+                    <TableCell className="hidden sm:table-cell font-mono text-sm">
+                      {acordo.titulo?.numero_documento || '-'}
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {formatCurrency(acordo.valor_original)}
@@ -595,7 +601,7 @@ export default function Acordos() {
                 ))}
                 {filteredAcordos.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhum acordo encontrado
                     </TableCell>
                   </TableRow>
