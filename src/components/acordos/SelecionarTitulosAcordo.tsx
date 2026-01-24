@@ -179,6 +179,11 @@ export function SelecionarTitulosAcordo({
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
+                        {divida.numero_documento && (
+                          <span className="text-xs text-muted-foreground font-mono">
+                            #{divida.numero_documento}
+                          </span>
+                        )}
                         <span className="text-sm font-medium">
                           {temParcelas
                             ? `Contrato (${divida.parcelas_abertas} parcela${divida.parcelas_abertas > 1 ? 's' : ''} em aberto)`

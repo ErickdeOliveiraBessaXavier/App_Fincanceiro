@@ -14,6 +14,7 @@ export interface TituloItem {
 
 export interface TituloAgrupado {
   id: string; // titulo_id
+  numero_documento?: string;
   cliente: {
     id: string;
     nome: string;
@@ -90,6 +91,7 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
 
         const divida: TituloAgrupado = {
           id: titulo.id!,
+          numero_documento: titulo.numero_documento || undefined,
           cliente: {
             id: clienteId,
             nome: titulo.cliente_nome || '',
