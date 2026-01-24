@@ -70,25 +70,33 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
 
       if (error) throw error;
 
-      // Separar títulos pai e parcelas filhas
-      const titulosPai = new Set<string>();
+      // Separar títulos pai, filhos e avulsos
       const parcelasFilhas = new Map<string, any[]>();
       const titulosAvulsos: any[] = [];
 
-      // Primeiro passo: identificar estrutura
+      // Primeiro pass: identificar todos os IDs que são pais (têm filhos)
+      const idsQueSaoPais = new Set<string>();
       (rawData || []).forEach((item: any) => {
         if (item.titulo_pai_id) {
+          idsQueSaoPais.add(item.titulo_pai_id);
+        }
+      });
+
+      // Segundo pass: classificar cada título
+      (rawData || []).forEach((item: any) => {
+        // Pular títulos que são containers (são pais) - serão representados pelas parcelas
+        if (idsQueSaoPais.has(item.id)) {
+          return;
+        }
+
+        if (item.titulo_pai_id) {
           // É uma parcela filha
-          titulosPai.add(item.titulo_pai_id);
           if (!parcelasFilhas.has(item.titulo_pai_id)) {
             parcelasFilhas.set(item.titulo_pai_id, []);
           }
           parcelasFilhas.get(item.titulo_pai_id)!.push(item);
-        } else if (item.total_parcelas && item.total_parcelas > 1) {
-          // É título pai (tem parcelas mas não é filho de ninguém)
-          titulosPai.add(item.id);
         } else {
-          // Título avulso (sem parcelas)
+          // Título avulso (não é pai nem filho)
           titulosAvulsos.push(item);
         }
       });
