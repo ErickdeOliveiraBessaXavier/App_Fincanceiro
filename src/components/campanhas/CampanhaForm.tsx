@@ -92,9 +92,10 @@ const CampanhaForm = ({ open, onOpenChange, campanha, onSuccess }: CampanhaFormP
 
   const fetchRecipientCount = async () => {
     try {
+      // Buscar da view consolidada
       let query = supabase
-        .from('titulos')
-        .select('id, cliente:clientes!inner(id, nome, email, telefone)', { count: 'exact' });
+        .from('vw_titulos_completos')
+        .select('id', { count: 'exact' });
 
       if (formData.filtros.status_titulo !== 'todos') {
         query = query.eq('status', formData.filtros.status_titulo);
@@ -248,8 +249,8 @@ const CampanhaForm = ({ open, onOpenChange, campanha, onSuccess }: CampanhaFormP
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="todos">Todos</SelectItem>
-                    <SelectItem value="vencido">Vencidos</SelectItem>
-                    <SelectItem value="em_aberto">Em Aberto</SelectItem>
+                    <SelectItem value="inadimplente">Inadimplentes</SelectItem>
+                    <SelectItem value="ativo">Ativos</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

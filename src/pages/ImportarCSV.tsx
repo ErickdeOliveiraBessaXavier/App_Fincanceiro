@@ -41,7 +41,6 @@ export default function ImportarCSV() {
   const { user } = useAuth();
 
   const requiredHeaders = ['cliente', 'cpf_cnpj', 'valor', 'vencimento'];
-  const optionalHeaders = ['contato', 'descricao'];
 
   // Função para validar CPF/CNPJ
   const validateCpfCnpj = (cpfCnpj: string): boolean => {
@@ -69,7 +68,6 @@ export default function ImportarCSV() {
     try {
       const cleanedCpfCnpj = cpfCnpj.replace(/[^\d]/g, '');
       
-      // Primeiro, tenta encontrar o cliente pelo CPF/CNPJ
       const { data: existingClient, error: findError } = await supabase
         .from('clientes')
         .select('id')
@@ -84,7 +82,6 @@ export default function ImportarCSV() {
         return existingClient.id;
       }
 
-      // Se não encontrou, cria um novo cliente
       const { data: newClient, error: createError } = await supabase
         .from('clientes')
         .insert({
@@ -139,7 +136,6 @@ export default function ImportarCSV() {
       const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
       const rows = lines.slice(1, 6).map(line => line.split(',').map(cell => cell.trim()));
 
-      // Validar cabeçalhos obrigatórios
       const validationErrors: string[] = [];
       requiredHeaders.forEach(required => {
         if (!headers.includes(required)) {
@@ -147,7 +143,6 @@ export default function ImportarCSV() {
         }
       });
 
-      // Validar dados das primeiras linhas
       if (validationErrors.length === 0) {
         rows.forEach((row, index) => {
           const rowData: any = {};
@@ -155,22 +150,18 @@ export default function ImportarCSV() {
             rowData[header] = row[i] || '';
           });
 
-          // Validar CPF/CNPJ
           if (!validateCpfCnpj(rowData.cpf_cnpj)) {
             validationErrors.push(`Linha ${index + 2}: CPF/CNPJ inválido`);
           }
 
-          // Validar valor
           if (!validateValue(rowData.valor)) {
             validationErrors.push(`Linha ${index + 2}: Valor inválido`);
           }
 
-          // Validar data
           if (!validateDate(rowData.vencimento)) {
             validationErrors.push(`Linha ${index + 2}: Data de vencimento inválida (use formato YYYY-MM-DD)`);
           }
 
-          // Validar nome do cliente
           if (!rowData.cliente || rowData.cliente.trim().length < 2) {
             validationErrors.push(`Linha ${index + 2}: Nome do cliente muito curto`);
           }
@@ -226,7 +217,6 @@ export default function ImportarCSV() {
               rowData[header] = row[index] || '';
             });
 
-            // Validar dados da linha
             if (!validateCpfCnpj(rowData.cpf_cnpj)) {
               result.errors.push(`Linha ${i + 2}: CPF/CNPJ inválido`);
               continue;
@@ -247,7 +237,6 @@ export default function ImportarCSV() {
               continue;
             }
 
-            // Encontrar ou criar cliente
             const clienteId = await findOrCreateClient(
               rowData.cliente,
               rowData.cpf_cnpj,
@@ -259,29 +248,44 @@ export default function ImportarCSV() {
               continue;
             }
 
-            // Contar clientes criados
             const cleanedCpfCnpj = rowData.cpf_cnpj.replace(/[^\d]/g, '');
             if (!createdClients.has(cleanedCpfCnpj)) {
               createdClients.add(cleanedCpfCnpj);
               result.clientesCreated++;
             }
 
-            // Inserir título
             const valor = parseFloat(rowData.valor.replace(/[^\d.,]/g, '').replace(',', '.'));
             
-            const { error: tituloError } = await supabase
+            // Criar título
+            const { data: tituloData, error: tituloError } = await supabase
               .from('titulos')
               .insert({
                 cliente_id: clienteId,
-                valor: valor,
-                vencimento: rowData.vencimento,
-                observacoes: rowData.descricao || null,
-                created_by: user.id,
-                status: 'pendente'
-              });
+                valor_original: valor,
+                vencimento_original: rowData.vencimento,
+                descricao: rowData.descricao || null,
+                created_by: user.id
+              })
+              .select()
+              .single();
 
             if (tituloError) {
               result.errors.push(`Linha ${i + 2}: ${tituloError.message}`);
+              continue;
+            }
+
+            // Criar parcela única
+            const { error: parcelaError } = await supabase
+              .from('parcelas')
+              .insert({
+                titulo_id: tituloData.id,
+                numero_parcela: 1,
+                valor_nominal: valor,
+                vencimento: rowData.vencimento
+              });
+
+            if (parcelaError) {
+              result.errors.push(`Linha ${i + 2}: Erro ao criar parcela`);
               continue;
             }
 
@@ -290,6 +294,9 @@ export default function ImportarCSV() {
             result.errors.push(`Linha ${i + 2}: Erro inesperado`);
           }
         }
+
+        // Refresh materialized view
+        await supabase.rpc('refresh_mv_parcelas');
 
         setImportResult(result);
 
@@ -308,7 +315,6 @@ export default function ImportarCSV() {
           });
         }
 
-        // Reset form se tudo deu certo
         if (result.errors.length === 0) {
           setFile(null);
           setPreview(null);
@@ -336,13 +342,7 @@ export default function ImportarCSV() {
     const csvContent = [
       'cliente,cpf_cnpj,valor,vencimento,contato,descricao',
       'João Silva Santos,123.456.789-00,1500.00,2025-10-15,(11) 99999-9999,Mensalidade outubro 2025',
-      'Maria Oliveira LTDA,12.345.678/0001-90,2750.50,2025-10-30,(11) 88888-8888,Prestação de serviços',
-      'Pedro Costa,987.654.321-00,890.00,2025-11-10,(11) 77777-7777,Consultoria empresarial',
-      'Ana Paula ME,98.765.432/0001-10,3200.00,2025-11-15,(11) 66666-6666,Fornecimento de materiais',
-      'Carlos Roberto,456.789.123-45,750.00,2025-10-05,carlos@email.com,Serviço técnico',
-      'Fernanda Almeida,789.123.456-78,1200.00,2025-12-01,(11) 55555-5555,Curso de capacitação',
-      'Tech Solutions LTDA,11.222.333/0001-44,5500.00,2025-11-30,contato@techsolutions.com,Desenvolvimento de software',
-      'Roberto Silva,321.654.987-00,950.00,2025-10-20,(11) 44444-4444,Manutenção predial'
+      'Maria Oliveira LTDA,12.345.678/0001-90,2750.50,2025-10-30,(11) 88888-8888,Prestação de serviços'
     ].join('\n');
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -450,28 +450,17 @@ export default function ImportarCSV() {
               </h4>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                 <li><code>cliente</code> - Nome completo do cliente</li>
-                <li><code>cpf_cnpj</code> - CPF (123.456.789-00) ou CNPJ (12.345.678/0001-90)</li>
-                <li><code>valor</code> - Valor em formato decimal (1500.00 ou 1.500,00)</li>
-                <li><code>vencimento</code> - Data no formato YYYY-MM-DD (2025-10-15)</li>
+                <li><code>cpf_cnpj</code> - CPF ou CNPJ</li>
+                <li><code>valor</code> - Valor em formato decimal</li>
+                <li><code>vencimento</code> - Data no formato YYYY-MM-DD</li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-medium mb-2">Colunas Opcionais</h4>
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                <li><code>contato</code> - Telefone (11) 99999-9999 ou email</li>
-                <li><code>descricao</code> - Descrição detalhada do título</li>
-              </ul>
-            </div>
-
-            <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-              <h4 className="font-medium mb-2 text-blue-800">💡 Dicas Importantes:</h4>
-              <ul className="list-disc list-inside text-sm text-blue-700 space-y-1">
-                <li>Use o template baixado como base</li>
-                <li>Mantenha os cabeçalhos exatamente como mostrado</li>
-                <li>CPF/CNPJ podem ter ou não formatação (pontos/traços)</li>
-                <li>Valores podem usar ponto ou vírgula como decimal</li>
-                <li>Se o cliente já existir (mesmo CPF/CNPJ), será reutilizado</li>
+                <li><code>contato</code> - Telefone ou email</li>
+                <li><code>descricao</code> - Descrição do título</li>
               </ul>
             </div>
 
@@ -479,7 +468,6 @@ export default function ImportarCSV() {
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 Certifique-se de que o arquivo esteja codificado em UTF-8 e use vírgula como separador.
-                As datas devem estar no formato YYYY-MM-DD (ex: 2024-12-30).
               </AlertDescription>
             </Alert>
           </CardContent>
@@ -495,17 +483,12 @@ export default function ImportarCSV() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     {preview.headers.map((header, index) => (
-                      <TableHead key={index} className="capitalize">
-                        {header}
-                        {requiredHeaders.includes(header) && (
-                          <span className="text-red-500 ml-1">*</span>
-                        )}
-                      </TableHead>
+                      <TableHead key={index} className="capitalize">{header}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
@@ -527,42 +510,40 @@ export default function ImportarCSV() {
       {importResult && (
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              {importResult.errors.length === 0 ? (
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              ) : (
-                <AlertCircle className="h-5 w-5 text-yellow-600" />
-              )}
-              Resultado da Importação
-            </CardTitle>
+            <CardTitle>Resultado da Importação</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-3 gap-4 text-center">
-              <div className="p-4 bg-green-50 rounded-lg">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-green-600">{importResult.success}</div>
-                <div className="text-sm text-green-600">Títulos Importados</div>
+                <div className="text-sm text-green-700">Importados</div>
               </div>
-              <div className="p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{importResult.clientesCreated}</div>
-                <div className="text-sm text-blue-600">Clientes Criados</div>
-              </div>
-              <div className="p-4 bg-red-50 rounded-lg">
+              <div className="text-center p-4 bg-red-50 rounded-lg">
                 <div className="text-2xl font-bold text-red-600">{importResult.errors.length}</div>
-                <div className="text-sm text-red-600">Erros</div>
+                <div className="text-sm text-red-700">Erros</div>
+              </div>
+              <div className="text-center p-4 bg-blue-50 rounded-lg">
+                <div className="text-2xl font-bold text-blue-600">{importResult.clientesCreated}</div>
+                <div className="text-sm text-blue-700">Clientes Criados</div>
               </div>
             </div>
 
             {importResult.errors.length > 0 && (
-              <div>
-                <h4 className="font-medium mb-2 text-red-600">Erros Encontrados:</h4>
-                <div className="max-h-40 overflow-y-auto space-y-1">
-                  {importResult.errors.map((error, index) => (
-                    <div key={index} className="text-sm text-red-600 bg-red-50 p-2 rounded">
-                      {error}
-                    </div>
-                  ))}
-                </div>
-              </div>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <div className="max-h-40 overflow-y-auto">
+                    <ul className="list-disc list-inside">
+                      {importResult.errors.slice(0, 10).map((error, index) => (
+                        <li key={index}>{error}</li>
+                      ))}
+                      {importResult.errors.length > 10 && (
+                        <li>... e mais {importResult.errors.length - 10} erros</li>
+                      )}
+                    </ul>
+                  </div>
+                </AlertDescription>
+              </Alert>
             )}
           </CardContent>
         </Card>

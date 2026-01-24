@@ -3,26 +3,27 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface TituloItem {
   id: string;
+  parcela_id: string;
   valor: number;
   vencimento: string;
   status: string;
-  numero_parcela?: number | null;
-  total_parcelas?: number | null;
-  titulo_pai_id?: string | null;
+  numero_parcela: number;
+  total_parcelas?: number;
+  saldo_atual: number;
 }
 
 export interface TituloAgrupado {
-  id: string; // titulo_pai_id ou próprio id para títulos avulsos
+  id: string; // titulo_id
   cliente: {
     id: string;
     nome: string;
     cpf_cnpj: string;
   };
-  valor_total: number; // soma de todas as parcelas em aberto
+  valor_total: number; // soma de saldos em aberto
   total_parcelas: number;
   parcelas_abertas: number;
   parcelas_pagas: number;
-  titulos: TituloItem[]; // lista de títulos/parcelas deste grupo
+  titulos: TituloItem[]; // lista de parcelas
   vencimento_mais_antigo: string;
   tem_vencido: boolean;
 }
@@ -43,173 +44,77 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
     try {
       setLoading(true);
 
-      // Buscar TODOS os títulos para poder agrupar corretamente
+      // Buscar da view consolidada
       let query = supabase
-        .from('titulos')
-        .select(`
-          id,
-          valor,
-          vencimento,
-          status,
-          numero_parcela,
-          total_parcelas,
-          titulo_pai_id,
-          cliente:clientes (
-            id,
-            nome,
-            cpf_cnpj
-          )
-        `)
-        .order('vencimento');
+        .from('vw_titulos_completos')
+        .select('*')
+        .in('status', ['ativo', 'inadimplente']);
 
       if (clienteIdFiltro) {
         query = query.eq('cliente_id', clienteIdFiltro);
       }
 
-      const { data: rawData, error } = await query;
+      const { data: titulos, error } = await query;
 
       if (error) throw error;
 
-      // Separar títulos pai e parcelas filhas
-      const titulosPai = new Set<string>();
-      const parcelasFilhas = new Map<string, any[]>();
-      const titulosAvulsos: any[] = [];
-
-      // Primeiro passo: identificar estrutura
-      (rawData || []).forEach((item: any) => {
-        if (item.titulo_pai_id) {
-          // É uma parcela filha
-          titulosPai.add(item.titulo_pai_id);
-          if (!parcelasFilhas.has(item.titulo_pai_id)) {
-            parcelasFilhas.set(item.titulo_pai_id, []);
-          }
-          parcelasFilhas.get(item.titulo_pai_id)!.push(item);
-        } else if (item.total_parcelas && item.total_parcelas > 1) {
-          // É título pai (tem parcelas mas não é filho de ninguém)
-          titulosPai.add(item.id);
-        } else {
-          // Título avulso (sem parcelas)
-          titulosAvulsos.push(item);
-        }
-      });
-
-      // Agrupar por cliente e dívida
+      // Para cada título, buscar suas parcelas pendentes
       const clientesMap = new Map<string, ClienteComDividas>();
-      const dividasMap = new Map<string, TituloAgrupado>();
 
-      // Processar parcelas filhas (agrupadas pelo titulo_pai_id)
-      parcelasFilhas.forEach((parcelas, tituloPaiId) => {
-        parcelas.forEach((item: any) => {
-          const cliente = item.cliente;
-          if (!cliente) return;
+      for (const titulo of titulos || []) {
+        const clienteId = titulo.cliente_id;
+        if (!clienteId) continue;
 
-          // Só processar se status for em_aberto ou vencido
-          if (item.status !== 'em_aberto' && item.status !== 'vencido') return;
+        // Buscar parcelas do título
+        const { data: parcelas } = await supabase
+          .from('mv_parcelas_consolidadas')
+          .select('*')
+          .eq('titulo_id', titulo.id)
+          .in('status', ['pendente', 'vencida'])
+          .order('numero_parcela');
 
-          // Inicializar cliente
-          if (!clientesMap.has(cliente.id)) {
-            clientesMap.set(cliente.id, {
-              id: cliente.id,
-              nome: cliente.nome,
-              cpf_cnpj: cliente.cpf_cnpj,
-              dividas: [],
-              valor_total: 0
-            });
-          }
+        if (!parcelas || parcelas.length === 0) continue;
 
-          const dividaKey = `${cliente.id}-${tituloPaiId}`;
-
-          if (!dividasMap.has(dividaKey)) {
-            dividasMap.set(dividaKey, {
-              id: tituloPaiId,
-              cliente: { id: cliente.id, nome: cliente.nome, cpf_cnpj: cliente.cpf_cnpj },
-              valor_total: 0,
-              total_parcelas: item.total_parcelas || 1,
-              parcelas_abertas: 0,
-              parcelas_pagas: 0,
-              titulos: [],
-              vencimento_mais_antigo: item.vencimento,
-              tem_vencido: false
-            });
-          }
-
-          const divida = dividasMap.get(dividaKey)!;
-
-          divida.titulos.push({
-            id: item.id,
-            valor: item.valor,
-            vencimento: item.vencimento,
-            status: item.status,
-            numero_parcela: item.numero_parcela,
-            total_parcelas: item.total_parcelas,
-            titulo_pai_id: item.titulo_pai_id
-          });
-
-          divida.valor_total += item.valor;
-          divida.parcelas_abertas++;
-
-          if (item.status === 'vencido') {
-            divida.tem_vencido = true;
-          }
-
-          if (new Date(item.vencimento) < new Date(divida.vencimento_mais_antigo)) {
-            divida.vencimento_mais_antigo = item.vencimento;
-          }
-        });
-      });
-
-      // Processar títulos avulsos
-      titulosAvulsos.forEach((item: any) => {
-        const cliente = item.cliente;
-        if (!cliente) return;
-
-        // Só processar se status for em_aberto ou vencido
-        if (item.status !== 'em_aberto' && item.status !== 'vencido') return;
-
-        if (!clientesMap.has(cliente.id)) {
-          clientesMap.set(cliente.id, {
-            id: cliente.id,
-            nome: cliente.nome,
-            cpf_cnpj: cliente.cpf_cnpj,
+        // Inicializar cliente
+        if (!clientesMap.has(clienteId)) {
+          clientesMap.set(clienteId, {
+            id: clienteId,
+            nome: titulo.cliente_nome || '',
+            cpf_cnpj: titulo.cliente_cpf_cnpj || '',
             dividas: [],
             valor_total: 0
           });
         }
 
-        const dividaKey = `${cliente.id}-${item.id}`;
+        const cliente = clientesMap.get(clienteId)!;
 
-        dividasMap.set(dividaKey, {
-          id: item.id,
-          cliente: { id: cliente.id, nome: cliente.nome, cpf_cnpj: cliente.cpf_cnpj },
-          valor_total: item.valor,
-          total_parcelas: 1,
-          parcelas_abertas: 1,
-          parcelas_pagas: 0,
-          titulos: [{
-            id: item.id,
-            valor: item.valor,
-            vencimento: item.vencimento,
-            status: item.status,
-            numero_parcela: null,
-            total_parcelas: null,
-            titulo_pai_id: null
-          }],
-          vencimento_mais_antigo: item.vencimento,
-          tem_vencido: item.status === 'vencido'
-        });
-      });
+        const divida: TituloAgrupado = {
+          id: titulo.id!,
+          cliente: {
+            id: clienteId,
+            nome: titulo.cliente_nome || '',
+            cpf_cnpj: titulo.cliente_cpf_cnpj || ''
+          },
+          valor_total: parcelas.reduce((sum, p) => sum + (p.saldo_atual || 0), 0),
+          total_parcelas: titulo.quantidade_parcelas || 1,
+          parcelas_abertas: parcelas.length,
+          parcelas_pagas: titulo.parcelas_pagas || 0,
+          titulos: parcelas.map(p => ({
+            id: titulo.id!,
+            parcela_id: p.id!,
+            valor: p.valor_nominal || 0,
+            vencimento: p.vencimento || '',
+            status: p.status || 'pendente',
+            numero_parcela: p.numero_parcela || 1,
+            saldo_atual: p.saldo_atual || 0
+          })),
+          vencimento_mais_antigo: parcelas[0]?.vencimento || titulo.vencimento_original || '',
+          tem_vencido: parcelas.some(p => p.status === 'vencida')
+        };
 
-      // Associar dívidas aos clientes
-      dividasMap.forEach((divida, key) => {
-        const clienteId = key.split('-')[0];
-        const cliente = clientesMap.get(clienteId);
-        if (cliente) {
-          // Ordenar títulos por número de parcela
-          divida.titulos.sort((a, b) => (a.numero_parcela || 0) - (b.numero_parcela || 0));
-          cliente.dividas.push(divida);
-          cliente.valor_total += divida.valor_total;
-        }
-      });
+        cliente.dividas.push(divida);
+        cliente.valor_total += divida.valor_total;
+      }
 
       // Converter para array e ordenar por valor total
       const clientesArray = Array.from(clientesMap.values())

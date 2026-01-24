@@ -38,8 +38,8 @@ interface Acordo {
   updated_at: string;
   titulo: {
     id: string;
-    valor: number;
-    vencimento: string;
+    valor_original: number;
+    vencimento_original: string;
   };
   cliente: {
     id: string;
@@ -50,7 +50,7 @@ interface Acordo {
 
 interface NovoAcordo {
   cliente_id: string;
-  titulo_ids: string[]; // Mudou de titulo_id único para array
+  titulo_ids: string[];
   valor_original: number;
   valor_acordo: number;
   parcelas: number;
@@ -120,14 +120,12 @@ export default function Acordos() {
   const [showCronograma, setShowCronograma] = useState(false);
   const { toast } = useToast();
 
-  // Hook para títulos agrupados
   const { clientes: clientesComDividas, loading: loadingTitulos, refetch: refetchTitulos } = useTitulosAgrupados();
 
   useEffect(() => {
     fetchAcordos();
   }, []);
 
-  // Abrir modal automaticamente se veio com dados pré-selecionados
   useEffect(() => {
     if (preSelectedData?.clienteId) {
       refetchTitulos();
@@ -158,8 +156,8 @@ export default function Acordos() {
           updated_at,
           titulo:titulos (
             id,
-            valor,
-            vencimento
+            valor_original,
+            vencimento_original
           ),
           cliente:clientes (
             id,
@@ -304,10 +302,8 @@ export default function Acordos() {
       const valorTotalComJuros = cronogramaParcelas.reduce((sum, p) => sum + p.valor_total, 0);
       const valorParcela = valorTotalComJuros / newAcordo.parcelas;
 
-      // Pegar o primeiro título como referência (para manter compatibilidade)
       const tituloPrincipal = newAcordo.titulo_ids[0];
 
-      // Criar o acordo
       const { data: acordoData, error: acordoError } = await supabase
         .from('acordos')
         .insert([{
@@ -329,7 +325,6 @@ export default function Acordos() {
 
       if (acordoError) throw acordoError;
 
-      // Criar parcelas na tabela parcelas_acordo
       if (acordoData && cronogramaParcelas.length > 0) {
         const parcelasInsert = cronogramaParcelas.map(p => ({
           acordo_id: acordoData.id,
@@ -350,15 +345,8 @@ export default function Acordos() {
         }
       }
 
-      // Atualizar status de TODOS os títulos selecionados para 'acordo'
-      const { error: updateError } = await supabase
-        .from('titulos')
-        .update({ status: 'acordo' })
-        .in('id', newAcordo.titulo_ids);
-
-      if (updateError) {
-        console.error('Erro ao atualizar títulos:', updateError);
-      }
+      // Nota: Como a tabela titulos não tem mais coluna 'status', 
+      // a marcação do acordo será feita via metadados ou outra tabela
 
       toast({
         title: "Sucesso",
@@ -401,7 +389,6 @@ export default function Acordos() {
     if (!acordoToDelete) return;
 
     try {
-      // Primeiro, deletar as parcelas do acordo
       await supabase
         .from('parcelas_acordo')
         .delete()
@@ -413,13 +400,6 @@ export default function Acordos() {
         .eq('id', acordoToDelete.id);
 
       if (error) throw error;
-
-      // Restaurar status dos títulos
-      // Como agora um acordo pode ter múltiplos títulos, precisamos buscar todos os títulos do cliente que estão em acordo
-      await supabase
-        .from('titulos')
-        .update({ status: 'em_aberto' })
-        .eq('id', acordoToDelete.titulo_id);
 
       setAcordos(prev => prev.filter(a => a.id !== acordoToDelete.id));
       setIsDeleteModalOpen(false);
@@ -463,8 +443,8 @@ export default function Acordos() {
   };
 
   const filteredAcordos = acordos.filter(acordo =>
-    acordo.cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    acordo.cliente.cpf_cnpj.includes(searchTerm) ||
+    acordo.cliente?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    acordo.cliente?.cpf_cnpj?.includes(searchTerm) ||
     acordo.observacoes?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
@@ -504,37 +484,31 @@ export default function Acordos() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Total Original</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Acordos Ativos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(acordos.reduce((sum, acordo) => sum + acordo.valor_original, 0))}
+            <div className="text-2xl font-bold text-blue-600">
+              {acordos.filter(a => a.status === 'ativo').length}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Total Acordado</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Acordos Cumpridos</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {formatCurrency(acordos.reduce((sum, acordo) => sum + acordo.valor_acordo, 0))}
+            <div className="text-2xl font-bold text-green-600">
+              {acordos.filter(a => a.status === 'cumprido').length}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Desconto Médio</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {acordos.length > 0 
-                ? `${(acordos.reduce((sum, acordo) => sum + ((acordo.valor_original - acordo.valor_acordo) / acordo.valor_original * 100), 0) / acordos.length).toFixed(1)}%`
-                : '0%'
-              }
+              {formatCurrency(acordos.reduce((sum, a) => sum + a.valor_acordo, 0))}
             </div>
           </CardContent>
         </Card>
@@ -543,16 +517,14 @@ export default function Acordos() {
       <Card>
         <CardHeader>
           <CardTitle>Lista de Acordos</CardTitle>
-          <CardDescription>
-            Acordos realizados com clientes
-          </CardDescription>
+          <CardDescription>Total de {filteredAcordos.length} acordos</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <div className="mb-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Buscar por cliente, CPF/CNPJ ou observações..."
+                placeholder="Buscar por cliente..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
@@ -560,41 +532,46 @@ export default function Acordos() {
             </div>
           </div>
 
-          <div className="rounded-md border">
+          <div className="rounded-md border overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>CPF/CNPJ</TableHead>
-                  <TableHead>Valor Original</TableHead>
+                  <TableHead className="hidden md:table-cell">Valor Original</TableHead>
                   <TableHead>Valor Acordo</TableHead>
-                  <TableHead>Desconto</TableHead>
-                  <TableHead>Parcelas</TableHead>
+                  <TableHead className="hidden lg:table-cell">Parcelas</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Data</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredAcordos.map((acordo) => (
                   <TableRow key={acordo.id}>
-                    <TableCell className="font-medium">{acordo.cliente.nome}</TableCell>
-                    <TableCell>{acordo.cliente.cpf_cnpj}</TableCell>
-                    <TableCell>{formatCurrency(acordo.valor_original)}</TableCell>
-                    <TableCell>{formatCurrency(acordo.valor_acordo)}</TableCell>
-                    <TableCell className="text-green-600 font-medium">
-                      {acordo.desconto.toFixed(1)}%
+                    <TableCell>
+                      <div>
+                        <div className="font-medium">{acordo.cliente?.nome}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {acordo.cliente?.cpf_cnpj}
+                        </div>
+                      </div>
                     </TableCell>
-                    <TableCell>{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {formatCurrency(acordo.valor_original)}
+                    </TableCell>
+                    <TableCell>{formatCurrency(acordo.valor_acordo)}</TableCell>
+                    <TableCell className="hidden lg:table-cell">
+                      {acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}
+                    </TableCell>
                     <TableCell>
                       <Badge className={getStatusColor(acordo.status)}>
                         {acordo.status}
                       </Badge>
                     </TableCell>
-                    <TableCell>{formatDate(acordo.data_acordo)}</TableCell>
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="ghost" size="sm"
+                      <div className="flex gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setSelectedAcordo(acordo);
                             setIsDetailsModalOpen(true);
@@ -602,187 +579,131 @@ export default function Acordos() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button variant="ghost" size="sm"
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           onClick={() => {
                             setAcordoToDelete(acordo);
                             setIsDeleteModalOpen(true);
                           }}
                         >
-                          <Trash2 className="h-4 w-4 text-red-500" />
+                          <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
                     </TableCell>
                   </TableRow>
                 ))}
+                {filteredAcordos.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                      Nenhum acordo encontrado
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Create Modal - Updated with new selection system */}
-      <Dialog open={isCreateModalOpen} onOpenChange={(open) => {
-        setIsCreateModalOpen(open);
-        if (!open) {
-          setShowCronograma(false);
-          setNewAcordo({
-            cliente_id: '',
-            titulo_ids: [],
-            valor_original: 0,
-            valor_acordo: 0,
-            parcelas: 1,
-            taxa_juros: 0,
-            data_inicio: new Date().toISOString().split('T')[0],
-            data_vencimento_primeira_parcela: new Date().toISOString().split('T')[0],
-            observacoes: ''
-          });
-        }
-      }}>
-        <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
+      {/* Modal Criar Acordo */}
+      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Novo Acordo de Pagamento</DialogTitle>
+            <DialogTitle>Novo Acordo</DialogTitle>
             <DialogDescription>
-              Selecione o cliente e os títulos para criar um acordo de renegociação
+              Selecione os títulos e configure o acordo de pagamento
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="grid gap-4 py-4">
-            {/* Novo componente de seleção de títulos */}
-            {loadingTitulos ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : (
-              <SelecionarTitulosAcordo
-                clientes={clientesComDividas}
-                clienteIdPreSelecionado={preSelectedData?.clienteId}
-                onSelectionChange={handleSelectionChange}
-              />
-            )}
+          <div className="space-y-4">
+            <SelecionarTitulosAcordo
+              clientes={clientesComDividas}
+              clienteIdPreSelecionado={preSelectedData?.clienteId}
+              onSelectionChange={handleSelectionChange}
+            />
 
-            {formErrors.cliente_id && (
-              <span className="text-xs text-destructive">{formErrors.cliente_id}</span>
-            )}
-
-            {/* Campos do acordo (aparecem quando há seleção) */}
             {newAcordo.titulo_ids.length > 0 && (
               <>
                 <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
+                  <div className="space-y-2">
                     <Label>Valor Original</Label>
                     <Input
-                      type="text"
                       value={formatCurrency(newAcordo.valor_original)}
                       disabled
                       className="bg-muted"
                     />
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="valor-acordo">Valor do Acordo</Label>
+                  <div className="space-y-2">
+                    <Label>Valor do Acordo</Label>
                     <Input
-                      id="valor-acordo"
                       type="number"
                       step="0.01"
-                      min="0"
                       value={newAcordo.valor_acordo}
-                      onChange={(e) => setNewAcordo({ ...newAcordo, valor_acordo: parseFloat(e.target.value) || 0 })}
-                      className={formErrors.valor_acordo ? "border-destructive" : ""}
+                      onChange={(e) => setNewAcordo(prev => ({ ...prev, valor_acordo: parseFloat(e.target.value) || 0 }))}
+                      className={formErrors.valor_acordo ? "border-red-500" : ""}
                     />
                     {formErrors.valor_acordo && (
-                      <span className="text-xs text-destructive">{formErrors.valor_acordo}</span>
+                      <span className="text-xs text-red-500">{formErrors.valor_acordo}</span>
                     )}
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="parcelas">Parcelas</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label>Parcelas</Label>
                     <Input
-                      id="parcelas"
                       type="number"
                       min="1"
                       value={newAcordo.parcelas}
-                      onChange={(e) => setNewAcordo({ ...newAcordo, parcelas: parseInt(e.target.value) || 1 })}
-                      className={formErrors.parcelas ? "border-destructive" : ""}
-                    />
-                    {formErrors.parcelas && (
-                      <span className="text-xs text-destructive">{formErrors.parcelas}</span>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label>Valor da Parcela</Label>
-                    <Input
-                      type="text"
-                      value={formatCurrency(newAcordo.valor_acordo / newAcordo.parcelas)}
-                      disabled
-                      className="bg-muted"
+                      onChange={(e) => setNewAcordo(prev => ({ ...prev, parcelas: parseInt(e.target.value) || 1 }))}
+                      className={formErrors.parcelas ? "border-red-500" : ""}
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="vencimento">Data Vencimento 1ª Parcela</Label>
+                  <div className="space-y-2">
+                    <Label>Taxa de Juros (%)</Label>
                     <Input
-                      id="vencimento"
-                      type="date"
-                      value={newAcordo.data_vencimento_primeira_parcela}
-                      onChange={(e) => setNewAcordo({ ...newAcordo, data_vencimento_primeira_parcela: e.target.value })}
-                      className={formErrors.data_vencimento_primeira_parcela ? "border-destructive" : ""}
-                    />
-                    {formErrors.data_vencimento_primeira_parcela && (
-                      <span className="text-xs text-destructive">{formErrors.data_vencimento_primeira_parcela}</span>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="taxa-juros">Taxa de Juros (%)</Label>
-                    <Input
-                      id="taxa-juros"
                       type="number"
                       step="0.01"
                       min="0"
-                      max="100"
-                      value={newAcordo.taxa_juros || 0}
-                      onChange={(e) => setNewAcordo({ ...newAcordo, taxa_juros: parseFloat(e.target.value) || 0 })}
+                      value={newAcordo.taxa_juros}
+                      onChange={(e) => setNewAcordo(prev => ({ ...prev, taxa_juros: parseFloat(e.target.value) || 0 }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>1ª Parcela</Label>
+                    <Input
+                      type="date"
+                      value={newAcordo.data_vencimento_primeira_parcela}
+                      onChange={(e) => setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: e.target.value }))}
+                      className={formErrors.data_vencimento_primeira_parcela ? "border-red-500" : ""}
                     />
                   </div>
                 </div>
 
-                <div className="grid gap-2">
-                  <Label htmlFor="observacoes">Observações</Label>
+                <div className="space-y-2">
+                  <Label>Observações</Label>
                   <Input
-                    id="observacoes"
                     value={newAcordo.observacoes}
-                    onChange={(e) => setNewAcordo({ ...newAcordo, observacoes: e.target.value })}
-                    placeholder="Observações sobre o acordo..."
+                    onChange={(e) => setNewAcordo(prev => ({ ...prev, observacoes: e.target.value }))}
                   />
                 </div>
 
-                <div className="flex gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={visualizarCronograma}
-                    disabled={!newAcordo.valor_acordo || !newAcordo.parcelas || !newAcordo.data_vencimento_primeira_parcela}
-                  >
-                    Visualizar Cronograma
-                  </Button>
-                </div>
+                <Button variant="outline" onClick={visualizarCronograma} className="w-full">
+                  Visualizar Cronograma
+                </Button>
 
-                {/* Cronograma Preview */}
                 {showCronograma && cronograma.length > 0 && (
-                  <div className="border rounded-lg p-4 max-h-60 overflow-y-auto">
-                    <h4 className="font-medium mb-3">Cronograma de Pagamentos</h4>
-                    <div className="space-y-2">
-                      {cronograma.map((parcela) => (
-                        <div key={parcela.numero} className="flex justify-between text-sm">
-                          <span>Parcela {parcela.numero}</span>
-                          <span>{formatDate(parcela.data_vencimento)}</span>
-                          <span className="font-medium">{formatCurrency(parcela.valor_total)}</span>
+                  <div className="p-4 bg-muted rounded-lg">
+                    <h4 className="font-medium mb-2">Cronograma de Parcelas</h4>
+                    <div className="space-y-1 text-sm">
+                      {cronograma.map((p) => (
+                        <div key={p.numero} className="flex justify-between">
+                          <span>Parcela {p.numero} - {formatDate(p.data_vencimento)}</span>
+                          <span>{formatCurrency(p.valor_total)}</span>
                         </div>
                       ))}
-                      <div className="border-t pt-2 flex justify-between font-medium">
-                        <span>Total Geral:</span>
+                      <div className="border-t pt-2 mt-2 font-medium flex justify-between">
+                        <span>Total</span>
                         <span>{formatCurrency(cronograma.reduce((sum, p) => sum + p.valor_total, 0))}</span>
                       </div>
                     </div>
@@ -791,65 +712,67 @@ export default function Acordos() {
               </>
             )}
           </div>
-          
           <DialogFooter>
-            <Button 
-              onClick={handleCreateAcordo}
-              disabled={newAcordo.titulo_ids.length === 0}
-            >
+            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleCreateAcordo} disabled={newAcordo.titulo_ids.length === 0}>
               Criar Acordo
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Details Modal */}
+      {/* Modal Detalhes */}
       <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detalhes do Acordo</DialogTitle>
           </DialogHeader>
           {selectedAcordo && (
             <div className="space-y-4">
-              <div>
-                <Label className="text-sm font-medium">Cliente</Label>
-                <p className="text-sm">{selectedAcordo.cliente.nome}</p>
-                <p className="text-xs text-muted-foreground">{selectedAcordo.cliente.cpf_cnpj}</p>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label className="text-sm font-medium">Valor Original</Label>
-                  <p className="text-sm">{formatCurrency(selectedAcordo.valor_original)}</p>
+                  <Label className="text-muted-foreground">Cliente</Label>
+                  <p className="font-medium">{selectedAcordo.cliente?.nome}</p>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Valor do Acordo</Label>
-                  <p className="text-sm">{formatCurrency(selectedAcordo.valor_acordo)}</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-sm font-medium">Desconto</Label>
-                  <p className="text-sm text-green-600 font-medium">{selectedAcordo.desconto.toFixed(1)}%</p>
+                  <Label className="text-muted-foreground">Status</Label>
+                  <div className="mt-1">
+                    <Badge className={getStatusColor(selectedAcordo.status)}>
+                      {selectedAcordo.status}
+                    </Badge>
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-sm font-medium">Status</Label>
-                  <Badge className={getStatusColor(selectedAcordo.status)}>
-                    {selectedAcordo.status}
-                  </Badge>
+                  <Label className="text-muted-foreground">Valor Original</Label>
+                  <p>{formatCurrency(selectedAcordo.valor_original)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Valor do Acordo</Label>
+                  <p className="font-medium">{formatCurrency(selectedAcordo.valor_acordo)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Desconto</Label>
+                  <p>{selectedAcordo.desconto.toFixed(1)}%</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Parcelas</Label>
+                  <p>{selectedAcordo.parcelas}x de {formatCurrency(selectedAcordo.valor_parcela)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">Data do Acordo</Label>
+                  <p>{formatDate(selectedAcordo.data_acordo)}</p>
+                </div>
+                <div>
+                  <Label className="text-muted-foreground">1ª Parcela</Label>
+                  <p>{formatDate(selectedAcordo.data_vencimento_primeira_parcela)}</p>
                 </div>
               </div>
-
-              <div>
-                <Label className="text-sm font-medium">Parcelamento</Label>
-                <p className="text-sm">{selectedAcordo.parcelas}x de {formatCurrency(selectedAcordo.valor_parcela)}</p>
-              </div>
-
               {selectedAcordo.observacoes && (
                 <div>
-                  <Label className="text-sm font-medium">Observações</Label>
-                  <p className="text-sm text-muted-foreground">{selectedAcordo.observacoes}</p>
+                  <Label className="text-muted-foreground">Observações</Label>
+                  <p>{selectedAcordo.observacoes}</p>
                 </div>
               )}
             </div>
@@ -857,7 +780,7 @@ export default function Acordos() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Modal */}
+      {/* Modal Delete */}
       <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -866,17 +789,11 @@ export default function Acordos() {
               Tem certeza que deseja excluir este acordo? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => setIsDeleteModalOpen(false)}
-            >
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
               Cancelar
             </Button>
-            <Button
-              variant="destructive"
-              onClick={handleDeleteAcordo}
-            >
+            <Button variant="destructive" onClick={handleDeleteAcordo}>
               Excluir
             </Button>
           </DialogFooter>

@@ -8,7 +8,7 @@ import { DatePickerWithRange } from '@/components/ui/date-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
-import { exportToCSV, exportToExcel, exportToPDF, formatCurrency as formatCurrencyUtil } from '@/utils/export';
+import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
 
 interface ReportData {
   totalTitulos: number;
@@ -44,8 +44,8 @@ export default function Relatorios() {
     try {
       setLoading(true);
 
-      // Buscar títulos com clientes
-      let titulosQuery = supabase.from('titulos').select('*, cliente:clientes(nome, cpf_cnpj)');
+      // Buscar títulos da view consolidada
+      let titulosQuery = supabase.from('vw_titulos_completos').select('*');
       let acordosQuery = supabase.from('acordos').select('*, cliente:clientes(nome, cpf_cnpj)');
 
       if (dateRange?.from && dateRange?.to) {
@@ -69,9 +69,9 @@ export default function Relatorios() {
       const titulos = titulosResult.data || [];
       const acordos = acordosResult.data || [];
 
-      // Calcular métricas
+      // Calcular métricas usando valor_original
       const totalTitulos = titulos.length;
-      const totalValor = titulos.reduce((sum, titulo) => sum + Number(titulo.valor), 0);
+      const totalValor = titulos.reduce((sum, titulo) => sum + Number(titulo.valor_original || 0), 0);
       const totalAcordos = acordos.length;
       const valorAcordos = acordos.reduce((sum, acordo) => sum + Number(acordo.valor_acordo), 0);
 
@@ -80,16 +80,16 @@ export default function Relatorios() {
 
       // Títulos por status
       const statusCount = titulos.reduce((acc, titulo) => {
-        const status = titulo.status || 'em_aberto';
+        const status = titulo.status || 'ativo';
         acc[status] = (acc[status] || 0) + 1;
         return acc;
       }, {} as Record<string, number>);
 
       const statusLabels: Record<string, string> = {
-        'em_aberto': 'Em Aberto',
-        'pago': 'Pago',
-        'vencido': 'Vencido',
-        'acordo': 'Acordo'
+        'ativo': 'Ativo',
+        'quitado': 'Quitado',
+        'inadimplente': 'Inadimplente',
+        'sem_parcelas': 'Sem Parcelas'
       };
 
       const titulosPorStatus = Object.entries(statusCount).map(([status, count]) => ({
@@ -104,7 +104,7 @@ export default function Relatorios() {
         const monthYear = date.toISOString().slice(0, 7);
         
         const count = titulos.filter(titulo => 
-          titulo.created_at.startsWith(monthYear)
+          (titulo.created_at || '').startsWith(monthYear)
         ).length;
 
         return {
@@ -157,9 +157,9 @@ export default function Relatorios() {
     const fimMesAnterior = new Date(now.getFullYear(), now.getMonth(), 0);
 
     // Filtrar por mês atual
-    const titulosMesAtual = titulos.filter(t => new Date(t.created_at) >= inicioMesAtual);
+    const titulosMesAtual = titulos.filter(t => new Date(t.created_at || '') >= inicioMesAtual);
     const titulosMesAnterior = titulos.filter(t => {
-      const date = new Date(t.created_at);
+      const date = new Date(t.created_at || '');
       return date >= inicioMesAnterior && date <= fimMesAnterior;
     });
 
@@ -177,8 +177,8 @@ export default function Relatorios() {
     return {
       titulos: calcPercentChange(titulosMesAtual.length, titulosMesAnterior.length),
       valor: calcPercentChange(
-        titulosMesAtual.reduce((s, t) => s + Number(t.valor), 0),
-        titulosMesAnterior.reduce((s, t) => s + Number(t.valor), 0)
+        titulosMesAtual.reduce((s, t) => s + Number(t.valor_original || 0), 0),
+        titulosMesAnterior.reduce((s, t) => s + Number(t.valor_original || 0), 0)
       ),
       acordos: calcPercentChange(acordosMesAtual.length, acordosMesAnterior.length),
       valorAcordos: calcPercentChange(
@@ -209,19 +209,19 @@ export default function Relatorios() {
       const columns = [
         { header: 'Cliente', key: 'clienteNome' },
         { header: 'CPF/CNPJ', key: 'cpfCnpj' },
-        { header: 'Valor', key: 'valor' },
-        { header: 'Vencimento', key: 'vencimento' },
+        { header: 'Valor Original', key: 'valor' },
+        { header: 'Saldo Devedor', key: 'saldoDevedor' },
         { header: 'Status', key: 'status' },
         { header: 'Criado em', key: 'createdAt' }
       ];
 
       const data = reportData.rawTitulos.map(t => ({
-        clienteNome: t.cliente?.nome || 'N/A',
-        cpfCnpj: t.cliente?.cpf_cnpj || 'N/A',
-        valor: Number(t.valor),
-        vencimento: formatDate(t.vencimento),
-        status: t.status,
-        createdAt: formatDate(t.created_at)
+        clienteNome: t.cliente_nome || 'N/A',
+        cpfCnpj: t.cliente_cpf_cnpj || 'N/A',
+        valor: Number(t.valor_original || 0),
+        saldoDevedor: Number(t.saldo_devedor || 0),
+        status: t.status || 'ativo',
+        createdAt: formatDate(t.created_at || '')
       }));
 
       const options = {
