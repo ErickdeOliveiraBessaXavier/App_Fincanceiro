@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Eye, Edit, Trash2, ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Plus, Search, Eye, ChevronDown, ChevronRight, User } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { TituloConsolidado, Parcela, StatusUtils, FormatUtils, ParcelaUtils } from '@/utils/titulo';
+import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils } from '@/utils/titulo';
 import { StatusBadge } from '@/components/titulos/StatusBadge';
 import { useAuth } from '@/contexts/AuthContext';
+
+interface ClienteAgrupado {
+  id: string;
+  nome: string;
+  cpf_cnpj: string;
+  titulos: TituloConsolidado[];
+  totalSaldo: number;
+  totalOriginal: number;
+  qtdTitulos: number;
+  temInadimplente: boolean;
+}
 
 export default function Titulos() {
   const [titulos, setTitulos] = useState<TituloConsolidado[]>([]);
@@ -28,6 +39,7 @@ export default function Titulos() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTitulo, setSelectedTitulo] = useState<TituloConsolidado | null>(null);
   const [parcelasTitulo, setParcelasTitulo] = useState<Parcela[]>([]);
+  const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
   const [expandedTitulos, setExpandedTitulos] = useState<Set<string>>(new Set());
   const [clientes, setClientes] = useState<Array<{ id: string; nome: string; cpf_cnpj: string }>>([]);
   const { toast } = useToast();
@@ -39,6 +51,7 @@ export default function Titulos() {
     valor_original: 0,
     vencimento_original: new Date().toISOString().split('T')[0],
     descricao: '',
+    numero_documento: '',
     numero_parcelas: 1,
     intervalo_dias: 30
   });
@@ -93,7 +106,11 @@ export default function Titulos() {
         .order('numero_parcela');
 
       if (error) throw error;
-      setParcelasTitulo((data || []) as Parcela[]);
+      setParcelasTitulo(prev => {
+        // Merge parcelas, replacing existing ones for this titulo
+        const otherParcelas = prev.filter(p => p.titulo_id !== tituloId);
+        return [...otherParcelas, ...(data || []) as Parcela[]];
+      });
     } catch (error) {
       console.error('Erro ao carregar parcelas:', error);
     }
@@ -118,6 +135,7 @@ export default function Titulos() {
           valor_original: newTitulo.valor_original,
           vencimento_original: newTitulo.vencimento_original,
           descricao: newTitulo.descricao || null,
+          numero_documento: newTitulo.numero_documento || null,
           created_by: user.id
         })
         .select()
@@ -160,6 +178,7 @@ export default function Titulos() {
         valor_original: 0,
         vencimento_original: new Date().toISOString().split('T')[0],
         descricao: '',
+        numero_documento: '',
         numero_parcelas: 1,
         intervalo_dias: 30
       });
@@ -174,7 +193,19 @@ export default function Titulos() {
     }
   };
 
-  const toggleExpanded = (tituloId: string) => {
+  const toggleClienteExpanded = (clienteId: string) => {
+    setExpandedClientes(prev => {
+      const next = new Set(prev);
+      if (next.has(clienteId)) {
+        next.delete(clienteId);
+      } else {
+        next.add(clienteId);
+      }
+      return next;
+    });
+  };
+
+  const toggleTituloExpanded = (tituloId: string) => {
     setExpandedTitulos(prev => {
       const next = new Set(prev);
       if (next.has(tituloId)) {
@@ -193,12 +224,55 @@ export default function Titulos() {
     setIsDetailsModalOpen(true);
   };
 
-  // Filtrar títulos
-  const filteredTitulos = titulos.filter(titulo =>
-    (titulo.cliente_nome?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (titulo.cliente_cpf_cnpj || '').includes(searchTerm) ||
-    (titulo.numero_documento || '').includes(searchTerm)
-  );
+  // Agrupar títulos por cliente
+  const clientesAgrupados = useMemo((): ClienteAgrupado[] => {
+    const map = new Map<string, ClienteAgrupado>();
+    
+    for (const titulo of titulos) {
+      const clienteId = titulo.cliente_id;
+      if (!clienteId) continue;
+
+      if (!map.has(clienteId)) {
+        map.set(clienteId, {
+          id: clienteId,
+          nome: titulo.cliente_nome || '',
+          cpf_cnpj: titulo.cliente_cpf_cnpj || '',
+          titulos: [],
+          totalSaldo: 0,
+          totalOriginal: 0,
+          qtdTitulos: 0,
+          temInadimplente: false
+        });
+      }
+
+      const cliente = map.get(clienteId)!;
+      cliente.titulos.push(titulo);
+      cliente.totalSaldo += titulo.saldo_devedor || 0;
+      cliente.totalOriginal += titulo.valor_original || 0;
+      cliente.qtdTitulos++;
+      if (titulo.status === 'inadimplente') {
+        cliente.temInadimplente = true;
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) => b.totalSaldo - a.totalSaldo);
+  }, [titulos]);
+
+  // Filtrar clientes
+  const filteredClientes = useMemo(() => {
+    if (!searchTerm) return clientesAgrupados;
+    
+    const term = searchTerm.toLowerCase();
+    return clientesAgrupados.filter(cliente =>
+      cliente.nome.toLowerCase().includes(term) ||
+      cliente.cpf_cnpj.includes(searchTerm) ||
+      cliente.titulos.some(t => 
+        (t.numero_documento || '').toLowerCase().includes(term)
+      )
+    );
+  }, [clientesAgrupados, searchTerm]);
+
+  const totalTitulos = titulos.length;
 
   if (loading) {
     return (
@@ -225,13 +299,13 @@ export default function Titulos() {
         <CardHeader>
           <CardTitle>Lista de Títulos</CardTitle>
           <CardDescription>
-            Total de {filteredTitulos.length} títulos
+            {filteredClientes.length} clientes, {totalTitulos} títulos
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Buscar por cliente, CPF/CNPJ ou documento..."
                 value={searchTerm}
@@ -245,109 +319,178 @@ export default function Titulos() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead></TableHead>
-                  <TableHead>Cliente</TableHead>
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead>Cliente / Título</TableHead>
                   <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead className="hidden lg:table-cell">Parcelas</TableHead>
+                  <TableHead>Saldo</TableHead>
+                  <TableHead className="hidden lg:table-cell">Títulos</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredTitulos.map((titulo) => (
-                  <React.Fragment key={titulo.id}>
-                    <TableRow>
+                {filteredClientes.map((cliente) => (
+                  <React.Fragment key={cliente.id}>
+                    {/* Linha do Cliente */}
+                    <TableRow className="bg-muted/30 hover:bg-muted/50">
                       <TableCell>
-                        {(titulo.quantidade_parcelas || 0) > 1 && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => toggleExpanded(titulo.id)}
-                            className="h-6 w-6 p-0"
-                          >
-                            {expandedTitulos.has(titulo.id) ? (
-                              <ChevronDown className="h-4 w-4" />
-                            ) : (
-                              <ChevronRight className="h-4 w-4" />
-                            )}
-                          </Button>
-                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleClienteExpanded(cliente.id)}
+                          className="h-6 w-6 p-0"
+                        >
+                          {expandedClientes.has(cliente.id) ? (
+                            <ChevronDown className="h-4 w-4" />
+                          ) : (
+                            <ChevronRight className="h-4 w-4" />
+                          )}
+                        </Button>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <div className="font-medium">{titulo.cliente_nome}</div>
-                          <div className="text-xs text-muted-foreground md:hidden">
-                            {titulo.cliente_cpf_cnpj}
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-muted-foreground" />
+                          <div>
+                            <div className="font-medium">{cliente.nome}</div>
+                            <div className="text-xs text-muted-foreground md:hidden">
+                              {cliente.cpf_cnpj}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden md:table-cell">
-                        {titulo.cliente_cpf_cnpj}
+                        {cliente.cpf_cnpj}
                       </TableCell>
                       <TableCell>
                         <div>
-                          <div className="font-medium">{FormatUtils.currency(titulo.saldo_devedor || 0)}</div>
+                          <div className="font-medium">{FormatUtils.currency(cliente.totalSaldo)}</div>
                           <div className="text-xs text-muted-foreground">
-                            de {FormatUtils.currency(titulo.valor_original || 0)}
+                            de {FormatUtils.currency(cliente.totalOriginal)}
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="hidden lg:table-cell">
-                        <div className="text-sm">
-                          {titulo.parcelas_pagas || 0}/{titulo.quantidade_parcelas || 1} pagas
-                        </div>
+                        <Badge variant="outline">{cliente.qtdTitulos} título(s)</Badge>
                       </TableCell>
                       <TableCell>
-                        <StatusBadge status={titulo.status || 'ativo'} />
+                        {cliente.temInadimplente ? (
+                          <StatusBadge status="inadimplente" />
+                        ) : (
+                          <StatusBadge status="ativo" />
+                        )}
                       </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => openDetails(titulo)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      <TableCell></TableCell>
                     </TableRow>
-                    {/* Parcelas expandidas */}
-                    {expandedTitulos.has(titulo.id) && parcelasTitulo
-                      .filter(p => p.titulo_id === titulo.id)
-                      .map((parcela) => (
-                        <TableRow key={parcela.id} className="bg-muted/30">
-                          <TableCell></TableCell>
-                          <TableCell colSpan={2} className="pl-8">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm">↳ Parcela {parcela.numero_parcela}</span>
-                              <Badge variant="outline" className="text-xs">
-                                Venc: {FormatUtils.date(parcela.vencimento)}
-                              </Badge>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="text-sm">
-                              {FormatUtils.currency(parcela.saldo_atual || 0)}
-                            </div>
-                          </TableCell>
-                          <TableCell className="hidden lg:table-cell">
-                            {parcela.total_pago > 0 && (
-                              <span className="text-xs text-green-600">
-                                Pago: {FormatUtils.currency(parcela.total_pago)}
-                              </span>
+
+                    {/* Títulos do Cliente (expandidos) */}
+                    {expandedClientes.has(cliente.id) && cliente.titulos.map((titulo) => (
+                      <React.Fragment key={titulo.id}>
+                        <TableRow className="hover:bg-accent/50">
+                          <TableCell className="pl-8">
+                            {(titulo.quantidade_parcelas || 0) > 1 && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => toggleTituloExpanded(titulo.id)}
+                                className="h-6 w-6 p-0"
+                              >
+                                {expandedTitulos.has(titulo.id) ? (
+                                  <ChevronDown className="h-4 w-4" />
+                                ) : (
+                                  <ChevronRight className="h-4 w-4" />
+                                )}
+                              </Button>
                             )}
                           </TableCell>
                           <TableCell>
-                            <StatusBadge status={parcela.status || 'pendente'} />
+                            <div className="pl-4">
+                              <div className="flex items-center gap-2">
+                                {titulo.numero_documento && (
+                                  <span className="font-mono text-xs text-muted-foreground">
+                                    #{titulo.numero_documento}
+                                  </span>
+                                )}
+                                <span className="text-sm">
+                                  {titulo.descricao || 'Título'}
+                                </span>
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                Venc: {FormatUtils.date(titulo.vencimento_original || '')}
+                                {(titulo.quantidade_parcelas || 1) > 1 && (
+                                  <span className="ml-2">
+                                    ({titulo.parcelas_pagas || 0}/{titulo.quantidade_parcelas} parcelas pagas)
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </TableCell>
-                          <TableCell></TableCell>
+                          <TableCell className="hidden md:table-cell"></TableCell>
+                          <TableCell>
+                            <div>
+                              <div className="font-medium">{FormatUtils.currency(titulo.saldo_devedor || 0)}</div>
+                              <div className="text-xs text-muted-foreground">
+                                de {FormatUtils.currency(titulo.valor_original || 0)}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="hidden lg:table-cell">
+                            <div className="text-sm">
+                              {titulo.parcelas_pagas || 0}/{titulo.quantidade_parcelas || 1}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <StatusBadge status={titulo.status || 'ativo'} />
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => openDetails(titulo)}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                         </TableRow>
-                      ))}
+
+                        {/* Parcelas do Título (expandidas) */}
+                        {expandedTitulos.has(titulo.id) && parcelasTitulo
+                          .filter(p => p.titulo_id === titulo.id)
+                          .map((parcela) => (
+                            <TableRow key={parcela.id} className="bg-muted/20">
+                              <TableCell></TableCell>
+                              <TableCell className="pl-12">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-sm text-muted-foreground">↳</span>
+                                  <span className="text-sm">Parcela {parcela.numero_parcela}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    Venc: {FormatUtils.date(parcela.vencimento)}
+                                  </Badge>
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell"></TableCell>
+                              <TableCell>
+                                <div className="text-sm">
+                                  {FormatUtils.currency(parcela.saldo_atual || 0)}
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell">
+                                {parcela.total_pago > 0 && (
+                                  <span className="text-xs text-primary">
+                                    Pago: {FormatUtils.currency(parcela.total_pago)}
+                                  </span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <StatusBadge status={parcela.status || 'pendente'} />
+                              </TableCell>
+                              <TableCell></TableCell>
+                            </TableRow>
+                          ))}
+                      </React.Fragment>
+                    ))}
                   </React.Fragment>
                 ))}
-                {filteredTitulos.length === 0 && (
+                {filteredClientes.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhum título encontrado
@@ -382,6 +525,14 @@ export default function Titulos() {
                   <option key={c.id} value={c.id}>{c.nome} - {c.cpf_cnpj}</option>
                 ))}
               </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Número do Documento (opcional)</Label>
+              <Input
+                placeholder="Ex: NF-12345"
+                value={newTitulo.numero_documento}
+                onChange={(e) => setNewTitulo(prev => ({ ...prev, numero_documento: e.target.value }))}
+              />
             </div>
             <div className="space-y-2">
               <Label>Valor Total</Label>
