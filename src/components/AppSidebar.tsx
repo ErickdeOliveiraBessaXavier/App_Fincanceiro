@@ -52,19 +52,19 @@ export const AppSidebar = memo(() => {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0">
+    <Sidebar collapsible="icon" className="border-r-0 bg-sidebar">
       <SidebarHeader className="p-4">
         <div className={cn(
           "flex items-center gap-3 transition-all duration-200",
           isCollapsed && "justify-center"
         )}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-sidebar-foreground shadow-lg backdrop-blur-sm">
             <Sparkles className="h-5 w-5" />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
-              <span className="font-bold text-foreground">CobrançaPro</span>
-              <span className="text-xs text-muted-foreground">Sistema de Gestão</span>
+              <span className="font-bold text-sidebar-foreground">CobrançaPro</span>
+              <span className="text-xs text-sidebar-foreground/70">Sistema de Gestão</span>
             </div>
           )}
         </div>
@@ -85,14 +85,14 @@ export const AppSidebar = memo(() => {
                         className={cn(
                           "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
                           active 
-                            ? "bg-primary text-primary-foreground shadow-md" 
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                            ? "bg-white/20 text-sidebar-foreground shadow-md backdrop-blur-sm" 
+                            : "text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground",
                           isCollapsed && "justify-center px-2"
                         )}
                       >
                         <item.icon className={cn(
                           "h-5 w-5 shrink-0",
-                          active && "text-primary-foreground"
+                          active && "text-sidebar-foreground"
                         )} />
                         {!isCollapsed && <span>{item.title}</span>}
                       </NavLink>
@@ -106,7 +106,7 @@ export const AppSidebar = memo(() => {
 
         {/* Pro Card - Only show when expanded */}
         {!isCollapsed && (
-          <div className="mt-6 mx-1 p-4 rounded-2xl bg-gradient-to-br from-primary to-primary/80 text-primary-foreground">
+          <div className="mt-6 mx-1 p-4 rounded-2xl bg-white/10 backdrop-blur-sm text-sidebar-foreground">
             <div className="flex items-center gap-2 mb-2">
               <Sparkles className="h-4 w-4" />
               <span className="text-xs font-semibold uppercase tracking-wide opacity-90">Pro</span>
@@ -116,7 +116,7 @@ export const AppSidebar = memo(() => {
             <Button 
               size="sm" 
               variant="secondary"
-              className="w-full bg-white/20 hover:bg-white/30 text-white border-0 backdrop-blur-sm"
+              className="w-full bg-accent hover:bg-accent/90 text-accent-foreground border-0"
             >
               Atualizar Agora
             </Button>
@@ -132,7 +132,7 @@ export const AppSidebar = memo(() => {
                 variant="ghost" 
                 onClick={signOut}
                 className={cn(
-                  "w-full justify-start gap-3 rounded-xl text-muted-foreground hover:bg-destructive/10 hover:text-destructive",
+                  "w-full justify-start gap-3 rounded-xl text-sidebar-foreground/70 hover:bg-white/10 hover:text-sidebar-foreground",
                   isCollapsed && "justify-center px-2"
                 )}
               >
