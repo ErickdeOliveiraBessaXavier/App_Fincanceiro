@@ -527,12 +527,15 @@ export default function Titulos() {
               </select>
             </div>
             <div className="space-y-2">
-              <Label>Número do Documento (opcional)</Label>
+              <Label>Código do Documento</Label>
               <Input
-                placeholder="Ex: NF-12345"
+                placeholder="Deixe vazio para gerar automático (TIT-00001)"
                 value={newTitulo.numero_documento}
                 onChange={(e) => setNewTitulo(prev => ({ ...prev, numero_documento: e.target.value }))}
               />
+              <p className="text-xs text-muted-foreground">
+                Se não informado, será gerado automaticamente (TIT-XXXXX)
+              </p>
             </div>
             <div className="space-y-2">
               <Label>Valor Total</Label>
