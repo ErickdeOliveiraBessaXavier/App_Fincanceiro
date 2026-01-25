@@ -33,7 +33,7 @@ export const Layout = memo(({ children }: LayoutProps) => {
         <AppSidebar />
         
         {/* Main content area with inset effect */}
-        <div className="flex-1 flex flex-col sm:m-3 sm:ml-0 sm:rounded-3xl bg-background overflow-hidden">
+        <div className="flex-1 flex flex-col sm:m-3 sm:ml-0 sm:rounded-3xl bg-background overflow-hidden animate-scale-in">
           <header className="shrink-0 h-16 flex items-center justify-between bg-card/80 backdrop-blur-md px-4 sm:px-6 border-b border-border/50">
             <div className="flex items-center gap-4">
               <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted" />
