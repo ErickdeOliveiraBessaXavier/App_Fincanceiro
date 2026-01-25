@@ -1006,18 +1006,7 @@ export default function Clientes() {
                       </div>
                     </div>
                     
-                    <div className="flex gap-2 justify-end mt-3 pt-3 border-t">
-                      <Button 
-                        variant="default" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/telecobranca/${cliente.id}`);
-                        }}
-                      >
-                        <Phone className="h-3 w-3 mr-1" />
-                        Telecobrança
-                      </Button>
+                    <div className="flex justify-end mt-3 pt-3 border-t">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -1027,6 +1016,10 @@ export default function Clientes() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>{cliente.nome}</DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => navigate(`/telecobranca/${cliente.id}`)}>
+                            <Phone className="h-4 w-4 mr-2" />
+                            Telecobrança
+                          </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => {
                             setSelectedCliente(cliente);
                             setIsDetailsModalOpen(true);
@@ -1132,64 +1125,58 @@ export default function Clientes() {
                         <TableCell>{cliente.total_titulos}</TableCell>
                         <TableCell>{formatCurrency(cliente.total_valor || 0)}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2 items-center">
-                            <Button 
-                              variant="default" 
-                              size="sm"
-                              onClick={() => navigate(`/telecobranca/${cliente.id}`)}
-                            >
-                              <Phone className="h-4 w-4 mr-1" />
-                              Telecobrança
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>{cliente.nome}</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem onClick={() => {
-                                  setSelectedCliente(cliente);
-                                  setIsDetailsModalOpen(true);
-                                }}>
-                                  <Eye className="h-4 w-4 mr-2" />
-                                  Ver Detalhes
-                                </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => {
-                                  setEditingCliente({
-                                    id: cliente.id,
-                                    nome: cliente.nome,
-                                    cpf_cnpj: cliente.cpf_cnpj,
-                                    telefone: cliente.telefone || '',
-                                    email: cliente.email || '',
-                                    endereco_completo: cliente.endereco_completo || '',
-                                    cep: cliente.cep || '',
-                                    cidade: cliente.cidade || '',
-                                    estado: cliente.estado || '',
-                                    observacoes: cliente.observacoes || '',
-                                    status: cliente.status
-                                  });
-                                  setIsEditModalOpen(true);
-                                }}>
-                                  <Edit className="h-4 w-4 mr-2" />
-                                  Editar
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => {
-                                    setClienteToDelete(cliente);
-                                    setIsDeleteModalOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <MoreHorizontal className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>{cliente.nome}</DropdownMenuLabel>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem onClick={() => navigate(`/telecobranca/${cliente.id}`)}>
+                                <Phone className="h-4 w-4 mr-2" />
+                                Telecobrança
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setSelectedCliente(cliente);
+                                setIsDetailsModalOpen(true);
+                              }}>
+                                <Eye className="h-4 w-4 mr-2" />
+                                Ver Detalhes
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => {
+                                setEditingCliente({
+                                  id: cliente.id,
+                                  nome: cliente.nome,
+                                  cpf_cnpj: cliente.cpf_cnpj,
+                                  telefone: cliente.telefone || '',
+                                  email: cliente.email || '',
+                                  endereco_completo: cliente.endereco_completo || '',
+                                  cep: cliente.cep || '',
+                                  cidade: cliente.cidade || '',
+                                  estado: cliente.estado || '',
+                                  observacoes: cliente.observacoes || '',
+                                  status: cliente.status
+                                });
+                                setIsEditModalOpen(true);
+                              }}>
+                                <Edit className="h-4 w-4 mr-2" />
+                                Editar
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem 
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => {
+                                  setClienteToDelete(cliente);
+                                  setIsDeleteModalOpen(true);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4 mr-2" />
+                                Excluir
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                       </TableRow>
                     ))}
