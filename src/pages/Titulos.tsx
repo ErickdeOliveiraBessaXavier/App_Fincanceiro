@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, Phone } from 'lucide-react';
+import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
+import { GlobalFilter } from '@/components/GlobalFilter';
+import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { titulosFilterConfig } from '@/constants/filterConfigs';
+import { titulosPresets } from '@/constants/filterPresets';
+import { createClienteAgrupadoFilterFunctions } from '@/utils/filterFunctions';
 import {
   Dialog,
   DialogContent,
@@ -49,7 +54,6 @@ export default function Titulos() {
   const navigate = useNavigate();
   const [titulos, setTitulos] = useState<TituloConsolidado[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -352,19 +356,21 @@ export default function Titulos() {
     return Array.from(map.values()).sort((a, b) => b.totalSaldo - a.totalSaldo);
   }, [titulos]);
 
-  // Filtrar clientes
-  const filteredClientes = useMemo(() => {
-    if (!searchTerm) return clientesAgrupados;
-    
-    const term = searchTerm.toLowerCase();
-    return clientesAgrupados.filter(cliente =>
-      cliente.nome.toLowerCase().includes(term) ||
-      cliente.cpf_cnpj.includes(searchTerm) ||
-      cliente.titulos.some(t => 
-        (t.numero_documento || '').toLowerCase().includes(term)
-      )
-    );
-  }, [clientesAgrupados, searchTerm]);
+  // Filter functions for titulos
+  const filterFunctions = useMemo(() => createClienteAgrupadoFilterFunctions(), []);
+
+  const {
+    filteredData: filteredClientes,
+    filters,
+    setFilter,
+    setFilters,
+    clearFilter,
+    clearAllFilters,
+    hasActiveFilters,
+    activeFiltersCount,
+    resultCount,
+    totalCount
+  } = useGlobalFilter(clientesAgrupados, filterFunctions);
 
   const totalTitulos = titulos.length;
 
@@ -468,17 +474,21 @@ export default function Titulos() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Buscar por cliente, CPF/CNPJ ou documento..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+          <GlobalFilter
+            configs={titulosFilterConfig}
+            filters={filters}
+            onFilterChange={setFilter}
+            onClearFilter={clearFilter}
+            onClearAll={clearAllFilters}
+            hasActiveFilters={hasActiveFilters}
+            activeFiltersCount={activeFiltersCount}
+            resultCount={resultCount}
+            totalCount={totalCount}
+            presets={titulosPresets}
+            onPresetSelect={(preset) => setFilters(preset.filters)}
+            collapsible={true}
+            defaultOpen={false}
+          />
 
           <div className="rounded-md border overflow-x-auto">
             <Table>
