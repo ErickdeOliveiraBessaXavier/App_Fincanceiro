@@ -54,8 +54,8 @@
     /* Radius - More rounded for modern look */
     --radius: 0.75rem;
 
-    /* Sidebar - Solid violet background */
-    --sidebar-background: 262 60% 50%;
+    /* Sidebar - Solid violet background (exact match) */
+    --sidebar-background: 262 83% 58%;
     --sidebar-foreground: 0 0% 100%;
     --sidebar-primary: 0 0% 100%;
     --sidebar-primary-foreground: 262 60% 50%;
