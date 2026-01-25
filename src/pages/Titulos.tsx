@@ -372,6 +372,39 @@ export default function Titulos() {
     totalCount
   } = useGlobalFilter(clientesAgrupados, filterFunctions);
 
+  // Filtrar títulos dentro de cada cliente quando há busca ativa
+  const clientesComTitulosFiltrados = useMemo(() => {
+    const searchValue = filters.search?.toLowerCase().trim();
+    
+    if (!searchValue) {
+      return filteredClientes;
+    }
+
+    return filteredClientes.map(cliente => {
+      // Filtra os títulos que correspondem à busca
+      const titulosFiltrados = cliente.titulos.filter(titulo => {
+        // Match no numero_documento
+        if (titulo.numero_documento?.toLowerCase().includes(searchValue)) return true;
+        // Match no ID do título
+        if (titulo.id?.toLowerCase().includes(searchValue)) return true;
+        // Match na descrição
+        if (titulo.descricao?.toLowerCase().includes(searchValue)) return true;
+        return false;
+      });
+
+      // Se encontrou títulos específicos, mostra apenas eles
+      // Caso contrário, pode ser que o match foi no cliente (nome/CPF), então mostra todos
+      const clienteMatchesSearch = 
+        cliente.nome?.toLowerCase().includes(searchValue) ||
+        cliente.cpf_cnpj?.toLowerCase().includes(searchValue);
+
+      return {
+        ...cliente,
+        titulos: titulosFiltrados.length > 0 ? titulosFiltrados : (clienteMatchesSearch ? cliente.titulos : [])
+      };
+    }).filter(cliente => cliente.titulos.length > 0);
+  }, [filteredClientes, filters.search]);
+
   const totalTitulos = titulos.length;
 
   // Helper functions for actions
@@ -470,7 +503,7 @@ export default function Titulos() {
         <CardHeader>
           <CardTitle>Lista de Títulos</CardTitle>
           <CardDescription>
-            {filteredClientes.length} clientes, {totalTitulos} títulos
+            {clientesComTitulosFiltrados.length} clientes, {totalTitulos} títulos
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -504,7 +537,7 @@ export default function Titulos() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredClientes.map((cliente) => (
+                {clientesComTitulosFiltrados.map((cliente) => (
                   <React.Fragment key={cliente.id}>
                     {/* Linha do Cliente */}
                     <TableRow className="bg-muted/30 hover:bg-muted/50">
@@ -775,7 +808,7 @@ export default function Titulos() {
                     ))}
                   </React.Fragment>
                 ))}
-                {filteredClientes.length === 0 && (
+                {clientesComTitulosFiltrados.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                       Nenhum título encontrado
