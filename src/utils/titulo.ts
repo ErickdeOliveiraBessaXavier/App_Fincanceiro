@@ -1,8 +1,8 @@
 // Utilitários para a nova arquitetura Event Sourcing
 // A lógica principal agora está no banco de dados
 
-export type TituloStatus = 'ativo' | 'quitado' | 'inadimplente' | 'sem_parcelas';
-export type ParcelaStatus = 'pendente' | 'paga' | 'vencida';
+export type TituloStatus = 'pago' | 'pendente' | 'a_vencer' | 'vencido' | 'renegociado';
+export type ParcelaStatus = 'pago' | 'pendente' | 'a_vencer' | 'vencido' | 'renegociado';
 
 export interface Titulo {
   id: string;
@@ -68,26 +68,22 @@ export interface Parcela {
 export const StatusUtils = {
   getColor: (status: TituloStatus | ParcelaStatus | string): string => {
     switch (status) {
-      case 'pendente':
-      case 'ativo': return 'bg-yellow-100 text-yellow-800';
-      case 'paga':
-      case 'quitado': return 'bg-green-100 text-green-800';
-      case 'vencida':
-      case 'inadimplente': return 'bg-red-100 text-red-800';
-      case 'sem_parcelas': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pago': return 'bg-success/10 text-success';
+      case 'pendente': return 'bg-secondary text-secondary-foreground';
+      case 'a_vencer': return 'bg-warning/10 text-warning';
+      case 'vencido': return 'bg-destructive/10 text-destructive';
+      case 'renegociado': return 'bg-accent/10 text-accent';
+      default: return 'bg-secondary text-secondary-foreground';
     }
   },
 
   getLabel: (status: TituloStatus | ParcelaStatus | string): string => {
     const labels: Record<string, string> = {
-      'ativo': 'Ativo',
-      'quitado': 'Quitado',
-      'inadimplente': 'Inadimplente',
-      'sem_parcelas': 'Sem Parcelas',
+      'pago': 'Pago',
       'pendente': 'Pendente',
-      'paga': 'Paga',
-      'vencida': 'Vencida'
+      'a_vencer': 'A Vencer',
+      'vencido': 'Vencido',
+      'renegociado': 'Renegociado'
     };
     return labels[status] || status;
   }

@@ -49,7 +49,7 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
       let query = supabase
         .from('vw_titulos_completos')
         .select('*')
-        .in('status', ['ativo', 'inadimplente']);
+        .in('status', ['pendente', 'a_vencer', 'vencido', 'renegociado']);
 
       if (clienteIdFiltro) {
         query = query.eq('cliente_id', clienteIdFiltro);
@@ -71,7 +71,7 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
           .from('mv_parcelas_consolidadas')
           .select('*')
           .eq('titulo_id', titulo.id)
-          .in('status', ['pendente', 'vencida'])
+          .in('status', ['pendente', 'a_vencer', 'vencido', 'renegociado'])
           .order('numero_parcela');
 
         if (!parcelas || parcelas.length === 0) continue;

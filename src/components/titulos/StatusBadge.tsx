@@ -8,16 +8,15 @@ interface StatusBadgeProps {
 
 const getVariant = (status: string): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" | "accent" => {
   switch (status) {
-    case 'quitado':
-    case 'paga':
+    case 'pago':
       return 'success';
-    case 'inadimplente':
-    case 'vencida':
+    case 'vencido':
       return 'destructive';
-    case 'pendente':
+    case 'a_vencer':
       return 'warning';
-    case 'ativo':
-      return 'default';
+    case 'renegociado':
+      return 'accent';
+    case 'pendente':
     default:
       return 'secondary';
   }
