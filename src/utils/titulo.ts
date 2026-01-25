@@ -80,10 +80,16 @@ export const StatusUtils = {
   getLabel: (status: TituloStatus | ParcelaStatus | string): string => {
     const labels: Record<string, string> = {
       'pago': 'Pago',
+      'paga': 'Paga',
       'pendente': 'Pendente',
       'a_vencer': 'A Vencer',
       'vencido': 'Vencido',
-      'renegociado': 'Renegociado'
+      'vencida': 'Vencida',
+      'renegociado': 'Renegociado',
+      'inadimplente': 'Inadimplente',
+      'ativo': 'Ativo',
+      'quitado': 'Quitado',
+      'sem_parcelas': 'Sem Parcelas'
     };
     return labels[status] || status;
   }
