@@ -53,7 +53,7 @@ export const AppSidebar = memo(() => {
 
   return (
     <Sidebar collapsible="icon" className="border-r-0 bg-sidebar">
-      <SidebarHeader className={cn("p-4", isCollapsed && "p-3")}>
+      <SidebarHeader className={cn("p-4", isCollapsed && "p-2")}>
         <div className={cn(
           "flex items-center gap-3 transition-all duration-200",
           isCollapsed && "justify-center"
@@ -73,7 +73,7 @@ export const AppSidebar = memo(() => {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className={cn("px-3", isCollapsed && "px-2")}>
+      <SidebarContent className={cn("px-3", isCollapsed && "px-1")}>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
@@ -127,7 +127,7 @@ export const AppSidebar = memo(() => {
         )}
       </SidebarContent>
       
-      <SidebarFooter className={cn("p-3", isCollapsed && "p-2")}>
+      <SidebarFooter className={cn("p-3", isCollapsed && "p-1")}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
