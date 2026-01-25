@@ -73,10 +73,14 @@ export const AppSidebar = memo(() => {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className={cn("px-3", isCollapsed && "px-1")}>
-        <SidebarGroup>
+      {/*
+        IMPORTANT: When collapsed, the base SidebarGroup has p-2 and the provider width is 3rem.
+        Extra horizontal padding here can make the icon buttons overflow.
+      */}
+      <SidebarContent className={cn("px-3", isCollapsed && "px-0")}>
+        <SidebarGroup className={cn(isCollapsed && "!p-1")}>
           <SidebarGroupContent>
-            <SidebarMenu className="space-y-1">
+            <SidebarMenu className={cn("space-y-1", isCollapsed && "items-center")}> 
               {menuItems.map((item) => {
                 const active = isActive(item.url);
                 return (
