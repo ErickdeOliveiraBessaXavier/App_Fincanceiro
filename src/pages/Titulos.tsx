@@ -712,7 +712,10 @@ export default function Titulos() {
                               <TableCell className="pl-12">
                                 <div className="flex items-center gap-2">
                                   <span className="text-sm text-muted-foreground">↳</span>
-                                  <span className="text-sm">Parcela {parcela.numero_parcela}</span>
+                                  <span className="text-sm">Parcela #{parcela.numero_parcela}</span>
+                                  <span className="text-xs text-muted-foreground font-mono">
+                                    {FormatUtils.shortId(parcela.id)}
+                                  </span>
                                   <Badge variant="outline" className="text-xs">
                                     Venc: {FormatUtils.date(parcela.vencimento)}
                                   </Badge>
@@ -743,7 +746,12 @@ export default function Titulos() {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      <DropdownMenuLabel>Parcela {parcela.numero_parcela}</DropdownMenuLabel>
+                                      <DropdownMenuLabel>
+                                        Parcela #{parcela.numero_parcela}
+                                        <span className="font-mono text-muted-foreground ml-1 text-xs">
+                                          ({FormatUtils.shortId(parcela.id)})
+                                        </span>
+                                      </DropdownMenuLabel>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem onClick={() => openPagamentoModal(parcela)}>
                                         <DollarSign className="h-4 w-4 mr-2" />

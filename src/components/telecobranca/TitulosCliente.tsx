@@ -148,9 +148,14 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
                   const isVencida = parcela.status === 'vencida';
                   
                   return (
-                    <TableRow key={parcela.id}>
+                      <TableRow key={parcela.id}>
                       <TableCell>
-                        {parcela.numero_parcela}
+                        <div className="flex flex-col">
+                          <span>#{parcela.numero_parcela}</span>
+                          <span className="text-xs text-muted-foreground font-mono">
+                            {parcela.id.slice(-8)}
+                          </span>
+                        </div>
                       </TableCell>
                       <TableCell>
                         {format(new Date(parcela.vencimento), 'dd/MM/yyyy')}

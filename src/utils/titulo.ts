@@ -109,6 +109,15 @@ export const FormatUtils = {
 
   dateToInput: (date: string): string => {
     return new Date(date).toISOString().split('T')[0];
+  },
+
+  parcelaId: (id: string, numeroParcela: number): string => {
+    const shortId = id.slice(-8);
+    return `#${numeroParcela} - ${shortId}`;
+  },
+
+  shortId: (id: string): string => {
+    return id.slice(-8);
   }
 };
 
