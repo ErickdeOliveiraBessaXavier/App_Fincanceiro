@@ -659,7 +659,8 @@ export default function Titulos() {
                                   const firstParcela = parcelasTitulo.find(p => p.titulo_id === titulo.id && p.status !== 'pago');
                                   if (!firstParcela) {
                                     // If we haven't loaded parcelas yet, expand the titulo first
-                                    if (!expandedTitulos.has(titulo.id)) {
+                                    // Only show "Ver Parcelas" if titulo has more than 1 parcela
+                                    if (!expandedTitulos.has(titulo.id) && (titulo.quantidade_parcelas || 1) > 1) {
                                       return (
                                         <DropdownMenuItem onClick={() => toggleTituloExpanded(titulo.id)}>
                                           <DollarSign className="h-4 w-4 mr-2" />
