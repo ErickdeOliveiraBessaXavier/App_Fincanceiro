@@ -166,6 +166,30 @@ export default function Clientes() {
     }
   };
 
+  // Verifica se já existe um cliente com o mesmo CPF/CNPJ
+  const checkCpfCnpjExists = async (cpfCnpj: string, excludeId?: string): Promise<boolean> => {
+    const cleaned = cpfCnpj.replace(/\D/g, '');
+    
+    let query = supabase
+      .from('clientes')
+      .select('id')
+      .eq('cpf_cnpj', cleaned);
+    
+    // Se estiver editando, exclui o próprio cliente da verificação
+    if (excludeId) {
+      query = query.neq('id', excludeId);
+    }
+    
+    const { data, error } = await query.maybeSingle();
+    
+    if (error) {
+      console.error('Erro ao verificar CPF/CNPJ:', error);
+      return false;
+    }
+    
+    return data !== null;
+  };
+
   const validateForm = () => {
     const errors: FormErrors = {};
     let isValid = true;
@@ -207,6 +231,21 @@ export default function Clientes() {
       return;
     }
 
+    // Verifica se CPF/CNPJ já existe
+    const cpfCnpjExists = await checkCpfCnpjExists(newCliente.cpf_cnpj);
+    if (cpfCnpjExists) {
+      setFormErrors(prev => ({ 
+        ...prev, 
+        cpf_cnpj: 'Já existe um cliente cadastrado com este CPF/CNPJ' 
+      }));
+      toast({
+        title: "CPF/CNPJ Duplicado",
+        description: "Já existe um cliente cadastrado com este CPF/CNPJ.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
@@ -217,6 +256,7 @@ export default function Clientes() {
         .insert([
           { 
             ...newCliente,
+            cpf_cnpj: newCliente.cpf_cnpj.replace(/\D/g, ''), // Salva apenas números
             status: 'ativo',
             created_by: user.id
           }
@@ -293,12 +333,27 @@ export default function Clientes() {
       return;
     }
 
+    // Verifica se CPF/CNPJ já existe (excluindo o próprio cliente)
+    const cpfCnpjExists = await checkCpfCnpjExists(editingCliente.cpf_cnpj, editingCliente.id);
+    if (cpfCnpjExists) {
+      setFormErrors(prev => ({ 
+        ...prev, 
+        cpf_cnpj: 'Já existe outro cliente cadastrado com este CPF/CNPJ' 
+      }));
+      toast({
+        title: "CPF/CNPJ Duplicado",
+        description: "Já existe outro cliente cadastrado com este CPF/CNPJ.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('clientes')
         .update({
           nome: editingCliente.nome,
-          cpf_cnpj: editingCliente.cpf_cnpj,
+          cpf_cnpj: editingCliente.cpf_cnpj.replace(/\D/g, ''), // Salva apenas números
           telefone: editingCliente.telefone,
           email: editingCliente.email,
           endereco_completo: editingCliente.endereco_completo,
