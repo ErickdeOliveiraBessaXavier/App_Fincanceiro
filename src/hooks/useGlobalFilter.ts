@@ -1,9 +1,9 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 
 export interface FilterConfig {
   id: string;
   label: string;
-  type: 'text' | 'select' | 'date' | 'number';
+  type: 'text' | 'select' | 'date' | 'number' | 'dateRange' | 'numberRange' | 'multiSelect';
   options?: Array<{ value: string; label: string; color?: string }>;
   placeholder?: string;
 }
@@ -16,17 +16,40 @@ export interface FilterValues {
   [key: string]: any;
 }
 
+export interface UseGlobalFilterOptions {
+  initialFilters?: FilterValues;
+}
+
+export interface UseGlobalFilterReturn<T> {
+  filteredData: T[];
+  filters: FilterValues;
+  setFilter: (key: string, value: any) => void;
+  setFilters: (filters: FilterValues) => void;
+  clearFilter: (key: string) => void;
+  clearAllFilters: () => void;
+  hasActiveFilters: boolean;
+  activeFiltersCount: number;
+  resultCount: number;
+  totalCount: number;
+}
+
 export function useGlobalFilter<T>(
   data: T[],
-  filterFunctions: FilterFunctions<T>
-) {
-  const [filters, setFilters] = useState<FilterValues>({});
+  filterFunctions: FilterFunctions<T>,
+  options?: UseGlobalFilterOptions
+): UseGlobalFilterReturn<T> {
+  const [filters, setFiltersState] = useState<FilterValues>(options?.initialFilters || {});
 
   const filteredData = useMemo(() => {
     return data.filter(item => {
       return Object.entries(filters).every(([key, value]) => {
         // Se o valor do filtro está vazio, não filtrar
-        if (!value || value === '' || value === null || value === undefined) {
+        if (value === '' || value === null || value === undefined) {
+          return true;
+        }
+        
+        // Para arrays vazios
+        if (Array.isArray(value) && value.length === 0) {
           return true;
         }
 
@@ -45,35 +68,49 @@ export function useGlobalFilter<T>(
     });
   }, [data, filters, filterFunctions]);
 
-  const setFilter = (key: string, value: any) => {
-    setFilters(prev => ({
+  const setFilter = useCallback((key: string, value: any) => {
+    setFiltersState(prev => ({
       ...prev,
       [key]: value
     }));
-  };
+  }, []);
 
-  const clearFilter = (key: string) => {
-    setFilters(prev => {
+  const setFilters = useCallback((newFilters: FilterValues) => {
+    setFiltersState(newFilters);
+  }, []);
+
+  const clearFilter = useCallback((key: string) => {
+    setFiltersState(prev => {
       const newFilters = { ...prev };
       delete newFilters[key];
       return newFilters;
     });
-  };
+  }, []);
 
-  const clearAllFilters = () => {
-    setFilters({});
-  };
+  const clearAllFilters = useCallback(() => {
+    setFiltersState({});
+  }, []);
 
-  const hasActiveFilters = Object.values(filters).some(value => 
-    value !== '' && value !== null && value !== undefined
-  );
+  const activeFiltersCount = useMemo(() => {
+    return Object.values(filters).filter(value => {
+      if (value === '' || value === null || value === undefined) return false;
+      if (Array.isArray(value) && value.length === 0) return false;
+      return true;
+    }).length;
+  }, [filters]);
+
+  const hasActiveFilters = activeFiltersCount > 0;
 
   return {
     filteredData,
     filters,
     setFilter,
+    setFilters,
     clearFilter,
     clearAllFilters,
-    hasActiveFilters
+    hasActiveFilters,
+    activeFiltersCount,
+    resultCount: filteredData.length,
+    totalCount: data.length
   };
 }

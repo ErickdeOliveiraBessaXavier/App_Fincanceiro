@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Plus, Search, Eye, Trash2, FileText } from 'lucide-react';
+import { Plus, Eye, Trash2, FileText } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,11 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
+import { GlobalFilter } from '@/components/GlobalFilter';
+import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { acordosFilterConfig } from '@/constants/filterConfigs';
+import { acordosPresets } from '@/constants/filterPresets';
+import { createAcordosFilterFunctions } from '@/utils/filterFunctions';
 import {
   Dialog,
   DialogContent,
@@ -97,7 +102,6 @@ export default function Acordos() {
 
   const [acordos, setAcordos] = useState<Acordo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -444,11 +448,21 @@ export default function Acordos() {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
-  const filteredAcordos = acordos.filter(acordo =>
-    acordo.cliente?.nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    acordo.cliente?.cpf_cnpj?.includes(searchTerm) ||
-    acordo.observacoes?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter functions for acordos
+  const filterFunctions = useMemo(() => createAcordosFilterFunctions(), []);
+
+  const {
+    filteredData: filteredAcordos,
+    filters,
+    setFilter,
+    setFilters,
+    clearFilter,
+    clearAllFilters,
+    hasActiveFilters,
+    activeFiltersCount,
+    resultCount,
+    totalCount
+  } = useGlobalFilter(acordos, filterFunctions);
 
   if (loading) {
     return (
@@ -522,17 +536,21 @@ export default function Acordos() {
           <CardDescription>Total de {filteredAcordos.length} acordos</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Buscar por cliente..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+          <GlobalFilter
+            configs={acordosFilterConfig}
+            filters={filters}
+            onFilterChange={setFilter}
+            onClearFilter={clearFilter}
+            onClearAll={clearAllFilters}
+            hasActiveFilters={hasActiveFilters}
+            activeFiltersCount={activeFiltersCount}
+            resultCount={resultCount}
+            totalCount={totalCount}
+            presets={acordosPresets}
+            onPresetSelect={(preset) => setFilters(preset.filters)}
+            collapsible={true}
+            defaultOpen={false}
+          />
 
           <div className="rounded-md border overflow-x-auto">
             <Table>
