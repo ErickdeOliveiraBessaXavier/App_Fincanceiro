@@ -204,8 +204,25 @@ export const createCampanhasFilterFunctions = () => ({
 
 // For grouped data (like ClienteAgrupado)
 export const createClienteAgrupadoFilterFunctions = () => ({
-  search: (item: any, value: string) => 
-    commonFilterFunctions.search(item, value, ['nome', 'cpf_cnpj']),
+  search: (item: any, value: string) => {
+    if (!value || value.trim() === '') return true;
+    
+    const searchLower = value.toLowerCase().trim();
+    
+    // Busca no cliente
+    if (item.nome?.toLowerCase().includes(searchLower)) return true;
+    if (item.cpf_cnpj?.toLowerCase().includes(searchLower)) return true;
+    
+    // Busca nos títulos (numero_documento, descricao, id)
+    if (item.titulos?.some((t: any) => {
+      if (t.numero_documento?.toLowerCase().includes(searchLower)) return true;
+      if (t.descricao?.toLowerCase().includes(searchLower)) return true;
+      if (t.id?.toLowerCase().includes(searchLower)) return true;
+      return false;
+    })) return true;
+    
+    return false;
+  },
   status: (item: any, value: string) => {
     if (!value || value === '') return true;
     
