@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { User, Phone, Mail, MapPin, FileText } from 'lucide-react';
+import { Separator } from '@/components/ui/separator';
+import { User, Phone, Mail, MapPin, ExternalLink } from 'lucide-react';
 
 interface Cliente {
   id: string;
@@ -20,36 +20,6 @@ interface ClienteResumoProps {
 }
 
 export function ClienteResumo({ cliente }: ClienteResumoProps) {
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ativo': return 'bg-green-100 text-green-800';
-      case 'inadimplente': return 'bg-red-100 text-red-800';
-      case 'em_acordo': return 'bg-blue-100 text-blue-800';
-      case 'quitado': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'ativo': return 'Ativo';
-      case 'inadimplente': return 'Inadimplente';
-      case 'em_acordo': return 'Em Acordo';
-      case 'quitado': return 'Quitado';
-      default: return status;
-    }
-  };
-
-  const formatCpfCnpj = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length === 11) {
-      return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    } else if (cleaned.length === 14) {
-      return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    }
-    return value;
-  };
-
   const formatPhone = (phone?: string | null) => {
     if (!phone) return null;
     const cleaned = phone.replace(/\D/g, '');
@@ -63,73 +33,63 @@ export function ClienteResumo({ cliente }: ClienteResumoProps) {
 
   return (
     <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-full">
-              <User className="h-6 w-6 text-primary" />
-            </div>
-            <div>
-              <CardTitle className="text-lg">{cliente.nome}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {formatCpfCnpj(cliente.cpf_cnpj)}
-              </p>
-            </div>
-          </div>
-          <Badge className={getStatusColor(cliente.status)}>
-            {getStatusLabel(cliente.status)}
-          </Badge>
-        </div>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          Dados do Cliente
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <div className="grid gap-3">
+      <CardContent className="space-y-1 text-sm">
+        {/* Lista compacta de informações */}
+        <div className="space-y-1">
           {cliente.telefone && (
-            <div className="flex items-center gap-2 text-sm">
+            <a 
+              href={`tel:${cliente.telefone}`} 
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors group"
+            >
               <Phone className="h-4 w-4 text-muted-foreground" />
-              <a 
-                href={`tel:${cliente.telefone}`}
-                className="text-primary hover:underline"
-              >
-                {formatPhone(cliente.telefone)}
-              </a>
-            </div>
+              <span className="flex-1">{formatPhone(cliente.telefone)}</span>
+              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
           )}
           
           {cliente.email && (
-            <div className="flex items-center gap-2 text-sm">
+            <a 
+              href={`mailto:${cliente.email}`} 
+              className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors group"
+            >
               <Mail className="h-4 w-4 text-muted-foreground" />
-              <a 
-                href={`mailto:${cliente.email}`}
-                className="text-primary hover:underline"
-              >
-                {cliente.email}
-              </a>
-            </div>
+              <span className="flex-1 truncate">{cliente.email}</span>
+              <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+            </a>
           )}
           
           {(cliente.cidade || cliente.estado || cliente.endereco_completo) && (
-            <div className="flex items-start gap-2 text-sm">
-              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <div>
+            <div className="flex items-start gap-2 p-2">
+              <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+              <div className="min-w-0">
                 {cliente.endereco_completo && (
-                  <p>{cliente.endereco_completo}</p>
+                  <p className="truncate">{cliente.endereco_completo}</p>
                 )}
                 {(cliente.cidade || cliente.estado) && (
-                  <p className="text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {[cliente.cidade, cliente.estado].filter(Boolean).join(' - ')}
                   </p>
                 )}
               </div>
             </div>
           )}
-          
-          {cliente.observacoes && (
-            <div className="flex items-start gap-2 text-sm mt-2 pt-2 border-t">
-              <FileText className="h-4 w-4 text-muted-foreground mt-0.5" />
-              <p className="text-muted-foreground">{cliente.observacoes}</p>
-            </div>
-          )}
         </div>
+        
+        {cliente.observacoes && (
+          <>
+            <Separator className="my-2" />
+            <div className="p-2 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground mb-1">Observações</p>
+              <p className="text-sm leading-relaxed">{cliente.observacoes}</p>
+            </div>
+          </>
+        )}
       </CardContent>
     </Card>
   );
