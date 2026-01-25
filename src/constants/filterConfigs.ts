@@ -13,7 +13,6 @@ export const titulosFilterConfig: FilterConfig[] = [
     type: 'select', 
     options: [
       { value: 'pago', label: 'Pago', color: 'green' },
-      { value: 'pendente', label: 'Pendente', color: 'gray' },
       { value: 'a_vencer', label: 'A Vencer', color: 'yellow' },
       { value: 'vencido', label: 'Vencido', color: 'red' },
       { value: 'renegociado', label: 'Renegociado', color: 'purple' },

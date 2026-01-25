@@ -81,7 +81,6 @@ export const StatusUtils = {
     const labels: Record<string, string> = {
       'pago': 'Pago',
       'paga': 'Paga',
-      'pendente': 'Pendente',
       'a_vencer': 'A Vencer',
       'vencido': 'Vencido',
       'vencida': 'Vencida',
@@ -89,7 +88,8 @@ export const StatusUtils = {
       'inadimplente': 'Inadimplente',
       'ativo': 'Ativo',
       'quitado': 'Quitado',
-      'sem_parcelas': 'Sem Parcelas'
+      'sem_parcelas': 'Sem Parcelas',
+      'pendente': 'A Vencer' // Fallback para dados antigos
     };
     return labels[status] || status;
   }
