@@ -53,13 +53,16 @@ export const AppSidebar = memo(() => {
 
   return (
     <Sidebar collapsible="icon" className="border-r-0 bg-sidebar">
-      <SidebarHeader className="p-4">
+      <SidebarHeader className={cn("p-4", isCollapsed && "p-2")}>
         <div className={cn(
           "flex items-center gap-3 transition-all duration-200",
           isCollapsed && "justify-center"
         )}>
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/20 text-sidebar-foreground shadow-lg backdrop-blur-sm">
-            <Sparkles className="h-5 w-5" />
+          <div className={cn(
+            "flex items-center justify-center rounded-xl bg-white/20 text-sidebar-foreground shadow-lg backdrop-blur-sm",
+            isCollapsed ? "h-8 w-8" : "h-10 w-10"
+          )}>
+            <Sparkles className={cn(isCollapsed ? "h-4 w-4" : "h-5 w-5")} />
           </div>
           {!isCollapsed && (
             <div className="flex flex-col">
@@ -70,7 +73,7 @@ export const AppSidebar = memo(() => {
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3">
+      <SidebarContent className={cn("px-3", isCollapsed && "px-1")}>
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu className="space-y-1">
@@ -124,7 +127,7 @@ export const AppSidebar = memo(() => {
         )}
       </SidebarContent>
       
-      <SidebarFooter className="p-3">
+      <SidebarFooter className={cn("p-3", isCollapsed && "p-1")}>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
