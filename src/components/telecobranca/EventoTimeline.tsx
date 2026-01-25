@@ -8,7 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Filter, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useToast } from '@/hooks/use-toast';
+import { Filter, Clock, CheckCircle, XCircle, AlertCircle, MoreHorizontal } from 'lucide-react';
 
 interface Evento {
   id: string;
@@ -29,6 +31,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
   const [filtroTipo, setFiltroTipo] = useState<string>('todos');
+  const { toast } = useToast();
 
   useEffect(() => {
     fetchEventos();
@@ -48,7 +51,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           data_contato,
           created_at,
           created_by,
-          profiles:created_by (nome)
+          profiles!comunicacoes_created_by_fkey (nome)
         `)
         .eq('cliente_id', clienteId)
         .order('created_at', { ascending: false });
@@ -66,7 +69,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           status,
           created_at,
           created_by,
-          profiles:created_by (nome)
+          profiles!agendamentos_created_by_fkey (nome)
         `)
         .eq('cliente_id', clienteId)
         .order('data_agendamento', { ascending: false });
@@ -109,6 +112,34 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
       console.error('Erro ao carregar eventos:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (agendamentoId: string, novoStatus: string) => {
+    try {
+      const { error } = await supabase
+        .from('agendamentos')
+        .update({ 
+          status: novoStatus,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', agendamentoId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Sucesso",
+        description: `Agendamento ${novoStatus === 'concluido' ? 'concluído' : 'cancelado'} com sucesso`,
+      });
+      
+      fetchEventos();
+    } catch (error) {
+      console.error('Erro ao atualizar status:', error);
+      toast({
+        title: "Erro",
+        description: "Não foi possível atualizar o status do agendamento",
+        variant: "destructive",
+      });
     }
   };
 
@@ -225,7 +256,28 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
                           {evento.operador} - {format(new Date(evento.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                         </p>
                       </div>
-                      {evento.origem === 'agendamento' && getStatusIcon(evento.status)}
+                      <div className="flex items-center gap-1">
+                        {evento.origem === 'agendamento' && getStatusIcon(evento.status)}
+                        {evento.origem === 'agendamento' && evento.status === 'pendente' && (
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-6 w-6 p-0">
+                                <MoreHorizontal className="h-3 w-3" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(evento.id, 'concluido')}>
+                                <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                                Marcar como Concluído
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleUpdateStatus(evento.id, 'cancelado')}>
+                                <XCircle className="h-4 w-4 mr-2 text-destructive" />
+                                Cancelar Agendamento
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        )}
+                      </div>
                     </div>
                     
                     {evento.descricao && (
