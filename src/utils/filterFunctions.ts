@@ -208,8 +208,26 @@ export const createClienteAgrupadoFilterFunctions = () => ({
     commonFilterFunctions.search(item, value, ['nome', 'cpf_cnpj']),
   status: (item: any, value: string) => {
     if (!value || value === '') return true;
-    // Filter by titulo status - show client if has any titulo with that status
-    return item.titulos?.some((t: any) => t.status === value) ?? false;
+    
+    // Filtra clientes que tenham títulos com o status OU parcelas com o status
+    return item.titulos?.some((t: any) => {
+      // Verifica status do título
+      if (t.status === value) return true;
+      
+      // Verifica se tem parcelas com o status baseado nos contadores
+      switch (value) {
+        case 'pago':
+          return (t.parcelas_pagas || 0) > 0;
+        case 'a_vencer':
+          return (t.parcelas_pendentes || 0) > 0;
+        case 'vencido':
+          return (t.parcelas_vencidas || 0) > 0;
+        case 'renegociado':
+          return t.status === 'renegociado';
+        default:
+          return false;
+      }
+    }) ?? false;
   },
   vencimento_de: (item: any, value: string) => {
     if (!value) return true;
