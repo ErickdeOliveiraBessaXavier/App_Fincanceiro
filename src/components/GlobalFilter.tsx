@@ -191,80 +191,82 @@ export function GlobalFilter({
 
   if (!collapsible) {
     return (
-      <div className="p-4 border rounded-lg bg-card">
+      <div className="p-4 border rounded-lg bg-card mb-4">
         {filterContent}
       </div>
     );
   }
 
   return (
-    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-      <div className="border rounded-lg bg-card overflow-hidden">
-        <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 rounded-none"
-          >
-            <div className="flex items-center gap-2">
-              <Filter className="h-4 w-4" />
-              <span className="font-medium">Filtros</span>
-              {activeFiltersCount > 0 && (
-                <Badge variant="secondary" className="h-5 px-1.5 text-xs">
-                  {activeFiltersCount}
-                </Badge>
+    <div className="mb-4">
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <div className="border rounded-lg bg-card overflow-hidden">
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 rounded-none"
+            >
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4" />
+                <span className="font-medium">Filtros</span>
+                {activeFiltersCount > 0 && (
+                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                    {activeFiltersCount}
+                  </Badge>
+                )}
+              </div>
+              {isOpen ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
               )}
+            </Button>
+          </CollapsibleTrigger>
+          
+          <CollapsibleContent>
+            <div className="p-4 border-t">
+              {filterContent}
             </div>
-            {isOpen ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-        </CollapsibleTrigger>
-        
-        <CollapsibleContent>
-          <div className="p-4 border-t">
-            {filterContent}
-          </div>
-        </CollapsibleContent>
-      </div>
-
-      {/* Active Filter Badges (shown when collapsed) */}
-      {!isOpen && hasActiveFilters && (
-        <div className="flex flex-wrap gap-2 mt-2">
-          {Object.entries(filters).map(([key, value]) => {
-            if (!value || value === '') return null;
-            
-            const config = configs.find(c => c.id === key);
-            if (!config) return null;
-
-            let displayValue = value;
-            if (config.type === 'select') {
-              const option = config.options?.find(opt => opt.value === value);
-              displayValue = option?.label || value;
-            }
-
-            return (
-              <Badge key={key} variant="secondary" className="gap-1 pr-1">
-                <span className="text-xs">
-                  {config.label}: {displayValue}
-                </span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onClearFilter(key);
-                  }}
-                  className="h-4 w-4 p-0 hover:bg-transparent ml-1"
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              </Badge>
-            );
-          })}
+          </CollapsibleContent>
         </div>
-      )}
-    </Collapsible>
+
+        {/* Active Filter Badges (shown when collapsed) */}
+        {!isOpen && hasActiveFilters && (
+          <div className="flex flex-wrap gap-2 mt-2">
+            {Object.entries(filters).map(([key, value]) => {
+              if (!value || value === '') return null;
+              
+              const config = configs.find(c => c.id === key);
+              if (!config) return null;
+
+              let displayValue = value;
+              if (config.type === 'select') {
+                const option = config.options?.find(opt => opt.value === value);
+                displayValue = option?.label || value;
+              }
+
+              return (
+                <Badge key={key} variant="secondary" className="gap-1 pr-1">
+                  <span className="text-xs">
+                    {config.label}: {displayValue}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onClearFilter(key);
+                    }}
+                    className="h-4 w-4 p-0 hover:bg-transparent ml-1"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </Badge>
+              );
+            })}
+          </div>
+        )}
+      </Collapsible>
+    </div>
   );
 }
