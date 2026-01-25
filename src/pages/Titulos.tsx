@@ -344,7 +344,7 @@ export default function Titulos() {
       cliente.totalSaldo += titulo.saldo_devedor || 0;
       cliente.totalOriginal += titulo.valor_original || 0;
       cliente.qtdTitulos++;
-      if (titulo.status === 'inadimplente') {
+      if (titulo.status === 'vencido') {
         cliente.temInadimplente = true;
       }
     }
@@ -435,7 +435,7 @@ export default function Titulos() {
 
   // Get first pending parcela for a titulo
   const getFirstPendingParcela = (tituloId: string): Parcela | null => {
-    const parcelas = parcelasTitulo.filter(p => p.titulo_id === tituloId && p.status !== 'paga');
+    const parcelas = parcelasTitulo.filter(p => p.titulo_id === tituloId && p.status !== 'pago');
     return parcelas.length > 0 ? parcelas[0] : null;
   };
 
@@ -644,9 +644,9 @@ export default function Titulos() {
                                   <Eye className="h-4 w-4 mr-2" />
                                   Ver Detalhes
                                 </DropdownMenuItem>
-                                {titulo.status !== 'quitado' && (() => {
+                                {titulo.status !== 'pago' && (() => {
                                   // Fetch first pending parcela for this titulo
-                                  const firstParcela = parcelasTitulo.find(p => p.titulo_id === titulo.id && p.status !== 'paga');
+                                  const firstParcela = parcelasTitulo.find(p => p.titulo_id === titulo.id && p.status !== 'pago');
                                   if (!firstParcela) {
                                     // If we haven't loaded parcelas yet, expand the titulo first
                                     if (!expandedTitulos.has(titulo.id)) {
@@ -724,7 +724,7 @@ export default function Titulos() {
                                 <StatusBadge status={parcela.status || 'pendente'} />
                               </TableCell>
                               <TableCell>
-                                {parcela.status !== 'paga' && (
+                                {parcela.status !== 'pago' && (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                       <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
