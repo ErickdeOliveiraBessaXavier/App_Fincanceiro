@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2 } from 'lucide-react';
+import { Plus, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2, MoreHorizontal } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +22,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 
 // Atualize a interface Cliente para incluir todos os campos
@@ -1010,51 +1018,54 @@ export default function Clientes() {
                         <Phone className="h-3 w-3 mr-1" />
                         Telecobrança
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedCliente(cliente);
-                          setIsDetailsModalOpen(true);
-                        }}
-                      >
-                        <Eye className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingCliente({
-                            id: cliente.id,
-                            nome: cliente.nome,
-                            cpf_cnpj: cliente.cpf_cnpj,
-                            telefone: cliente.telefone || '',
-                            email: cliente.email || '',
-                            endereco_completo: cliente.endereco_completo || '',
-                            cep: cliente.cep || '',
-                            cidade: cliente.cidade || '',
-                            estado: cliente.estado || '',
-                            observacoes: cliente.observacoes || '',
-                            status: cliente.status
-                          });
-                          setIsEditModalOpen(true);
-                        }}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setClienteToDelete(cliente);
-                          setIsDeleteModalOpen(true);
-                        }}
-                      >
-                        <Trash2 className="h-3 w-3 text-destructive" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>{cliente.nome}</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => {
+                            setSelectedCliente(cliente);
+                            setIsDetailsModalOpen(true);
+                          }}>
+                            <Eye className="h-4 w-4 mr-2" />
+                            Ver Detalhes
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => {
+                            setEditingCliente({
+                              id: cliente.id,
+                              nome: cliente.nome,
+                              cpf_cnpj: cliente.cpf_cnpj,
+                              telefone: cliente.telefone || '',
+                              email: cliente.email || '',
+                              endereco_completo: cliente.endereco_completo || '',
+                              cep: cliente.cep || '',
+                              cidade: cliente.cidade || '',
+                              estado: cliente.estado || '',
+                              observacoes: cliente.observacoes || '',
+                              status: cliente.status
+                            });
+                            setIsEditModalOpen(true);
+                          }}>
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="text-destructive focus:text-destructive"
+                            onClick={() => {
+                              setClienteToDelete(cliente);
+                              setIsDeleteModalOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </Card>
                 ))}
@@ -1121,7 +1132,7 @@ export default function Clientes() {
                         <TableCell>{cliente.total_titulos}</TableCell>
                         <TableCell>{formatCurrency(cliente.total_valor || 0)}</TableCell>
                         <TableCell>
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 items-center">
                             <Button 
                               variant="default" 
                               size="sm"
@@ -1130,48 +1141,54 @@ export default function Clientes() {
                               <Phone className="h-4 w-4 mr-1" />
                               Telecobrança
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                setSelectedCliente(cliente);
-                                setIsDetailsModalOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                setEditingCliente({
-                                  id: cliente.id,
-                                  nome: cliente.nome,
-                                  cpf_cnpj: cliente.cpf_cnpj,
-                                  telefone: cliente.telefone || '',
-                                  email: cliente.email || '',
-                                  endereco_completo: cliente.endereco_completo || '',
-                                  cep: cliente.cep || '',
-                                  cidade: cliente.cidade || '',
-                                  estado: cliente.estado || '',
-                                  observacoes: cliente.observacoes || '',
-                                  status: cliente.status
-                                });
-                                setIsEditModalOpen(true);
-                              }}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="sm"
-                              onClick={() => {
-                                setClienteToDelete(cliente);
-                                setIsDeleteModalOpen(true);
-                              }}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>{cliente.nome}</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => {
+                                  setSelectedCliente(cliente);
+                                  setIsDetailsModalOpen(true);
+                                }}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Ver Detalhes
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => {
+                                  setEditingCliente({
+                                    id: cliente.id,
+                                    nome: cliente.nome,
+                                    cpf_cnpj: cliente.cpf_cnpj,
+                                    telefone: cliente.telefone || '',
+                                    email: cliente.email || '',
+                                    endereco_completo: cliente.endereco_completo || '',
+                                    cep: cliente.cep || '',
+                                    cidade: cliente.cidade || '',
+                                    estado: cliente.estado || '',
+                                    observacoes: cliente.observacoes || '',
+                                    status: cliente.status
+                                  });
+                                  setIsEditModalOpen(true);
+                                }}>
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Editar
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => {
+                                    setClienteToDelete(cliente);
+                                    setIsDeleteModalOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
                         </TableCell>
                       </TableRow>
