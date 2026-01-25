@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Plus, Search, Eye, ChevronDown, ChevronRight, User, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, Search, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -15,15 +16,28 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils } from '@/utils/titulo';
 import { StatusBadge } from '@/components/titulos/StatusBadge';
+import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
+import { AplicarEncargoModal } from '@/components/titulos/AplicarEncargoModal';
+import { ConcederDescontoModal } from '@/components/titulos/ConcederDescontoModal';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface ClienteAgrupado {
   id: string;
   nome: string;
   cpf_cnpj: string;
+  telefone: string | null;
+  email: string | null;
   titulos: TituloConsolidado[];
   totalSaldo: number;
   totalOriginal: number;
@@ -32,6 +46,7 @@ interface ClienteAgrupado {
 }
 
 export default function Titulos() {
+  const navigate = useNavigate();
   const [titulos, setTitulos] = useState<TituloConsolidado[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -46,6 +61,28 @@ export default function Titulos() {
   const [clientes, setClientes] = useState<Array<{ id: string; nome: string; cpf_cnpj: string }>>([]);
   const { toast } = useToast();
   const { user } = useAuth();
+
+  // Modal states for financial actions
+  const [pagamentoModal, setPagamentoModal] = useState<{
+    open: boolean;
+    parcelaId: string;
+    parcelaNumero: number;
+    saldoAtual: number;
+  }>({ open: false, parcelaId: '', parcelaNumero: 0, saldoAtual: 0 });
+
+  const [encargoModal, setEncargoModal] = useState<{
+    open: boolean;
+    parcelaId: string;
+    parcelaNumero: number;
+    saldoAtual: number;
+  }>({ open: false, parcelaId: '', parcelaNumero: 0, saldoAtual: 0 });
+
+  const [descontoModal, setDescontoModal] = useState<{
+    open: boolean;
+    parcelaId: string;
+    parcelaNumero: number;
+    saldoAtual: number;
+  }>({ open: false, parcelaId: '', parcelaNumero: 0, saldoAtual: 0 });
 
   // Form state para novo título
   const [newTitulo, setNewTitulo] = useState({
@@ -292,6 +329,8 @@ export default function Titulos() {
           id: clienteId,
           nome: titulo.cliente_nome || '',
           cpf_cnpj: titulo.cliente_cpf_cnpj || '',
+          telefone: titulo.cliente_telefone || null,
+          email: titulo.cliente_email || null,
           titulos: [],
           totalSaldo: 0,
           totalOriginal: 0,
@@ -328,6 +367,77 @@ export default function Titulos() {
   }, [clientesAgrupados, searchTerm]);
 
   const totalTitulos = titulos.length;
+
+  // Helper functions for actions
+  const handleRefreshData = async () => {
+    await supabase.rpc('refresh_mv_parcelas');
+    await fetchTitulos();
+    // Refresh parcelas for expanded titles
+    for (const tituloId of expandedTitulos) {
+      await fetchParcelasTitulo(tituloId);
+    }
+  };
+
+  const openWhatsApp = (telefone: string | null, nome: string) => {
+    if (!telefone) {
+      toast({
+        title: "Telefone não cadastrado",
+        description: "Este cliente não possui telefone cadastrado",
+        variant: "destructive",
+      });
+      return;
+    }
+    const numero = telefone.replace(/\D/g, '');
+    const mensagem = encodeURIComponent(`Olá ${nome}, entramos em contato referente ao seu débito.`);
+    window.open(`https://wa.me/55${numero}?text=${mensagem}`, '_blank');
+  };
+
+  const openEmail = (email: string | null, nome: string) => {
+    if (!email) {
+      toast({
+        title: "E-mail não cadastrado",
+        description: "Este cliente não possui e-mail cadastrado",
+        variant: "destructive",
+      });
+      return;
+    }
+    const assunto = encodeURIComponent('Cobrança - Títulos em aberto');
+    const corpo = encodeURIComponent(`Prezado(a) ${nome},\n\nEntramos em contato referente aos títulos em aberto.\n\nAtenciosamente.`);
+    window.open(`mailto:${email}?subject=${assunto}&body=${corpo}`, '_blank');
+  };
+
+  const openPagamentoModal = (parcela: Parcela) => {
+    setPagamentoModal({
+      open: true,
+      parcelaId: parcela.id,
+      parcelaNumero: parcela.numero_parcela,
+      saldoAtual: parcela.saldo_atual || 0
+    });
+  };
+
+  const openEncargoModal = (parcela: Parcela) => {
+    setEncargoModal({
+      open: true,
+      parcelaId: parcela.id,
+      parcelaNumero: parcela.numero_parcela,
+      saldoAtual: parcela.saldo_atual || 0
+    });
+  };
+
+  const openDescontoModal = (parcela: Parcela) => {
+    setDescontoModal({
+      open: true,
+      parcelaId: parcela.id,
+      parcelaNumero: parcela.numero_parcela,
+      saldoAtual: parcela.saldo_atual || 0
+    });
+  };
+
+  // Get first pending parcela for a titulo
+  const getFirstPendingParcela = (tituloId: string): Parcela | null => {
+    const parcelas = parcelasTitulo.filter(p => p.titulo_id === tituloId && p.status !== 'paga');
+    return parcelas.length > 0 ? parcelas[0] : null;
+  };
 
   if (loading) {
     return (
@@ -434,7 +544,31 @@ export default function Titulos() {
                           <StatusBadge status="ativo" />
                         )}
                       </TableCell>
-                      <TableCell></TableCell>
+                      <TableCell>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Ações do Cliente</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => navigate(`/telecobranca?cliente=${cliente.id}`)}>
+                              <Phone className="h-4 w-4 mr-2" />
+                              Telecobrança
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openWhatsApp(cliente.telefone, cliente.nome)}>
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              WhatsApp
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEmail(cliente.email, cliente.nome)}>
+                              <Mail className="h-4 w-4 mr-2" />
+                              E-mail
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
                     </TableRow>
 
                     {/* Títulos do Cliente (expandidos) */}
@@ -497,25 +631,64 @@ export default function Titulos() {
                             <StatusBadge status={titulo.status || 'ativo'} />
                           </TableCell>
                           <TableCell>
-                            <div className="flex gap-1">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => openDetails(titulo)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setTituloToDelete(titulo);
-                                  setIsDeleteModalOpen(true);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Ações do Título</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => openDetails(titulo)}>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  Ver Detalhes
+                                </DropdownMenuItem>
+                                {titulo.status !== 'quitado' && (() => {
+                                  // Fetch first pending parcela for this titulo
+                                  const firstParcela = parcelasTitulo.find(p => p.titulo_id === titulo.id && p.status !== 'paga');
+                                  if (!firstParcela) {
+                                    // If we haven't loaded parcelas yet, expand the titulo first
+                                    if (!expandedTitulos.has(titulo.id)) {
+                                      return (
+                                        <DropdownMenuItem onClick={() => toggleTituloExpanded(titulo.id)}>
+                                          <DollarSign className="h-4 w-4 mr-2" />
+                                          Ver Parcelas
+                                        </DropdownMenuItem>
+                                      );
+                                    }
+                                    return null;
+                                  }
+                                  return (
+                                    <>
+                                      <DropdownMenuItem onClick={() => openPagamentoModal(firstParcela)}>
+                                        <DollarSign className="h-4 w-4 mr-2" />
+                                        Registrar Pagamento
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openEncargoModal(firstParcela)}>
+                                        <Percent className="h-4 w-4 mr-2" />
+                                        Adicionar Encargo
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openDescontoModal(firstParcela)}>
+                                        <Tag className="h-4 w-4 mr-2" />
+                                        Conceder Desconto
+                                      </DropdownMenuItem>
+                                    </>
+                                  );
+                                })()}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem 
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => {
+                                    setTituloToDelete(titulo);
+                                    setIsDeleteModalOpen(true);
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                         </TableRow>
 
@@ -550,7 +723,33 @@ export default function Titulos() {
                               <TableCell>
                                 <StatusBadge status={parcela.status || 'pendente'} />
                               </TableCell>
-                              <TableCell></TableCell>
+                              <TableCell>
+                                {parcela.status !== 'paga' && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                      <DropdownMenuLabel>Parcela {parcela.numero_parcela}</DropdownMenuLabel>
+                                      <DropdownMenuSeparator />
+                                      <DropdownMenuItem onClick={() => openPagamentoModal(parcela)}>
+                                        <DollarSign className="h-4 w-4 mr-2" />
+                                        Registrar Pagamento
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openEncargoModal(parcela)}>
+                                        <Percent className="h-4 w-4 mr-2" />
+                                        Adicionar Encargo
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem onClick={() => openDescontoModal(parcela)}>
+                                        <Tag className="h-4 w-4 mr-2" />
+                                        Conceder Desconto
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+                              </TableCell>
                             </TableRow>
                           ))}
                       </React.Fragment>
@@ -649,9 +848,9 @@ export default function Titulos() {
               />
             </div>
             {newTitulo.numero_parcelas > 1 && newTitulo.valor_original > 0 && (
-              <div className="p-3 bg-blue-50 rounded-lg text-sm">
-                <p className="font-medium text-blue-800">Preview:</p>
-                <p className="text-blue-700">
+              <div className="p-3 bg-primary/10 rounded-lg text-sm">
+                <p className="font-medium text-primary">Preview:</p>
+                <p className="text-primary/80">
                   {newTitulo.numero_parcelas}x de {FormatUtils.currency(ParcelaUtils.calcularValor(newTitulo.valor_original, newTitulo.numero_parcelas))}
                 </p>
               </div>
@@ -691,11 +890,11 @@ export default function Titulos() {
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Saldo Devedor</Label>
-                  <p className="font-medium text-red-600">{FormatUtils.currency(selectedTitulo.saldo_devedor || 0)}</p>
+                  <p className="font-medium text-destructive">{FormatUtils.currency(selectedTitulo.saldo_devedor || 0)}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Total Pago</Label>
-                  <p className="font-medium text-green-600">{FormatUtils.currency(selectedTitulo.total_pago || 0)}</p>
+                  <p className="font-medium text-primary">{FormatUtils.currency(selectedTitulo.total_pago || 0)}</p>
                 </div>
                 <div>
                   <Label className="text-muted-foreground">Status</Label>
@@ -752,6 +951,34 @@ export default function Titulos() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Modals de Ações Financeiras */}
+      <RegistrarPagamentoModal
+        open={pagamentoModal.open}
+        onOpenChange={(open) => setPagamentoModal(prev => ({ ...prev, open }))}
+        parcelaId={pagamentoModal.parcelaId}
+        parcelaNumero={pagamentoModal.parcelaNumero}
+        saldoAtual={pagamentoModal.saldoAtual}
+        onSuccess={handleRefreshData}
+      />
+
+      <AplicarEncargoModal
+        open={encargoModal.open}
+        onOpenChange={(open) => setEncargoModal(prev => ({ ...prev, open }))}
+        parcelaId={encargoModal.parcelaId}
+        parcelaNumero={encargoModal.parcelaNumero}
+        saldoAtual={encargoModal.saldoAtual}
+        onSuccess={handleRefreshData}
+      />
+
+      <ConcederDescontoModal
+        open={descontoModal.open}
+        onOpenChange={(open) => setDescontoModal(prev => ({ ...prev, open }))}
+        parcelaId={descontoModal.parcelaId}
+        parcelaNumero={descontoModal.parcelaNumero}
+        saldoAtual={descontoModal.saldoAtual}
+        onSuccess={handleRefreshData}
+      />
     </div>
   );
 }
