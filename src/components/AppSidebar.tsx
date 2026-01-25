@@ -52,7 +52,7 @@ export const AppSidebar = memo(() => {
   };
 
   return (
-    <Sidebar collapsible="icon" className="border-r-0 bg-primary">
+    <Sidebar collapsible="icon" className="border-r-0">
       <SidebarHeader className={cn("p-4", isCollapsed && "p-2")}>
         <div className={cn(
           "flex items-center gap-3 transition-all duration-200",

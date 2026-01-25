@@ -29,7 +29,7 @@ export const Layout = memo(({ children }: LayoutProps) => {
 
   return (
     <SidebarProvider>
-      <div className="flex h-screen w-full overflow-hidden bg-background sm:bg-primary">
+      <div className="flex h-screen w-full overflow-hidden bg-background sm:bg-sidebar">
         <AppSidebar />
         
         {/* Main content area with inset effect */}
