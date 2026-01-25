@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search, Filter, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2 } from 'lucide-react';
+import { Plus, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,6 +9,11 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
+import { GlobalFilter } from '@/components/GlobalFilter';
+import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { clientesFilterConfig } from '@/constants/filterConfigs';
+import { clientesPresets } from '@/constants/filterPresets';
+import { createClientesFilterFunctions } from '@/utils/filterFunctions';
 import {
   Dialog,
   DialogContent,
@@ -64,8 +69,7 @@ export default function Clientes() {
   const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
   const [comunicacoes, setComunicacoes] = useState<Comunicacao[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('todos');
+  
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState({
     nome: '',
@@ -100,7 +104,7 @@ export default function Clientes() {
 
   useEffect(() => {
     fetchClientes();
-  }, [statusFilter]);
+  }, []);
 
   useEffect(() => {
     if (selectedCliente) {
@@ -121,9 +125,6 @@ export default function Clientes() {
           )
         `);
 
-      if (statusFilter !== 'todos') {
-        query = query.eq('status', statusFilter);
-      }
 
       const { data, error } = await query.order('created_at', { ascending: false });
 
@@ -409,12 +410,21 @@ export default function Clientes() {
     return new Date(date).toLocaleString('pt-BR');
   };
 
-  const filteredClientes = clientes.filter(cliente =>
-    cliente.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.cpf_cnpj.includes(searchTerm) ||
-    cliente.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    cliente.telefone?.includes(searchTerm)
-  );
+  // Filter functions for clientes
+  const filterFunctions = useMemo(() => createClientesFilterFunctions(), []);
+
+  const {
+    filteredData: filteredClientes,
+    filters,
+    setFilter,
+    setFilters,
+    clearFilter,
+    clearAllFilters,
+    hasActiveFilters,
+    activeFiltersCount,
+    resultCount,
+    totalCount
+  } = useGlobalFilter(clientes, filterFunctions);
 
   const statusCounts = {
     total: clientes.length,
@@ -874,28 +884,21 @@ export default function Clientes() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Buscar por nome, CPF/CNPJ, email..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border border-input rounded-md bg-background text-sm"
-                >
-                  <option value="todos">Todos os Status</option>
-                  <option value="ativo">Ativo</option>
-                  <option value="inadimplente">Inadimplente</option>
-                  <option value="em_acordo">Em Acordo</option>
-                  <option value="quitado">Quitado</option>
-                </select>
-              </div>
+              <GlobalFilter
+                configs={clientesFilterConfig}
+                filters={filters}
+                onFilterChange={setFilter}
+                onClearFilter={clearFilter}
+                onClearAll={clearAllFilters}
+                hasActiveFilters={hasActiveFilters}
+                activeFiltersCount={activeFiltersCount}
+                resultCount={resultCount}
+                totalCount={totalCount}
+                presets={clientesPresets}
+                onPresetSelect={(preset) => setFilters(preset.filters)}
+                collapsible={true}
+                defaultOpen={false}
+              />
 
               {/* Mobile Card View */}
               <div className="space-y-4">
@@ -1015,28 +1018,21 @@ export default function Clientes() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex gap-4 mb-6">
-                <div className="relative flex-1">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-                  <Input
-                    placeholder="Buscar por nome, CPF/CNPJ, email ou telefone..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  className="px-3 py-2 border border-input rounded-md bg-background"
-                >
-                  <option value="todos">Todos os Status</option>
-                  <option value="ativo">Ativo</option>
-                  <option value="inadimplente">Inadimplente</option>
-                  <option value="em_acordo">Em Acordo</option>
-                  <option value="quitado">Quitado</option>
-                </select>
-              </div>
+              <GlobalFilter
+                configs={clientesFilterConfig}
+                filters={filters}
+                onFilterChange={setFilter}
+                onClearFilter={clearFilter}
+                onClearAll={clearAllFilters}
+                hasActiveFilters={hasActiveFilters}
+                activeFiltersCount={activeFiltersCount}
+                resultCount={resultCount}
+                totalCount={totalCount}
+                presets={clientesPresets}
+                onPresetSelect={(preset) => setFilters(preset.filters)}
+                collapsible={true}
+                defaultOpen={false}
+              />
 
               <div className="rounded-md border overflow-x-auto">
                 <Table>
