@@ -1,15 +1,19 @@
-import { useState, useEffect } from 'react';
-import { Plus, Search, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Plus, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import CampanhaForm from '@/components/campanhas/CampanhaForm';
 import CampanhaDetails from '@/components/campanhas/CampanhaDetails';
+import { GlobalFilter } from '@/components/GlobalFilter';
+import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { campanhasFilterConfig } from '@/constants/filterConfigs';
+import { campanhasPresets } from '@/constants/filterPresets';
+import { createCampanhasFilterFunctions } from '@/utils/filterFunctions';
 
 interface Campanha {
   id: string;
@@ -25,7 +29,6 @@ interface Campanha {
 export default function Campanhas() {
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
   
   // Modais
   const [formOpen, setFormOpen] = useState(false);
@@ -77,11 +80,21 @@ export default function Campanhas() {
     return new Date(date).toLocaleDateString('pt-BR');
   };
 
-  const filteredCampanhas = campanhas.filter(campanha =>
-    campanha.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    campanha.canal.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    campanha.status.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // Filter functions for campanhas
+  const filterFunctions = useMemo(() => createCampanhasFilterFunctions(), []);
+
+  const {
+    filteredData: filteredCampanhas,
+    filters,
+    setFilter,
+    setFilters,
+    clearFilter,
+    clearAllFilters,
+    hasActiveFilters,
+    activeFiltersCount,
+    resultCount,
+    totalCount
+  } = useGlobalFilter(campanhas, filterFunctions);
 
   const toggleCampanhaStatus = async (id: string, currentStatus: string) => {
     try {
@@ -221,17 +234,21 @@ export default function Campanhas() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-              <Input
-                placeholder="Buscar por nome, canal ou status..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
+          <GlobalFilter
+            configs={campanhasFilterConfig}
+            filters={filters}
+            onFilterChange={setFilter}
+            onClearFilter={clearFilter}
+            onClearAll={clearAllFilters}
+            hasActiveFilters={hasActiveFilters}
+            activeFiltersCount={activeFiltersCount}
+            resultCount={resultCount}
+            totalCount={totalCount}
+            presets={campanhasPresets}
+            onPresetSelect={(preset) => setFilters(preset.filters)}
+            collapsible={true}
+            defaultOpen={false}
+          />
 
           {filteredCampanhas.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
