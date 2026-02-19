@@ -1,48 +1,83 @@
 
 
-# Plano: Corrigir erro "function max(uuid) does not exist"
+# Plano: Exibir parcelas do acordo em titulos renegociados
 
 ## Problema
 
-O trigger `criar_evento_emissao_parcela` dispara ao inserir parcelas e usa `MAX(t.created_by)` para obter o criador do titulo. Porem, PostgreSQL nao suporta a funcao `MAX()` em colunas do tipo UUID, causando o erro.
+Quando um acordo e criado com varias parcelas, essas parcelas sao salvas na tabela `parcelas_acordo`. Porem, a pagina de Titulos (`Titulos.tsx`) so exibe parcelas da `mv_parcelas_consolidadas` (que vem da tabela `parcelas`). Titulos com status "Renegociado" aparecem corretamente, mas ao expandir, nao mostram as parcelas do acordo.
 
 ## Solucao
 
-### Migration SQL
+Quando um titulo tem status "renegociado", buscar e exibir as parcelas do acordo (`parcelas_acordo`) alem das parcelas originais. Isso sera feito no frontend, sem alterar a estrutura do banco.
 
-Recriar a funcao do trigger substituindo `MAX(t.created_by)` por uma subquery direta, ja que todas as parcelas de um titulo compartilham o mesmo `created_by`:
+## Alteracoes
 
-```sql
-CREATE OR REPLACE FUNCTION public.criar_evento_emissao_parcela()
- RETURNS trigger
- LANGUAGE plpgsql
- SECURITY DEFINER
- SET search_path TO 'public'
-AS $function$
-DECLARE v_total_parcelas INTEGER; v_created_by UUID;
-BEGIN
-  SELECT COUNT(*) INTO v_total_parcelas
-  FROM public.parcelas p WHERE p.titulo_id = NEW.titulo_id;
+### 1. `src/pages/Titulos.tsx`
 
-  SELECT t.created_by INTO v_created_by
-  FROM public.titulos t WHERE t.id = NEW.titulo_id;
+**Adicionar estado e funcao para parcelas de acordo:**
 
-  INSERT INTO public.eventos_parcela (parcela_id, tipo, valor, efeito, descricao, created_by)
-  VALUES (NEW.id, 'emissao_parcela', NEW.valor_nominal, 0,
-    format('Parcela %s/%s emitida - Vencimento: %s', NEW.numero_parcela, v_total_parcelas, to_char(NEW.vencimento, 'DD/MM/YYYY')), v_created_by);
-  RETURN NEW;
-END;
-$function$;
+```typescript
+const [parcelasAcordo, setParcelasAcordo] = useState<Map<string, any[]>>(new Map());
 
-NOTIFY pgrst, 'reload schema';
+const fetchParcelasAcordo = async (tituloId: string) => {
+  const { data: acordos } = await supabase
+    .from('acordos')
+    .select('id')
+    .eq('titulo_id', tituloId)
+    .eq('status', 'ativo');
+
+  if (!acordos || acordos.length === 0) return;
+
+  const { data: parcelas } = await supabase
+    .from('parcelas_acordo')
+    .select('*')
+    .eq('acordo_id', acordos[0].id)
+    .order('numero_parcela');
+
+  if (parcelas) {
+    setParcelasAcordo(prev => new Map(prev).set(tituloId, parcelas));
+  }
+};
 ```
 
-### Resumo
+**Modificar `toggleTituloExpanded`** para tambem buscar parcelas de acordo quando o titulo esta renegociado:
 
-| Alteracao | Detalhe |
-|-----------|---------|
-| Corrigir `criar_evento_emissao_parcela` | Substituir `MAX(t.created_by)` por SELECT direto na tabela titulos |
-| Reload schema PostgREST | `NOTIFY pgrst, 'reload schema'` para garantir que a RPC `criar_titulo_com_parcelas` seja reconhecida |
+```typescript
+const toggleTituloExpanded = (tituloId: string) => {
+  setExpandedTitulos(prev => {
+    const next = new Set(prev);
+    if (next.has(tituloId)) {
+      next.delete(tituloId);
+    } else {
+      next.add(tituloId);
+      fetchParcelasTitulo(tituloId);
+      // Buscar parcelas de acordo se titulo renegociado
+      const titulo = titulos.find(t => t.id === tituloId);
+      if (titulo?.status === 'renegociado') {
+        fetchParcelasAcordo(tituloId);
+      }
+    }
+    return next;
+  });
+};
+```
 
-Nenhum arquivo frontend precisa ser alterado - apenas a migration SQL.
+**Adicionar secao de parcelas do acordo no JSX**, logo apos as parcelas originais (apos linha 779). Quando existirem parcelas de acordo para o titulo, exibir um separador visual "Parcelas do Acordo" seguido das parcelas com seus valores, vencimentos e status.
+
+### 2. Permitir expandir titulos renegociados
+
+Atualmente, o botao de expandir so aparece se `quantidade_parcelas > 1` (linha 595). Modificar para tambem expandir se o titulo esta renegociado:
+
+```typescript
+{((titulo.quantidade_parcelas || 0) > 1 || titulo.status === 'renegociado') && (
+  <Button ...>
+```
+
+## Resumo
+
+| Arquivo | Alteracao |
+|---------|-----------|
+| `src/pages/Titulos.tsx` | Novo estado `parcelasAcordo`, funcao `fetchParcelasAcordo`, exibicao das parcelas do acordo ao expandir titulo renegociado |
+
+Nenhuma alteracao no banco de dados. Apenas leitura da tabela `parcelas_acordo` ja existente.
 
