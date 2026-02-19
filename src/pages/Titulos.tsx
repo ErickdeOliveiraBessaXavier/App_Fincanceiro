@@ -170,45 +170,18 @@ export default function Titulos() {
     }
 
     try {
-      // Criar título
-      const { data: tituloData, error: tituloError } = await supabase
-        .from('titulos')
-        .insert({
-          cliente_id: newTitulo.cliente_id,
-          valor_original: newTitulo.valor_original,
-          vencimento_original: newTitulo.vencimento_original,
-          descricao: newTitulo.descricao || null,
-          numero_documento: newTitulo.numero_documento || null,
-          created_by: user.id
-        })
-        .select()
-        .single();
+      const { data, error } = await supabase.rpc('criar_titulo_com_parcelas', {
+        p_cliente_id: newTitulo.cliente_id,
+        p_valor_original: newTitulo.valor_original,
+        p_vencimento_original: newTitulo.vencimento_original,
+        p_descricao: newTitulo.descricao || null,
+        p_numero_documento: newTitulo.numero_documento || null,
+        p_numero_parcelas: newTitulo.numero_parcelas,
+        p_intervalo_dias: newTitulo.intervalo_dias,
+        p_created_by: user.id
+      });
 
-      if (tituloError) throw tituloError;
-
-      // Criar parcelas
-      const valorParcela = ParcelaUtils.calcularValor(newTitulo.valor_original, newTitulo.numero_parcelas);
-      const datasVencimento = ParcelaUtils.calcularDatas(
-        newTitulo.vencimento_original,
-        newTitulo.numero_parcelas,
-        newTitulo.intervalo_dias
-      );
-
-      const parcelasInsert = datasVencimento.map((data, index) => ({
-        titulo_id: tituloData.id,
-        numero_parcela: index + 1,
-        valor_nominal: valorParcela,
-        vencimento: data
-      }));
-
-      const { error: parcelasError } = await supabase
-        .from('parcelas')
-        .insert(parcelasInsert);
-
-      if (parcelasError) throw parcelasError;
-
-      // Refresh materialized view
-      await supabase.rpc('refresh_mv_parcelas');
+      if (error) throw error;
 
       toast({
         title: "Sucesso",
