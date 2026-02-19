@@ -819,6 +819,19 @@ export type Database = {
         }
         Returns: Json
       }
+      criar_titulo_com_parcelas: {
+        Args: {
+          p_cliente_id: string
+          p_created_by?: string
+          p_descricao?: string
+          p_intervalo_dias?: number
+          p_numero_documento?: string
+          p_numero_parcelas?: number
+          p_valor_original: number
+          p_vencimento_original: string
+        }
+        Returns: Json
+      }
       estornar_evento_parcela: {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
