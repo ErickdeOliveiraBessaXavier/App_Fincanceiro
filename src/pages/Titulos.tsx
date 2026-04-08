@@ -570,7 +570,7 @@ export default function Titulos() {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Ações do Cliente</DropdownMenuLabel>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => navigate(`/telecobranca?cliente=${cliente.id}`)}>
+                            <DropdownMenuItem onClick={() => navigate(`/telecobranca/${cliente.id}`)}>
                               <Phone className="h-4 w-4 mr-2" />
                               Telecobrança
                             </DropdownMenuItem>
