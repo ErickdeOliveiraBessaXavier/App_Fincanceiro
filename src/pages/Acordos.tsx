@@ -229,65 +229,36 @@ export default function Acordos() {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
       const desconto = ((newAcordo.valor_original - newAcordo.valor_acordo) / newAcordo.valor_original) * 100;
       const cronogramaParcelas = calcularCronograma();
       const valorTotalComJuros = cronogramaParcelas.reduce((sum, p) => sum + p.valor_total, 0);
       const valorParcela = valorTotalComJuros / newAcordo.parcelas;
-
       const tituloPrincipal = newAcordo.titulo_ids[0];
 
-      const { data: acordoData, error: acordoError } = await supabase
-        .from('acordos')
-        .insert([{
-          titulo_id: tituloPrincipal,
-          cliente_id: newAcordo.cliente_id,
-          valor_original: newAcordo.valor_original,
-          valor_acordo: valorTotalComJuros,
-          desconto: desconto,
-          parcelas: newAcordo.parcelas,
-          valor_parcela: valorParcela,
-          data_acordo: new Date().toISOString().split('T')[0],
-          data_vencimento_primeira_parcela: newAcordo.data_vencimento_primeira_parcela,
-          status: 'ativo',
-          observacoes: newAcordo.observacoes,
-          created_by: user.id
-        }])
-        .select()
-        .single();
-
-      if (acordoError) throw acordoError;
-
-      if (acordoData && cronogramaParcelas.length > 0) {
-        const parcelasInsert = cronogramaParcelas.map(p => ({
-          acordo_id: acordoData.id,
+      await createAcordoMutation.mutateAsync({
+        titulo_id: tituloPrincipal,
+        cliente_id: newAcordo.cliente_id,
+        valor_original: newAcordo.valor_original,
+        valor_acordo: valorTotalComJuros,
+        desconto,
+        parcelas: newAcordo.parcelas,
+        valor_parcela: valorParcela,
+        data_vencimento_primeira_parcela: newAcordo.data_vencimento_primeira_parcela,
+        observacoes: newAcordo.observacoes,
+        cronograma: cronogramaParcelas.map((p) => ({
           numero_parcela: p.numero,
           valor: p.valor,
           valor_juros: p.valor_juros,
           valor_total: p.valor_total,
           data_vencimento: p.data_vencimento,
-          status: 'pendente'
-        }));
-
-        const { error: parcelasError } = await supabase
-          .from('parcelas_acordo')
-          .insert(parcelasInsert);
-
-        if (parcelasError) {
-          console.error('Erro ao criar parcelas:', parcelasError);
-        }
-      }
-
-      // Nota: Como a tabela titulos não tem mais coluna 'status', 
-      // a marcação do acordo será feita via metadados ou outra tabela
+        })),
+      });
 
       toast({
         title: "Sucesso",
         description: `Acordo criado com sucesso. ${newAcordo.titulo_ids.length} título(s) incluído(s).`,
       });
-      
+
       setIsCreateModalOpen(false);
       setShowCronograma(false);
       setNewAcordo({
@@ -299,10 +270,9 @@ export default function Acordos() {
         taxa_juros: 0,
         data_inicio: new Date().toISOString().split('T')[0],
         data_vencimento_primeira_parcela: new Date().toISOString().split('T')[0],
-        observacoes: ''
+        observacoes: '',
       });
-      
-      fetchAcordos();
+
       refetchTitulos();
     } catch (error) {
       console.error('Erro ao criar acordo:', error);
