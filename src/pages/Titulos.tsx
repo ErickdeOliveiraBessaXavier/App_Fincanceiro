@@ -1,7 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import {
+  useTitulos,
+  useClientesSelect,
+  useParcelasByTitulo,
+  useCreateTitulo,
+  useDeleteTitulo,
+  titulosKeys,
+} from '@/lib/queries/titulos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
