@@ -180,30 +180,13 @@ export default function Clientes() {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const { data, error } = await supabase
-        .from('clientes')
-        .insert([
-          { 
-            ...newCliente,
-            cpf_cnpj: newCliente.cpf_cnpj.replace(/\D/g, ''), // Salva apenas números
-            status: 'ativo',
-            created_by: user.id
-          }
-        ])
-        .select();
-
-      if (error) throw error;
+      await createClienteMutation.mutateAsync(newCliente);
 
       toast({
         title: "Sucesso",
         description: "Cliente criado com sucesso.",
       });
       setIsCreateModalOpen(false);
-      fetchClientes();
       setNewCliente({
         nome: '',
         cpf_cnpj: '',
@@ -282,30 +265,25 @@ export default function Clientes() {
     }
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .update({
-          nome: editingCliente.nome,
-          cpf_cnpj: editingCliente.cpf_cnpj.replace(/\D/g, ''), // Salva apenas números
-          telefone: editingCliente.telefone,
-          email: editingCliente.email,
-          endereco_completo: editingCliente.endereco_completo,
-          cep: editingCliente.cep,
-          cidade: editingCliente.cidade,
-          estado: editingCliente.estado,
-          observacoes: editingCliente.observacoes,
-          status: editingCliente.status
-        })
-        .eq('id', editingCliente.id);
-
-      if (error) throw error;
+      await updateClienteMutation.mutateAsync({
+        id: editingCliente.id,
+        nome: editingCliente.nome,
+        cpf_cnpj: editingCliente.cpf_cnpj,
+        telefone: editingCliente.telefone,
+        email: editingCliente.email,
+        endereco_completo: editingCliente.endereco_completo,
+        cep: editingCliente.cep,
+        cidade: editingCliente.cidade,
+        estado: editingCliente.estado,
+        observacoes: editingCliente.observacoes,
+        status: editingCliente.status,
+      });
 
       toast({
         title: "Sucesso",
         description: "Cliente atualizado com sucesso.",
       });
       setIsEditModalOpen(false);
-      fetchClientes();
     } catch (error) {
       console.error('Erro ao atualizar cliente:', error);
       toast({
@@ -320,38 +298,26 @@ export default function Clientes() {
     if (!clienteToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .delete()  // Changed from update to delete
-        .eq('id', clienteToDelete.id);
-
-      if (error) throw error;
-
-      // Update local state to remove the client from view
-      setClientes(prevClientes => 
-        prevClientes.filter(c => c.id !== clienteToDelete.id)
-      );
+      await deleteClienteMutation.mutateAsync(clienteToDelete.id);
 
       toast({
         title: "Sucesso",
         description: "Cliente excluído com sucesso.",
       });
-      
-      // Limpa os estados relacionados
+
+      // Limpa estados relacionados
+      const deletedId = clienteToDelete.id;
       setIsDeleteModalOpen(false);
       setClienteToDelete(null);
-      
-      // Se o cliente excluído for o selecionado, limpa a seleção
-      if (selectedCliente?.id === clienteToDelete.id) {
+
+      if (selectedCliente?.id === deletedId) {
         setSelectedCliente(null);
         setIsDetailsModalOpen(false);
       }
-      
-      // Se o cliente excluído estiver sendo editado, fecha o modal de edição
-      if (editingCliente.id === clienteToDelete.id) {
+
+      if (editingCliente.id === deletedId) {
         setIsEditModalOpen(false);
       }
-
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
       toast({
