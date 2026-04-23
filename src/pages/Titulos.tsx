@@ -337,11 +337,12 @@ export default function Titulos() {
   // Helper functions for actions
   const handleRefreshData = async () => {
     await supabase.rpc('refresh_mv_parcelas');
-    await fetchTitulos();
-    // Refresh parcelas for expanded titles
-    for (const tituloId of expandedTitulos) {
-      await fetchParcelasTitulo(tituloId);
-    }
+    // Invalida titulos e todos os caches de parcelas
+    await queryClient.invalidateQueries({ queryKey: titulosKeys.all });
+    // Re-fetch parcelas dos titulos expandidos
+    await Promise.all(
+      Array.from(expandedTitulos).map((tituloId) => fetchParcelasTitulo(tituloId))
+    );
   };
 
   const openWhatsApp = (telefone: string | null, nome: string) => {
