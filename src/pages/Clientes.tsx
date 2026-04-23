@@ -81,14 +81,6 @@ interface FormErrors {
 
 export default function Clientes() {
   const navigate = useNavigate();
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [comunicacoes, setComunicacoes] = useState<Comunicacao[]>([]);
-  const [loading, setLoading] = useState(true);
-  
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-export default function Clientes() {
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   // === Data via React Query ===
