@@ -87,6 +87,20 @@ export default function Clientes() {
   const [loading, setLoading] = useState(true);
   
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+export default function Clientes() {
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // === Data via React Query ===
+  const { data: clientes = [], isLoading: loading } = useClientes();
+  const createClienteMutation = useCreateCliente();
+  const updateClienteMutation = useUpdateCliente();
+  const deleteClienteMutation = useDeleteCliente();
+
+  const [selectedCliente, setSelectedCliente] = useState<ClienteRow | null>(null);
+  const { data: comunicacoes = [] } = useComunicacoes(selectedCliente?.id ?? null);
+
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState({
     nome: '',
     cpf_cnpj: '',
@@ -96,7 +110,7 @@ export default function Clientes() {
     cep: '',
     cidade: '',
     estado: '',
-    observacoes: ''
+    observacoes: '',
   });
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -111,100 +125,11 @@ export default function Clientes() {
     cidade: '',
     estado: '',
     observacoes: '',
-    status: ''
+    status: '',
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchClientes();
-  }, []);
-
-  useEffect(() => {
-    if (selectedCliente) {
-      fetchComunicacoes(selectedCliente.id);
-    }
-  }, [selectedCliente]);
-
-  const fetchClientes = async () => {
-    try {
-      setLoading(true);
-      let query = supabase
-        .from('clientes')
-        .select(`
-          *,
-          titulos (
-            id,
-            valor_original
-          )
-        `);
-
-
-      const { data, error } = await query.order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Calcular dados agregados para cada cliente
-      const clientesComDados = data?.map(cliente => ({
-        ...cliente,
-        total_titulos: cliente.titulos?.length || 0,
-        total_valor: cliente.titulos?.reduce((sum: number, titulo: any) => sum + (titulo.valor_original || 0), 0) || 0
-      })) || [];
-
-      setClientes(clientesComDados);
-    } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os clientes",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchComunicacoes = async (clienteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('comunicacoes')
-        .select('*')
-        .eq('cliente_id', clienteId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setComunicacoes(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar comunicações:', error);
-    }
-  };
-
-  // Verifica se já existe um cliente com o mesmo CPF/CNPJ
-  const checkCpfCnpjExists = async (cpfCnpj: string, excludeId?: string): Promise<boolean> => {
-    const cleaned = cpfCnpj.replace(/\D/g, '');
-    
-    let query = supabase
-      .from('clientes')
-      .select('id')
-      .eq('cpf_cnpj', cleaned);
-    
-    // Se estiver editando, exclui o próprio cliente da verificação
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
-    
-    const { data, error } = await query.maybeSingle();
-    
-    if (error) {
-      console.error('Erro ao verificar CPF/CNPJ:', error);
-      return false;
-    }
-    
-    return data !== null;
-  };
+  const [clienteToDelete, setClienteToDelete] = useState<ClienteRow | null>(null);
 
   const validateForm = () => {
     const errors: FormErrors = {};
