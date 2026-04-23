@@ -61,19 +61,26 @@ interface ClienteAgrupado {
 
 export default function Titulos() {
   const navigate = useNavigate();
-  const [titulos, setTitulos] = useState<TituloConsolidado[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function Titulos() {
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const { user } = useAuth();
+
+  // === Data via React Query ===
+  const { data: titulos = [], isLoading: loading } = useTitulos();
+  const { data: clientes = [] } = useClientesSelect();
+  const createTituloMutation = useCreateTitulo();
+  const deleteTituloMutation = useDeleteTitulo();
+
+  // UI state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTitulo, setSelectedTitulo] = useState<TituloConsolidado | null>(null);
   const [tituloToDelete, setTituloToDelete] = useState<TituloConsolidado | null>(null);
-  const [parcelasTitulo, setParcelasTitulo] = useState<Parcela[]>([]);
   const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
   const [expandedTitulos, setExpandedTitulos] = useState<Set<string>>(new Set());
-  const [clientes, setClientes] = useState<Array<{ id: string; nome: string; cpf_cnpj: string }>>([]);
-  const { toast } = useToast();
-  const { user } = useAuth();
 
   // Modal states for financial actions
   const [pagamentoModal, setPagamentoModal] = useState<{
@@ -108,64 +115,35 @@ export default function Titulos() {
     intervalo_dias: 30
   });
 
-  useEffect(() => {
-    fetchTitulos();
-    fetchClientes();
-  }, []);
-
-  const fetchTitulos = async () => {
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('vw_titulos_completos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setTitulos((data || []) as TituloConsolidado[]);
-    } catch (error) {
-      console.error('Erro ao carregar títulos:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os títulos",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+  // Parcelas: prefetch+cache via React Query — agregamos os caches em uma lista plana
+  // para preservar a API existente do componente (parcelasTitulo + filter por titulo_id).
+  const parcelasTitulo = useMemo<Parcela[]>(() => {
+    const all: Parcela[] = [];
+    for (const tituloId of expandedTitulos) {
+      const cached = queryClient.getQueryData<Parcela[]>(titulosKeys.parcelas(tituloId));
+      if (cached) all.push(...cached);
     }
-  };
-
-  const fetchClientes = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('clientes')
-        .select('id, nome, cpf_cnpj')
-        .order('nome');
-
-      if (error) throw error;
-      setClientes(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
+    if (selectedTitulo) {
+      const cached = queryClient.getQueryData<Parcela[]>(titulosKeys.parcelas(selectedTitulo.id));
+      if (cached && !expandedTitulos.has(selectedTitulo.id)) all.push(...cached);
     }
-  };
+    return all;
+    // queryClient is stable; depend on changing keys to retrigger derivation
+  }, [expandedTitulos, selectedTitulo, queryClient, titulos]);
 
   const fetchParcelasTitulo = async (tituloId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('mv_parcelas_consolidadas')
-        .select('*')
-        .eq('titulo_id', tituloId)
-        .order('numero_parcela');
-
-      if (error) throw error;
-      setParcelasTitulo(prev => {
-        // Merge parcelas, replacing existing ones for this titulo
-        const otherParcelas = prev.filter(p => p.titulo_id !== tituloId);
-        return [...otherParcelas, ...(data || []) as Parcela[]];
-      });
-    } catch (error) {
-      console.error('Erro ao carregar parcelas:', error);
-    }
+    await queryClient.fetchQuery({
+      queryKey: titulosKeys.parcelas(tituloId),
+      queryFn: async () => {
+        const { data, error } = await supabase
+          .from('mv_parcelas_consolidadas')
+          .select('*')
+          .eq('titulo_id', tituloId)
+          .order('numero_parcela');
+        if (error) throw error;
+        return (data || []) as Parcela[];
+      },
+    });
   };
 
   const handleCreateTitulo = async () => {
@@ -179,18 +157,16 @@ export default function Titulos() {
     }
 
     try {
-      const { data, error } = await supabase.rpc('criar_titulo_com_parcelas', {
-        p_cliente_id: newTitulo.cliente_id,
-        p_valor_original: newTitulo.valor_original,
-        p_vencimento_original: newTitulo.vencimento_original,
-        p_descricao: newTitulo.descricao || null,
-        p_numero_documento: newTitulo.numero_documento || null,
-        p_numero_parcelas: newTitulo.numero_parcelas,
-        p_intervalo_dias: newTitulo.intervalo_dias,
-        p_created_by: user.id
+      await createTituloMutation.mutateAsync({
+        cliente_id: newTitulo.cliente_id,
+        valor_original: newTitulo.valor_original,
+        vencimento_original: newTitulo.vencimento_original,
+        descricao: newTitulo.descricao || null,
+        numero_documento: newTitulo.numero_documento || null,
+        numero_parcelas: newTitulo.numero_parcelas,
+        intervalo_dias: newTitulo.intervalo_dias,
+        created_by: user.id,
       });
-
-      if (error) throw error;
 
       toast({
         title: "Sucesso",
@@ -207,7 +183,6 @@ export default function Titulos() {
         numero_parcelas: 1,
         intervalo_dias: 30
       });
-      fetchTitulos();
     } catch (error) {
       console.error('Erro ao criar título:', error);
       toast({
