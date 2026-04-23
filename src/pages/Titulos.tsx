@@ -228,36 +228,7 @@ export default function Titulos() {
     if (!tituloToDelete) return;
 
     try {
-      // Primeiro deletar eventos das parcelas
-      const { data: parcelas } = await supabase
-        .from('parcelas')
-        .select('id')
-        .eq('titulo_id', tituloToDelete.id);
-
-      if (parcelas && parcelas.length > 0) {
-        const parcelaIds = parcelas.map(p => p.id);
-        await supabase
-          .from('eventos_parcela')
-          .delete()
-          .in('parcela_id', parcelaIds);
-      }
-
-      // Deletar parcelas
-      await supabase
-        .from('parcelas')
-        .delete()
-        .eq('titulo_id', tituloToDelete.id);
-
-      // Deletar título
-      const { error } = await supabase
-        .from('titulos')
-        .delete()
-        .eq('id', tituloToDelete.id);
-
-      if (error) throw error;
-
-      // Refresh materialized view
-      await supabase.rpc('refresh_mv_parcelas');
+      await deleteTituloMutation.mutateAsync(tituloToDelete.id);
 
       toast({
         title: "Sucesso",
@@ -266,7 +237,6 @@ export default function Titulos() {
 
       setIsDeleteModalOpen(false);
       setTituloToDelete(null);
-      fetchTitulos();
     } catch (error) {
       console.error('Erro ao excluir título:', error);
       toast({
