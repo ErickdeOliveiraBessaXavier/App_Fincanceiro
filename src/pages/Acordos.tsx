@@ -100,14 +100,17 @@ export default function Acordos() {
   const location = useLocation();
   const preSelectedData = location.state as LocationState | null;
 
-  const [acordos, setAcordos] = useState<Acordo[]>([]);
-  const [loading, setLoading] = useState(true);
+  // === Data via React Query ===
+  const { data: acordos = [], isLoading: loading } = useAcordos();
+  const createAcordoMutation = useCreateAcordo();
+  const deleteAcordoMutation = useDeleteAcordo();
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedAcordo, setSelectedAcordo] = useState<Acordo | null>(null);
-  const [acordoToDelete, setAcordoToDelete] = useState<Acordo | null>(null);
-  
+  const [selectedAcordo, setSelectedAcordo] = useState<AcordoRow | null>(null);
+  const [acordoToDelete, setAcordoToDelete] = useState<AcordoRow | null>(null);
+
   const [newAcordo, setNewAcordo] = useState<NovoAcordo>({
     cliente_id: '',
     titulo_ids: [],
@@ -119,17 +122,13 @@ export default function Acordos() {
     data_vencimento_primeira_parcela: new Date().toISOString().split('T')[0],
     observacoes: ''
   });
-  
+
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [cronograma, setCronograma] = useState<CronogramaParcela[]>([]);
   const [showCronograma, setShowCronograma] = useState(false);
   const { toast } = useToast();
 
   const { clientes: clientesComDividas, loading: loadingTitulos, refetch: refetchTitulos } = useTitulosAgrupados();
-
-  useEffect(() => {
-    fetchAcordos();
-  }, []);
 
   useEffect(() => {
     if (preSelectedData?.clienteId) {
