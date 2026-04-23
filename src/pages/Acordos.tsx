@@ -294,19 +294,8 @@ export default function Acordos() {
     if (!acordoToDelete) return;
 
     try {
-      await supabase
-        .from('parcelas_acordo')
-        .delete()
-        .eq('acordo_id', acordoToDelete.id);
+      await deleteAcordoMutation.mutateAsync(acordoToDelete.id);
 
-      const { error } = await supabase
-        .from('acordos')
-        .delete()
-        .eq('id', acordoToDelete.id);
-
-      if (error) throw error;
-
-      setAcordos(prev => prev.filter(a => a.id !== acordoToDelete.id));
       setIsDeleteModalOpen(false);
       setAcordoToDelete(null);
 
@@ -314,7 +303,7 @@ export default function Acordos() {
         title: "Sucesso",
         description: "Acordo excluído com sucesso",
       });
-      
+
       refetchTitulos();
     } catch (error) {
       console.error('Erro ao excluir acordo:', error);
