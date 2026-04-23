@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plus, Eye, Trash2, FileText } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useAcordos, useCreateAcordo, useDeleteAcordo, type AcordoRow } from '@/lib/queries/acordos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -100,14 +100,17 @@ export default function Acordos() {
   const location = useLocation();
   const preSelectedData = location.state as LocationState | null;
 
-  const [acordos, setAcordos] = useState<Acordo[]>([]);
-  const [loading, setLoading] = useState(true);
+  // === Data via React Query ===
+  const { data: acordos = [], isLoading: loading } = useAcordos();
+  const createAcordoMutation = useCreateAcordo();
+  const deleteAcordoMutation = useDeleteAcordo();
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedAcordo, setSelectedAcordo] = useState<Acordo | null>(null);
-  const [acordoToDelete, setAcordoToDelete] = useState<Acordo | null>(null);
-  
+  const [selectedAcordo, setSelectedAcordo] = useState<AcordoRow | null>(null);
+  const [acordoToDelete, setAcordoToDelete] = useState<AcordoRow | null>(null);
+
   const [newAcordo, setNewAcordo] = useState<NovoAcordo>({
     cliente_id: '',
     titulo_ids: [],
@@ -119,7 +122,7 @@ export default function Acordos() {
     data_vencimento_primeira_parcela: new Date().toISOString().split('T')[0],
     observacoes: ''
   });
-  
+
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [cronograma, setCronograma] = useState<CronogramaParcela[]>([]);
   const [showCronograma, setShowCronograma] = useState(false);
@@ -128,85 +131,11 @@ export default function Acordos() {
   const { clientes: clientesComDividas, loading: loadingTitulos, refetch: refetchTitulos } = useTitulosAgrupados();
 
   useEffect(() => {
-    fetchAcordos();
-  }, []);
-
-  useEffect(() => {
     if (preSelectedData?.clienteId) {
       refetchTitulos();
       setIsCreateModalOpen(true);
     }
   }, [preSelectedData, refetchTitulos]);
-
-  const fetchAcordos = async () => {
-    try {
-      setLoading(true);
-      const { data: rawData, error } = await supabase
-        .from('acordos')
-        .select(`
-          id,
-          titulo_id,
-          cliente_id,
-          valor_original,
-          valor_acordo,
-          desconto,
-          parcelas,
-          valor_parcela,
-          data_acordo,
-          data_vencimento_primeira_parcela,
-          status,
-          observacoes,
-          created_by,
-          created_at,
-          updated_at,
-          titulo:titulos (
-            id,
-            valor_original,
-            vencimento_original,
-            numero_documento
-          ),
-          cliente:clientes (
-            id,
-            nome,
-            cpf_cnpj
-          )
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      const typedData = (rawData as any[])?.map(item => ({
-        id: item.id,
-        titulo_id: item.titulo_id,
-        cliente_id: item.cliente_id,
-        valor_original: item.valor_original,
-        valor_acordo: item.valor_acordo,
-        desconto: item.desconto,
-        parcelas: item.parcelas,
-        valor_parcela: item.valor_parcela,
-        data_acordo: item.data_acordo,
-        data_vencimento_primeira_parcela: item.data_vencimento_primeira_parcela,
-        status: item.status,
-        observacoes: item.observacoes,
-        created_by: item.created_by,
-        created_at: item.created_at,
-        updated_at: item.updated_at,
-        titulo: item.titulo,
-        cliente: item.cliente
-      })) || [];
-      
-      setAcordos(typedData);
-    } catch (error) {
-      console.error('Erro ao carregar acordos:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os acordos",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const validateForm = () => {
     const errors: FormErrors = {};
@@ -300,65 +229,36 @@ export default function Acordos() {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Usuário não autenticado');
-
       const desconto = ((newAcordo.valor_original - newAcordo.valor_acordo) / newAcordo.valor_original) * 100;
       const cronogramaParcelas = calcularCronograma();
       const valorTotalComJuros = cronogramaParcelas.reduce((sum, p) => sum + p.valor_total, 0);
       const valorParcela = valorTotalComJuros / newAcordo.parcelas;
-
       const tituloPrincipal = newAcordo.titulo_ids[0];
 
-      const { data: acordoData, error: acordoError } = await supabase
-        .from('acordos')
-        .insert([{
-          titulo_id: tituloPrincipal,
-          cliente_id: newAcordo.cliente_id,
-          valor_original: newAcordo.valor_original,
-          valor_acordo: valorTotalComJuros,
-          desconto: desconto,
-          parcelas: newAcordo.parcelas,
-          valor_parcela: valorParcela,
-          data_acordo: new Date().toISOString().split('T')[0],
-          data_vencimento_primeira_parcela: newAcordo.data_vencimento_primeira_parcela,
-          status: 'ativo',
-          observacoes: newAcordo.observacoes,
-          created_by: user.id
-        }])
-        .select()
-        .single();
-
-      if (acordoError) throw acordoError;
-
-      if (acordoData && cronogramaParcelas.length > 0) {
-        const parcelasInsert = cronogramaParcelas.map(p => ({
-          acordo_id: acordoData.id,
+      await createAcordoMutation.mutateAsync({
+        titulo_id: tituloPrincipal,
+        cliente_id: newAcordo.cliente_id,
+        valor_original: newAcordo.valor_original,
+        valor_acordo: valorTotalComJuros,
+        desconto,
+        parcelas: newAcordo.parcelas,
+        valor_parcela: valorParcela,
+        data_vencimento_primeira_parcela: newAcordo.data_vencimento_primeira_parcela,
+        observacoes: newAcordo.observacoes,
+        cronograma: cronogramaParcelas.map((p) => ({
           numero_parcela: p.numero,
           valor: p.valor,
           valor_juros: p.valor_juros,
           valor_total: p.valor_total,
           data_vencimento: p.data_vencimento,
-          status: 'pendente'
-        }));
-
-        const { error: parcelasError } = await supabase
-          .from('parcelas_acordo')
-          .insert(parcelasInsert);
-
-        if (parcelasError) {
-          console.error('Erro ao criar parcelas:', parcelasError);
-        }
-      }
-
-      // Nota: Como a tabela titulos não tem mais coluna 'status', 
-      // a marcação do acordo será feita via metadados ou outra tabela
+        })),
+      });
 
       toast({
         title: "Sucesso",
         description: `Acordo criado com sucesso. ${newAcordo.titulo_ids.length} título(s) incluído(s).`,
       });
-      
+
       setIsCreateModalOpen(false);
       setShowCronograma(false);
       setNewAcordo({
@@ -370,10 +270,9 @@ export default function Acordos() {
         taxa_juros: 0,
         data_inicio: new Date().toISOString().split('T')[0],
         data_vencimento_primeira_parcela: new Date().toISOString().split('T')[0],
-        observacoes: ''
+        observacoes: '',
       });
-      
-      fetchAcordos();
+
       refetchTitulos();
     } catch (error) {
       console.error('Erro ao criar acordo:', error);
@@ -395,19 +294,8 @@ export default function Acordos() {
     if (!acordoToDelete) return;
 
     try {
-      await supabase
-        .from('parcelas_acordo')
-        .delete()
-        .eq('acordo_id', acordoToDelete.id);
+      await deleteAcordoMutation.mutateAsync(acordoToDelete.id);
 
-      const { error } = await supabase
-        .from('acordos')
-        .delete()
-        .eq('id', acordoToDelete.id);
-
-      if (error) throw error;
-
-      setAcordos(prev => prev.filter(a => a.id !== acordoToDelete.id));
       setIsDeleteModalOpen(false);
       setAcordoToDelete(null);
 
@@ -415,7 +303,7 @@ export default function Acordos() {
         title: "Sucesso",
         description: "Acordo excluído com sucesso",
       });
-      
+
       refetchTitulos();
     } catch (error) {
       console.error('Erro ao excluir acordo:', error);

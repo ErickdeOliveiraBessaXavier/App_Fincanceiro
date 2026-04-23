@@ -1,7 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2, MoreHorizontal } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import {
+  useClientes,
+  useComunicacoes,
+  useCreateCliente,
+  useUpdateCliente,
+  useDeleteCliente,
+  checkCpfCnpjExists,
+  type ClienteRow,
+} from '@/lib/queries/clientes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -73,11 +81,17 @@ interface FormErrors {
 
 export default function Clientes() {
   const navigate = useNavigate();
-  const [clientes, setClientes] = useState<Cliente[]>([]);
-  const [selectedCliente, setSelectedCliente] = useState<Cliente | null>(null);
-  const [comunicacoes, setComunicacoes] = useState<Comunicacao[]>([]);
-  const [loading, setLoading] = useState(true);
-  
+  const { toast } = useToast();
+
+  // === Data via React Query ===
+  const { data: clientes = [], isLoading: loading } = useClientes();
+  const createClienteMutation = useCreateCliente();
+  const updateClienteMutation = useUpdateCliente();
+  const deleteClienteMutation = useDeleteCliente();
+
+  const [selectedCliente, setSelectedCliente] = useState<ClienteRow | null>(null);
+  const { data: comunicacoes = [] } = useComunicacoes(selectedCliente?.id ?? null);
+
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState({
     nome: '',
@@ -88,7 +102,7 @@ export default function Clientes() {
     cep: '',
     cidade: '',
     estado: '',
-    observacoes: ''
+    observacoes: '',
   });
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -103,100 +117,11 @@ export default function Clientes() {
     cidade: '',
     estado: '',
     observacoes: '',
-    status: ''
+    status: '',
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [clienteToDelete, setClienteToDelete] = useState<Cliente | null>(null);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    fetchClientes();
-  }, []);
-
-  useEffect(() => {
-    if (selectedCliente) {
-      fetchComunicacoes(selectedCliente.id);
-    }
-  }, [selectedCliente]);
-
-  const fetchClientes = async () => {
-    try {
-      setLoading(true);
-      let query = supabase
-        .from('clientes')
-        .select(`
-          *,
-          titulos (
-            id,
-            valor_original
-          )
-        `);
-
-
-      const { data, error } = await query.order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      // Calcular dados agregados para cada cliente
-      const clientesComDados = data?.map(cliente => ({
-        ...cliente,
-        total_titulos: cliente.titulos?.length || 0,
-        total_valor: cliente.titulos?.reduce((sum: number, titulo: any) => sum + (titulo.valor_original || 0), 0) || 0
-      })) || [];
-
-      setClientes(clientesComDados);
-    } catch (error) {
-      console.error('Erro ao carregar clientes:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível carregar os clientes",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchComunicacoes = async (clienteId: string) => {
-    try {
-      const { data, error } = await supabase
-        .from('comunicacoes')
-        .select('*')
-        .eq('cliente_id', clienteId)
-        .order('created_at', { ascending: false })
-        .limit(10);
-
-      if (error) throw error;
-      setComunicacoes(data || []);
-    } catch (error) {
-      console.error('Erro ao carregar comunicações:', error);
-    }
-  };
-
-  // Verifica se já existe um cliente com o mesmo CPF/CNPJ
-  const checkCpfCnpjExists = async (cpfCnpj: string, excludeId?: string): Promise<boolean> => {
-    const cleaned = cpfCnpj.replace(/\D/g, '');
-    
-    let query = supabase
-      .from('clientes')
-      .select('id')
-      .eq('cpf_cnpj', cleaned);
-    
-    // Se estiver editando, exclui o próprio cliente da verificação
-    if (excludeId) {
-      query = query.neq('id', excludeId);
-    }
-    
-    const { data, error } = await query.maybeSingle();
-    
-    if (error) {
-      console.error('Erro ao verificar CPF/CNPJ:', error);
-      return false;
-    }
-    
-    return data !== null;
-  };
+  const [clienteToDelete, setClienteToDelete] = useState<ClienteRow | null>(null);
 
   const validateForm = () => {
     const errors: FormErrors = {};
@@ -255,30 +180,13 @@ export default function Clientes() {
     }
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error('Usuário não autenticado');
-
-      const { data, error } = await supabase
-        .from('clientes')
-        .insert([
-          { 
-            ...newCliente,
-            cpf_cnpj: newCliente.cpf_cnpj.replace(/\D/g, ''), // Salva apenas números
-            status: 'ativo',
-            created_by: user.id
-          }
-        ])
-        .select();
-
-      if (error) throw error;
+      await createClienteMutation.mutateAsync(newCliente);
 
       toast({
         title: "Sucesso",
         description: "Cliente criado com sucesso.",
       });
       setIsCreateModalOpen(false);
-      fetchClientes();
       setNewCliente({
         nome: '',
         cpf_cnpj: '',
@@ -357,30 +265,25 @@ export default function Clientes() {
     }
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .update({
-          nome: editingCliente.nome,
-          cpf_cnpj: editingCliente.cpf_cnpj.replace(/\D/g, ''), // Salva apenas números
-          telefone: editingCliente.telefone,
-          email: editingCliente.email,
-          endereco_completo: editingCliente.endereco_completo,
-          cep: editingCliente.cep,
-          cidade: editingCliente.cidade,
-          estado: editingCliente.estado,
-          observacoes: editingCliente.observacoes,
-          status: editingCliente.status
-        })
-        .eq('id', editingCliente.id);
-
-      if (error) throw error;
+      await updateClienteMutation.mutateAsync({
+        id: editingCliente.id,
+        nome: editingCliente.nome,
+        cpf_cnpj: editingCliente.cpf_cnpj,
+        telefone: editingCliente.telefone,
+        email: editingCliente.email,
+        endereco_completo: editingCliente.endereco_completo,
+        cep: editingCliente.cep,
+        cidade: editingCliente.cidade,
+        estado: editingCliente.estado,
+        observacoes: editingCliente.observacoes,
+        status: editingCliente.status,
+      });
 
       toast({
         title: "Sucesso",
         description: "Cliente atualizado com sucesso.",
       });
       setIsEditModalOpen(false);
-      fetchClientes();
     } catch (error) {
       console.error('Erro ao atualizar cliente:', error);
       toast({
@@ -395,38 +298,26 @@ export default function Clientes() {
     if (!clienteToDelete) return;
 
     try {
-      const { error } = await supabase
-        .from('clientes')
-        .delete()  // Changed from update to delete
-        .eq('id', clienteToDelete.id);
-
-      if (error) throw error;
-
-      // Update local state to remove the client from view
-      setClientes(prevClientes => 
-        prevClientes.filter(c => c.id !== clienteToDelete.id)
-      );
+      await deleteClienteMutation.mutateAsync(clienteToDelete.id);
 
       toast({
         title: "Sucesso",
         description: "Cliente excluído com sucesso.",
       });
-      
-      // Limpa os estados relacionados
+
+      // Limpa estados relacionados
+      const deletedId = clienteToDelete.id;
       setIsDeleteModalOpen(false);
       setClienteToDelete(null);
-      
-      // Se o cliente excluído for o selecionado, limpa a seleção
-      if (selectedCliente?.id === clienteToDelete.id) {
+
+      if (selectedCliente?.id === deletedId) {
         setSelectedCliente(null);
         setIsDetailsModalOpen(false);
       }
-      
-      // Se o cliente excluído estiver sendo editado, fecha o modal de edição
-      if (editingCliente.id === clienteToDelete.id) {
+
+      if (editingCliente.id === deletedId) {
         setIsEditModalOpen(false);
       }
-
     } catch (error) {
       console.error('Erro ao excluir cliente:', error);
       toast({
