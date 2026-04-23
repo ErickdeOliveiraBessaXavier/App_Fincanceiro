@@ -61,8 +61,6 @@ interface ClienteAgrupado {
 
 export default function Titulos() {
   const navigate = useNavigate();
-export default function Titulos() {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
