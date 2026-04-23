@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Plus, Eye, Trash2, FileText } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useAcordos, useCreateAcordo, useDeleteAcordo, type AcordoRow } from '@/lib/queries/acordos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
