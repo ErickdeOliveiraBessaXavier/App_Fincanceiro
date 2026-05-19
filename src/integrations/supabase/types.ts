@@ -957,6 +957,10 @@ export type Database = {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
       }
+      has_min_role: {
+        Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -982,7 +986,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "operador"
+      app_role: "admin" | "operador" | "gerente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1110,7 +1114,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operador"],
+      app_role: ["admin", "operador", "gerente"],
     },
   },
 } as const

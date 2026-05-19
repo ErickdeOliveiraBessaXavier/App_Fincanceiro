@@ -45,6 +45,7 @@ import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamento
 import { AplicarEncargoModal } from '@/components/titulos/AplicarEncargoModal';
 import { ConcederDescontoModal } from '@/components/titulos/ConcederDescontoModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface ClienteAgrupado {
   id: string;
@@ -64,6 +65,7 @@ export default function Titulos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isGerente } = useUserRole();
 
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
@@ -635,28 +637,36 @@ export default function Titulos() {
                                         <DollarSign className="h-4 w-4 mr-2" />
                                         Registrar Pagamento
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => openEncargoModal(firstParcela)}>
-                                        <Percent className="h-4 w-4 mr-2" />
-                                        Adicionar Encargo
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => openDescontoModal(firstParcela)}>
-                                        <Tag className="h-4 w-4 mr-2" />
-                                        Conceder Desconto
-                                      </DropdownMenuItem>
+                                      {isGerente && (
+                                        <>
+                                          <DropdownMenuItem onClick={() => openEncargoModal(firstParcela)}>
+                                            <Percent className="h-4 w-4 mr-2" />
+                                            Adicionar Encargo
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => openDescontoModal(firstParcela)}>
+                                            <Tag className="h-4 w-4 mr-2" />
+                                            Conceder Desconto
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
                                     </>
                                   );
                                 })()}
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem 
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={() => {
-                                    setTituloToDelete(titulo);
-                                    setIsDeleteModalOpen(true);
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4 mr-2" />
-                                  Excluir
-                                </DropdownMenuItem>
+                                {isGerente && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => {
+                                        setTituloToDelete(titulo);
+                                        setIsDeleteModalOpen(true);
+                                      }}
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Excluir
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </DropdownMenuContent>
                             </DropdownMenu>
                           </TableCell>
@@ -716,14 +726,18 @@ export default function Titulos() {
                                         <DollarSign className="h-4 w-4 mr-2" />
                                         Registrar Pagamento
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => openEncargoModal(parcela)}>
-                                        <Percent className="h-4 w-4 mr-2" />
-                                        Adicionar Encargo
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => openDescontoModal(parcela)}>
-                                        <Tag className="h-4 w-4 mr-2" />
-                                        Conceder Desconto
-                                      </DropdownMenuItem>
+                                      {isGerente && (
+                                        <>
+                                          <DropdownMenuItem onClick={() => openEncargoModal(parcela)}>
+                                            <Percent className="h-4 w-4 mr-2" />
+                                            Adicionar Encargo
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => openDescontoModal(parcela)}>
+                                            <Tag className="h-4 w-4 mr-2" />
+                                            Conceder Desconto
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 )}
