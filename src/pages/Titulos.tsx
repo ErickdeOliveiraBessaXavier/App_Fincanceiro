@@ -45,6 +45,7 @@ import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamento
 import { AplicarEncargoModal } from '@/components/titulos/AplicarEncargoModal';
 import { ConcederDescontoModal } from '@/components/titulos/ConcederDescontoModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface ClienteAgrupado {
   id: string;
