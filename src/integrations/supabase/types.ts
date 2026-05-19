@@ -957,6 +957,10 @@ export type Database = {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
       }
+      has_min_role: {
+        Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
