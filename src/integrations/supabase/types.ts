@@ -249,6 +249,69 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          changed_fields: string[] | null
+          context: Json | null
+          id: string
+          occurred_at: string
+          record_id: string | null
+          reverted: boolean
+          reverted_by_id: string | null
+          table_name: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_fields?: string[] | null
+          context?: Json | null
+          id?: string
+          occurred_at?: string
+          record_id?: string | null
+          reverted?: boolean
+          reverted_by_id?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_fields?: string[] | null
+          context?: Json | null
+          id?: string
+          occurred_at?: string
+          record_id?: string | null
+          reverted?: boolean
+          reverted_by_id?: string | null
+          table_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_reverted_by_id_fkey"
+            columns: ["reverted_by_id"]
+            isOneToOne: false
+            referencedRelation: "audit_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_reverted_by_id_fkey"
+            columns: ["reverted_by_id"]
+            isOneToOne: false
+            referencedRelation: "vw_audit_record"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campaign_logs: {
         Row: {
           campanha_id: string
@@ -758,6 +821,41 @@ export type Database = {
           },
         ]
       }
+      vw_audit_record: {
+        Row: {
+          action: string | null
+          actor_email: string | null
+          actor_id: string | null
+          actor_nome: string | null
+          actor_profile_email: string | null
+          after_data: Json | null
+          before_data: Json | null
+          changed_fields: string[] | null
+          context: Json | null
+          id: string | null
+          occurred_at: string | null
+          record_id: string | null
+          reverted: boolean | null
+          reverted_by_id: string | null
+          table_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_reverted_by_id_fkey"
+            columns: ["reverted_by_id"]
+            isOneToOne: false
+            referencedRelation: "audit_log"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_reverted_by_id_fkey"
+            columns: ["reverted_by_id"]
+            isOneToOne: false
+            referencedRelation: "vw_audit_record"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_titulos_completos: {
         Row: {
           cliente_cpf_cnpj: string | null
@@ -799,26 +897,49 @@ export type Database = {
       }
     }
     Functions: {
-      aplicar_encargo_parcela: {
-        Args: {
-          p_created_by?: string
-          p_descricao?: string
-          p_parcela_id: string
-          p_tipo: string
-          p_valor: number
-        }
-        Returns: Json
-      }
+      aplicar_encargo_parcela:
+        | {
+            Args: {
+              p_created_by?: string
+              p_descricao?: string
+              p_parcela_id: string
+              p_tipo: string
+              p_valor: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_created_by?: string
+              p_descricao?: string
+              p_motivo?: string
+              p_parcela_id: string
+              p_tipo: string
+              p_valor: number
+            }
+            Returns: Json
+          }
       check_overdue_parcelas: { Args: never; Returns: undefined }
-      conceder_desconto_parcela: {
-        Args: {
-          p_created_by?: string
-          p_descricao?: string
-          p_parcela_id: string
-          p_valor: number
-        }
-        Returns: Json
-      }
+      conceder_desconto_parcela:
+        | {
+            Args: {
+              p_created_by?: string
+              p_descricao?: string
+              p_parcela_id: string
+              p_valor: number
+            }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_created_by?: string
+              p_descricao?: string
+              p_motivo?: string
+              p_parcela_id: string
+              p_valor: number
+            }
+            Returns: Json
+          }
       criar_titulo_com_parcelas: {
         Args: {
           p_cliente_id: string
@@ -853,6 +974,10 @@ export type Database = {
           p_parcela_id: string
           p_valor: number
         }
+        Returns: Json
+      }
+      reverter_audit_log: {
+        Args: { p_audit_id: string; p_motivo: string }
         Returns: Json
       }
     }
