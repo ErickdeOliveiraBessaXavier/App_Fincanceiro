@@ -726,14 +726,18 @@ export default function Titulos() {
                                         <DollarSign className="h-4 w-4 mr-2" />
                                         Registrar Pagamento
                                       </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => openEncargoModal(parcela)}>
-                                        <Percent className="h-4 w-4 mr-2" />
-                                        Adicionar Encargo
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => openDescontoModal(parcela)}>
-                                        <Tag className="h-4 w-4 mr-2" />
-                                        Conceder Desconto
-                                      </DropdownMenuItem>
+                                      {isGerente && (
+                                        <>
+                                          <DropdownMenuItem onClick={() => openEncargoModal(parcela)}>
+                                            <Percent className="h-4 w-4 mr-2" />
+                                            Adicionar Encargo
+                                          </DropdownMenuItem>
+                                          <DropdownMenuItem onClick={() => openDescontoModal(parcela)}>
+                                            <Tag className="h-4 w-4 mr-2" />
+                                            Conceder Desconto
+                                          </DropdownMenuItem>
+                                        </>
+                                      )}
                                     </DropdownMenuContent>
                                   </DropdownMenu>
                                 )}
