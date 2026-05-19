@@ -64,6 +64,7 @@ export default function Titulos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
+  const { isGerente } = useUserRole();
 
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
