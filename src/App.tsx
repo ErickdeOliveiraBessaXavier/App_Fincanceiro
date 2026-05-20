@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
+import { AdminRoute } from "@/components/AdminRoute";
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Clientes = React.lazy(() => import("./pages/Clientes"));
@@ -38,7 +39,7 @@ const App = () => (
               <Route path="/campanhas" element={<Layout><Campanhas /></Layout>} />
               <Route path="/importar" element={<Layout><ImportarCSV /></Layout>} />
               <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
-              <Route path="/usuarios" element={<Layout><Usuarios /></Layout>} />
+              <Route path="/usuarios" element={<Layout><AdminRoute><Usuarios /></AdminRoute></Layout>} />
               <Route path="/telecobranca/:clienteId" element={<Layout><Telecobranca /></Layout>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
