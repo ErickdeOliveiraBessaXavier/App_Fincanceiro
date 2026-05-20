@@ -1,86 +1,51 @@
-# Plano — Permissões granulares (RBAC)
+## Objetivo
+Corrigir o problema entre operador/admin garantindo que (1) todo usuário tenha papel atribuído, (2) a tela de Usuários só seja acessível por admin, e (3) admins possam gerenciar papéis com segurança.
 
-Hoje quase todas as policies usam `auth.role() = 'authenticated'` ou `auth.uid() = created_by`. Qualquer usuário logado pode estornar, dar desconto, excluir título alheio. Vamos introduzir 3 papéis claros e aplicar guards no banco (RPC + RLS), única camada confiável.
+## Diagnóstico
+- `eobx` não possui linha em `user_roles` → UI mostra fallback "operador" enganoso.
+- `/usuarios` está exposto a qualquer autenticado, mas RLS filtra `user_roles` por `auth.uid()`, fazendo não-admins verem todos como "operador".
+- UI desconhece o papel `gerente` (já existe no enum).
+- Botões "Novo/Editar/Excluir" são decorativos.
 
-## 1. Papéis
+## Plano (abordagem mais segura)
 
-Adicionar `gerente` ao enum `app_role` (já existem `admin`, `operador`).
+### 1. Migração de dados (backfill)
+- `INSERT` em `user_roles` para todo `profiles.user_id` que ainda não tenha papel, com valor padrão `operador`.
+- Garante que ninguém fique "sem papel" e elimina o fallback enganoso.
 
-| Ação | operador | gerente | admin |
-|---|---|---|---|
-| Ver tudo (títulos, clientes, parcelas, acordos) | ✅ | ✅ | ✅ |
-| Criar título / cliente / agendamento / comunicação | ✅ | ✅ | ✅ |
-| Registrar pagamento | ✅ | ✅ | ✅ |
-| Aplicar encargo (juros/multa) | ❌ | ✅ | ✅ |
-| Conceder desconto | ❌ | ✅ | ✅ |
-| Estornar evento | ❌ | ✅ | ✅ |
-| Editar/excluir título alheio | ❌ | ✅ | ✅ |
-| Criar/quebrar acordo | ❌ | ✅ | ✅ |
-| Reverter via `reverter_audit_log` | ❌ | ❌ | ✅ |
-| Ler `audit_log` | ❌ | ✅ (próprias ações) | ✅ (tudo) |
-| Gerenciar `user_roles` | ❌ | ❌ | ✅ |
+### 2. Guarda de rota no frontend
+- Criar `AdminRoute` que usa `useUserRole`; se não for admin, redireciona para `/` com toast "Acesso restrito".
+- Envolver `/usuarios` em `App.tsx` com `AdminRoute`.
+- Ocultar item "Usuários" no `AppSidebar` para não-admins.
 
-## 2. Guards nas RPCs financeiras
+> Observação: RLS já impede dano real — esta camada é UX/defesa em profundidade. A segurança verdadeira continua no banco.
 
-Adicionar no topo de cada RPC `SECURITY DEFINER` uma checagem com `has_role`:
+### 3. UI de Usuários (apenas admin)
+- Suportar 3 papéis: ajustar `getRoleColor`/`getRoleIcon` para incluir `gerente` (ícone `UserCog`, cor âmbar).
+- Trocar 3 cards por 4: Total, Admins, Gerentes, Operadores.
+- Remover fallback `|| 'operador'` — se papel for `null`, mostrar badge "sem papel" (não deve mais ocorrer após backfill, mas defensivo).
+- Remover botões decorativos "Novo Usuário" e "Excluir" (criação/exclusão exige edge function com `auth.admin` — fora do escopo seguro agora).
+- Substituir botão "Editar" por modal `EditarPapelModal` que apenas altera o papel.
 
-- `aplicar_encargo_parcela`, `conceder_desconto_parcela`, `estornar_evento_parcela`
-  → exige `admin` OU `gerente`. Caso contrário `RAISE EXCEPTION 'Operação restrita a gerente/admin'`.
-- `registrar_pagamento_parcela`, `criar_titulo_com_parcelas` → qualquer autenticado (mantém).
-- `reverter_audit_log` → já exige `admin` (mantém).
+### 4. Modal EditarPapelModal
+- `Select` com opções: operador / gerente / admin.
+- Bloqueia o admin de rebaixar a si mesmo (previne lock-out).
+- Operação transacional: `DELETE FROM user_roles WHERE user_id=?` + `INSERT (user_id, role)`.
+- Confirmação explícita antes de salvar (boa prática para ação sensível).
+- Invalida cache `['user-roles', userId]` e refaz `fetchUsuarios`.
+- Registra a alteração: as RLS já têm trigger de auditoria (`audit_log`) caso esteja anexado a `user_roles`; se não estiver, adicionar trigger `fn_audit_row` em `user_roles` para rastreabilidade (recomendado para ação crítica).
 
-## 3. RLS refinada por tabela
+### 5. Endurecimento adicional (opcional, recomendado)
+- Adicionar trigger `BEFORE DELETE` em `user_roles` que impede remover o último admin do sistema (proteção contra lock-out global).
 
-Substituir as policies permissivas atuais:
+## Arquivos afetados
+- **Migração nova**: backfill `user_roles` + (opcional) trigger anti-lock-out + audit em `user_roles`.
+- **Novo**: `src/components/AdminRoute.tsx`
+- **Novo**: `src/components/usuarios/EditarPapelModal.tsx`
+- **Editado**: `src/App.tsx` (envolver rota)
+- **Editado**: `src/components/AppSidebar.tsx` (ocultar item)
+- **Editado**: `src/pages/Usuarios.tsx` (4 cards, papel gerente, modal, sem botões decorativos)
 
-### `titulos`
-- SELECT: qualquer autenticado (mantém).
-- INSERT: qualquer autenticado.
-- UPDATE: `created_by = auth.uid() OR has_role(auth.uid(),'gerente') OR has_role(auth.uid(),'admin')`.
-- DELETE: `has_role(auth.uid(),'gerente') OR has_role(auth.uid(),'admin')` (operador não exclui mais).
-
-### `clientes`, `agendamentos`, `comunicacoes`, `campanhas`
-- UPDATE/DELETE: `created_by = auth.uid() OR has_role(...,'gerente') OR has_role(...,'admin')`.
-
-### `acordos` + `parcelas_acordo`
-- INSERT/UPDATE/DELETE: somente `gerente` ou `admin`.
-
-### `eventos_parcela`
-- INSERT direto continua bloqueado na prática (só RPCs gravam). Reforçar policy de INSERT para exigir o guard de papel quando `tipo IN ('juros_aplicado','multa_aplicada','desconto_concedido','estorno')` — mas como passa por RPC `SECURITY DEFINER`, o guard real é o do item 2.
-
-### `audit_log`
-- SELECT: `has_role(auth.uid(),'admin') OR (has_role(auth.uid(),'gerente') AND actor_id = auth.uid())`.
-
-### `user_roles`
-- Atual já restringe a `admin`. Mantém.
-
-## 4. Helper único de papel mínimo
-
-```sql
-create or replace function public.has_min_role(_uid uuid, _min app_role)
-returns boolean language sql stable security definer set search_path=public as $$
-  select case _min
-    when 'operador' then exists(select 1 from user_roles where user_id=_uid)
-    when 'gerente'  then exists(select 1 from user_roles where user_id=_uid and role in ('gerente','admin'))
-    when 'admin'    then exists(select 1 from user_roles where user_id=_uid and role='admin')
-  end
-$$;
-```
-
-Usar nos guards de RPC para legibilidade: `if not public.has_min_role(auth.uid(),'gerente') then raise exception ...`.
-
-## 5. Frontend — só esconder, banco é a verdade
-
-Pequeno hook `useUserRole()` (lê `user_roles` do usuário atual, cacheia em React Query) já existirá / criar se faltar. Esconder botões de Estorno/Desconto/Encargo/Excluir/Acordo para quem não tem papel. **Não** é guard — banco bloqueia mesmo se driblado.
-
-## 6. Migrações
-
-1. **Migration 1** — `alter type app_role add value 'gerente'`; criar `has_min_role`; recriar policies (drop + create) das tabelas listadas; recriar 3 RPCs financeiras com guard no topo.
-2. **Migration 2** — refinar policy do `audit_log` para gerente ver as próprias ações.
-3. Smoke test: logar como operador e tentar `conceder_desconto_parcela` → deve falhar com mensagem clara.
-
-## 7. Fora do escopo desta fase
-
-- Tela de "Gerenciar usuários e papéis" (já existe `Usuarios.tsx` — só conferir se permite atribuir `gerente`).
-- UI de Histórico/confirmações (próxima frente).
-- Atribuição automática de `gerente` — feita manualmente por admin via UI atual.
+## O que NÃO faremos agora (por segurança)
+- Criar/excluir usuários via UI (exigiria service_role em edge function — adicional, deixar para frente separada).
+- Mudanças em RLS já existentes (estão corretas).
