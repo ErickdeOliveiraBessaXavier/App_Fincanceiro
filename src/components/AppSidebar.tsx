@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUserRole } from "@/hooks/useUserRole";
 import {
   Sidebar,
   SidebarContent,
@@ -43,8 +44,10 @@ export const AppSidebar = memo(() => {
   const { state } = useSidebar();
   const location = useLocation();
   const { signOut } = useAuth();
+  const { isAdmin } = useUserRole();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
+  const visibleMenuItems = menuItems.filter(i => i.url !== "/usuarios" || isAdmin);
 
   const isActive = (path: string) => {
     if (path === '/') return currentPath === path;
@@ -81,7 +84,7 @@ export const AppSidebar = memo(() => {
         <SidebarGroup className={cn(isCollapsed && "!p-1")}>
           <SidebarGroupContent>
             <SidebarMenu className={cn("space-y-1", isCollapsed && "items-center")}> 
-              {menuItems.map((item) => {
+              {visibleMenuItems.map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>
