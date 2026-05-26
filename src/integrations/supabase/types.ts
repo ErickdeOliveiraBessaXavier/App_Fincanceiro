@@ -17,11 +17,13 @@ export type Database = {
       acordos: {
         Row: {
           cliente_id: string
+          company_id: string | null
           created_at: string
           created_by: string
           data_acordo: string
           data_inicio: string
           data_vencimento_primeira_parcela: string
+          deleted_at: string | null
           desconto: number
           id: string
           observacoes: string | null
@@ -36,11 +38,13 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
+          company_id?: string | null
           created_at?: string
           created_by: string
           data_acordo?: string
           data_inicio?: string
           data_vencimento_primeira_parcela: string
+          deleted_at?: string | null
           desconto?: number
           id?: string
           observacoes?: string | null
@@ -55,11 +59,13 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
+          company_id?: string | null
           created_at?: string
           created_by?: string
           data_acordo?: string
           data_inicio?: string
           data_vencimento_primeira_parcela?: string
+          deleted_at?: string | null
           desconto?: number
           id?: string
           observacoes?: string | null
@@ -73,6 +79,13 @@ export type Database = {
           valor_parcela?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "acordos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "fk_cliente"
             columns: ["cliente_id"]
@@ -99,6 +112,7 @@ export type Database = {
       activity_logs: {
         Row: {
           acao: string
+          company_id: string | null
           created_at: string
           descricao: string
           id: string
@@ -108,6 +122,7 @@ export type Database = {
         }
         Insert: {
           acao: string
+          company_id?: string | null
           created_at?: string
           descricao: string
           id?: string
@@ -117,6 +132,7 @@ export type Database = {
         }
         Update: {
           acao?: string
+          company_id?: string | null
           created_at?: string
           descricao?: string
           id?: string
@@ -124,12 +140,21 @@ export type Database = {
           recurso_tipo?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "activity_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       agendamentos: {
         Row: {
           acordo_id: string | null
           cliente_id: string
+          company_id: string | null
           created_at: string | null
           created_by: string
           data_agendamento: string
@@ -144,6 +169,7 @@ export type Database = {
         Insert: {
           acordo_id?: string | null
           cliente_id: string
+          company_id?: string | null
           created_at?: string | null
           created_by: string
           data_agendamento: string
@@ -158,6 +184,7 @@ export type Database = {
         Update: {
           acordo_id?: string | null
           cliente_id?: string
+          company_id?: string | null
           created_at?: string | null
           created_by?: string
           data_agendamento?: string
@@ -182,6 +209,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -212,6 +246,7 @@ export type Database = {
           acordo_id: string | null
           categoria: string | null
           cliente_id: string | null
+          company_id: string | null
           created_at: string
           created_by: string
           id: string
@@ -225,6 +260,7 @@ export type Database = {
           acordo_id?: string | null
           categoria?: string | null
           cliente_id?: string | null
+          company_id?: string | null
           created_at?: string
           created_by: string
           id?: string
@@ -238,6 +274,7 @@ export type Database = {
           acordo_id?: string | null
           categoria?: string | null
           cliente_id?: string | null
+          company_id?: string | null
           created_at?: string
           created_by?: string
           id?: string
@@ -247,7 +284,15 @@ export type Database = {
           titulo_id?: string | null
           url_arquivo?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "anexos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       audit_log: {
         Row: {
@@ -316,6 +361,7 @@ export type Database = {
         Row: {
           campanha_id: string
           cliente: string
+          company_id: string | null
           contato: string
           erro_mensagem: string | null
           id: string
@@ -326,6 +372,7 @@ export type Database = {
         Insert: {
           campanha_id: string
           cliente: string
+          company_id?: string | null
           contato: string
           erro_mensagem?: string | null
           id?: string
@@ -336,6 +383,7 @@ export type Database = {
         Update: {
           campanha_id?: string
           cliente?: string
+          company_id?: string | null
           contato?: string
           erro_mensagem?: string | null
           id?: string
@@ -351,11 +399,19 @@ export type Database = {
             referencedRelation: "campanhas"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "campaign_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
         ]
       }
       campanhas: {
         Row: {
           canal: string
+          company_id: string | null
           created_at: string
           created_by: string
           filtros: Json | null
@@ -367,6 +423,7 @@ export type Database = {
         }
         Insert: {
           canal: string
+          company_id?: string | null
           created_at?: string
           created_by: string
           filtros?: Json | null
@@ -378,6 +435,7 @@ export type Database = {
         }
         Update: {
           canal?: string
+          company_id?: string | null
           created_at?: string
           created_by?: string
           filtros?: Json | null
@@ -387,12 +445,21 @@ export type Database = {
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "campanhas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       clientes: {
         Row: {
           cep: string | null
           cidade: string | null
+          company_id: string | null
           cpf_cnpj: string
           created_at: string
           created_by: string
@@ -409,6 +476,7 @@ export type Database = {
         Insert: {
           cep?: string | null
           cidade?: string | null
+          company_id?: string | null
           cpf_cnpj: string
           created_at?: string
           created_by: string
@@ -425,6 +493,7 @@ export type Database = {
         Update: {
           cep?: string | null
           cidade?: string | null
+          company_id?: string | null
           cpf_cnpj?: string
           created_at?: string
           created_by?: string
@@ -438,6 +507,50 @@ export type Database = {
           telefone?: string | null
           updated_at?: string
         }
+        Relationships: [
+          {
+            foreignKeyName: "clientes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      companies: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          deleted_at: string | null
+          id: string
+          nome: string
+          plano: string
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nome: string
+          plano?: string
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          nome?: string
+          plano?: string
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
         Relationships: []
       }
       comunicacoes: {
@@ -446,6 +559,7 @@ export type Database = {
           assunto: string
           canal: string
           cliente_id: string
+          company_id: string | null
           created_at: string
           created_by: string
           data_contato: string | null
@@ -459,6 +573,7 @@ export type Database = {
           assunto: string
           canal: string
           cliente_id: string
+          company_id?: string | null
           created_at?: string
           created_by: string
           data_contato?: string | null
@@ -472,6 +587,7 @@ export type Database = {
           assunto?: string
           canal?: string
           cliente_id?: string
+          company_id?: string | null
           created_at?: string
           created_by?: string
           data_contato?: string | null
@@ -481,6 +597,13 @@ export type Database = {
           tipo?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "comunicacoes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "comunicacoes_created_by_fkey"
             columns: ["created_by"]
@@ -492,8 +615,10 @@ export type Database = {
       }
       eventos_parcela: {
         Row: {
+          company_id: string | null
           created_at: string | null
           created_by: string | null
+          deleted_at: string | null
           descricao: string | null
           efeito: number
           estornado: boolean | null
@@ -506,8 +631,10 @@ export type Database = {
           valor: number
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           descricao?: string | null
           efeito: number
           estornado?: boolean | null
@@ -520,8 +647,10 @@ export type Database = {
           valor: number
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          deleted_at?: string | null
           descricao?: string | null
           efeito?: number
           estornado?: boolean | null
@@ -534,6 +663,13 @@ export type Database = {
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
             columns: ["estornado_por_id"]
@@ -559,6 +695,7 @@ export type Database = {
       }
       notificacoes: {
         Row: {
+          company_id: string | null
           created_at: string
           data_agendamento: string | null
           id: string
@@ -571,6 +708,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           data_agendamento?: string | null
           id?: string
@@ -583,6 +721,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           data_agendamento?: string | null
           id?: string
@@ -594,11 +733,21 @@ export type Database = {
           titulo?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "notificacoes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       parcelas: {
         Row: {
+          company_id: string | null
           created_at: string | null
+          deleted_at: string | null
           id: string
           numero_parcela: number
           titulo_id: string
@@ -606,7 +755,9 @@ export type Database = {
           vencimento: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           numero_parcela: number
           titulo_id: string
@@ -614,7 +765,9 @@ export type Database = {
           vencimento: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           id?: string
           numero_parcela?: number
           titulo_id?: string
@@ -622,6 +775,13 @@ export type Database = {
           vencimento?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "parcelas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parcelas_titulo_id_fkey"
             columns: ["titulo_id"]
@@ -641,9 +801,11 @@ export type Database = {
       parcelas_acordo: {
         Row: {
           acordo_id: string
+          company_id: string | null
           created_at: string
           data_pagamento: string | null
           data_vencimento: string
+          deleted_at: string | null
           id: string
           numero_parcela: number
           observacoes: string | null
@@ -655,9 +817,11 @@ export type Database = {
         }
         Insert: {
           acordo_id: string
+          company_id?: string | null
           created_at?: string
           data_pagamento?: string | null
           data_vencimento: string
+          deleted_at?: string | null
           id?: string
           numero_parcela: number
           observacoes?: string | null
@@ -669,9 +833,11 @@ export type Database = {
         }
         Update: {
           acordo_id?: string
+          company_id?: string | null
           created_at?: string
           data_pagamento?: string | null
           data_vencimento?: string
+          deleted_at?: string | null
           id?: string
           numero_parcela?: number
           observacoes?: string | null
@@ -689,10 +855,18 @@ export type Database = {
             referencedRelation: "acordos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "parcelas_acordo_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
         Row: {
+          company_id: string | null
           created_at: string
           email: string
           id: string
@@ -701,6 +875,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          company_id?: string | null
           created_at?: string
           email: string
           id?: string
@@ -709,6 +884,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          company_id?: string | null
           created_at?: string
           email?: string
           id?: string
@@ -716,13 +892,23 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       titulos: {
         Row: {
           cliente_id: string
+          company_id: string | null
           created_at: string
           created_by: string
+          deleted_at: string | null
           descricao: string | null
           id: string
           metadata: Json | null
@@ -733,8 +919,10 @@ export type Database = {
         }
         Insert: {
           cliente_id: string
+          company_id?: string | null
           created_at?: string
           created_by: string
+          deleted_at?: string | null
           descricao?: string | null
           id?: string
           metadata?: Json | null
@@ -745,8 +933,10 @@ export type Database = {
         }
         Update: {
           cliente_id?: string
+          company_id?: string | null
           created_at?: string
           created_by?: string
+          deleted_at?: string | null
           descricao?: string | null
           id?: string
           metadata?: Json | null
@@ -761,6 +951,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "titulos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -826,8 +1023,6 @@ export type Database = {
           action: string | null
           actor_email: string | null
           actor_id: string | null
-          actor_nome: string | null
-          actor_profile_email: string | null
           after_data: Json | null
           before_data: Json | null
           changed_fields: string[] | null
@@ -838,6 +1033,36 @@ export type Database = {
           reverted: boolean | null
           reverted_by_id: string | null
           table_name: string | null
+        }
+        Insert: {
+          action?: string | null
+          actor_email?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_fields?: string[] | null
+          context?: Json | null
+          id?: string | null
+          occurred_at?: string | null
+          record_id?: string | null
+          reverted?: boolean | null
+          reverted_by_id?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          action?: string | null
+          actor_email?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_fields?: string[] | null
+          context?: Json | null
+          id?: string | null
+          occurred_at?: string | null
+          record_id?: string | null
+          reverted?: boolean | null
+          reverted_by_id?: string | null
+          table_name?: string | null
         }
         Relationships: [
           {
@@ -858,29 +1083,15 @@ export type Database = {
       }
       vw_titulos_completos: {
         Row: {
-          cliente_cpf_cnpj: string | null
-          cliente_email: string | null
           cliente_id: string | null
           cliente_nome: string | null
-          cliente_telefone: string | null
+          company_id: string | null
+          cpf_cnpj: string | null
           created_at: string | null
-          created_by: string | null
+          deleted_at: string | null
           descricao: string | null
           id: string | null
-          metadata: Json | null
           numero_documento: string | null
-          parcelas_pagas: number | null
-          parcelas_pendentes: number | null
-          parcelas_vencidas: number | null
-          proximo_vencimento: string | null
-          quantidade_parcelas: number | null
-          saldo_devedor: number | null
-          status: string | null
-          tipo: string | null
-          total_descontos: number | null
-          total_juros: number | null
-          total_multa: number | null
-          total_pago: number | null
           updated_at: string | null
           valor_original: number | null
           vencimento_original: string | null
@@ -891,6 +1102,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "titulos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -953,6 +1171,7 @@ export type Database = {
         }
         Returns: Json
       }
+      current_company_id: { Args: never; Returns: string }
       estornar_evento_parcela: {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
@@ -968,6 +1187,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: { Args: { _uid?: string }; Returns: boolean }
       migrate_existing_titulos_to_clientes: { Args: never; Returns: undefined }
       refresh_mv_parcelas: { Args: never; Returns: undefined }
       registrar_pagamento_parcela: {
@@ -986,7 +1206,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "operador" | "gerente"
+      app_role: "super_admin" | "admin" | "operador" | "gerente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1114,7 +1334,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operador", "gerente"],
+      app_role: ["super_admin", "admin", "operador", "gerente"],
     },
   },
 } as const
