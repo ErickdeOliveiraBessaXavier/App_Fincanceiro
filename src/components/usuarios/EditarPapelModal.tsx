@@ -29,7 +29,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
   const [saving, setSaving] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, companyId } = useAuth();
   const qc = useQueryClient();
 
   const isSelf = user?.id === usuario.user_id;
@@ -42,7 +42,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
         .from('user_roles').delete().eq('user_id', usuario.user_id);
       if (delErr) throw delErr;
       const { error: insErr } = await supabase
-        .from('user_roles').insert({ user_id: usuario.user_id, role: novoPapel });
+        .from('user_roles').insert({ user_id: usuario.user_id, role: novoPapel, company_id: companyId });
       if (insErr) throw insErr;
 
       toast({ title: 'Papel atualizado', description: `${usuario.nome} agora é ${novoPapel}.` });
@@ -76,8 +76,9 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
             <Select value={novoPapel} onValueChange={(v) => setNovoPapel(v as AppRole)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="leitura">Leitura</SelectItem>
                 <SelectItem value="operador">Operador</SelectItem>
-                <SelectItem value="gerente">Gerente</SelectItem>
+                <SelectItem value="financeiro">Financeiro</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
               </SelectContent>
             </Select>

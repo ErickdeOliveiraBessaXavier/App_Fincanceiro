@@ -68,7 +68,7 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
 
         // Buscar parcelas do título
         const { data: parcelas } = await supabase
-          .from('mv_parcelas_consolidadas')
+          .from('vw_parcelas_consolidadas')
           .select('*')
           .eq('titulo_id', titulo.id)
           .in('status', ['pendente', 'a_vencer', 'vencido', 'renegociado'])

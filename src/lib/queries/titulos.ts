@@ -58,7 +58,7 @@ export function useParcelasByTitulo(tituloId: string | null, enabled = true) {
     queryFn: async (): Promise<Parcela[]> => {
       if (!tituloId) return [];
       const { data, error } = await supabase
-        .from('mv_parcelas_consolidadas')
+        .from('vw_parcelas_consolidadas')
         .select('*')
         .eq('titulo_id', tituloId)
         .order('numero_parcela');
@@ -110,27 +110,18 @@ export function useCreateTitulo() {
 }
 
 /**
- * Exclui um titulo (e parcelas/eventos relacionados) e refresca a MV.
+ * Cancela um titulo (soft delete) preservando o histórico financeiro.
+ * Nunca apaga registros — usa a RPC `cancelar_titulo` (auditada).
  */
 export function useDeleteTitulo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (tituloId: string) => {
-      const { data: parcelas } = await supabase
-        .from('parcelas')
-        .select('id')
-        .eq('titulo_id', tituloId);
-
-      if (parcelas && parcelas.length > 0) {
-        const parcelaIds = parcelas.map((p) => p.id);
-        await supabase.from('eventos_parcela').delete().in('parcela_id', parcelaIds);
-      }
-
-      await supabase.from('parcelas').delete().eq('titulo_id', tituloId);
-
-      const { error } = await supabase.from('titulos').delete().eq('id', tituloId);
+      const { error } = await supabase.rpc('cancelar_titulo', {
+        p_titulo_id: tituloId,
+        p_motivo: 'Cancelado pelo usuário',
+      });
       if (error) throw error;
-
       await supabase.rpc('refresh_mv_parcelas');
     },
     onSuccess: () => {

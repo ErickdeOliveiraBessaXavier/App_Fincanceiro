@@ -10,7 +10,7 @@ interface LayoutProps {
 }
 
 export const Layout = memo(({ children }: LayoutProps) => {
-  const { user, loading } = useAuth();
+  const { user, loading, companyId, isSuperAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -25,6 +25,11 @@ export const Layout = memo(({ children }: LayoutProps) => {
 
   if (!user) {
     return <Navigate to="/auth" replace />;
+  }
+
+  // Usuário autenticado sem empresa (e não super_admin) precisa configurar a empresa.
+  if (!companyId && !isSuperAdmin) {
+    return <Navigate to="/setup-empresa" replace />;
   }
 
   return (

@@ -46,7 +46,7 @@ export function MetricasCliente({ clienteId }: MetricasClienteProps) {
 
       // Buscar parcelas consolidadas
       const { data: parcelas } = await supabase
-        .from('mv_parcelas_consolidadas')
+        .from('vw_parcelas_consolidadas')
         .select('*')
         .in('titulo_id', tituloIds);
 

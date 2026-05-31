@@ -1,1 +1,0 @@
-alter view public.vw_audit_record set (security_invoker = true);

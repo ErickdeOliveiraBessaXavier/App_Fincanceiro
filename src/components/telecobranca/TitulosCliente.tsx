@@ -53,7 +53,7 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
 
       // Buscar parcelas consolidadas desses títulos
       const { data: parcelasData, error: parcelasError } = await supabase
-        .from('mv_parcelas_consolidadas')
+        .from('vw_parcelas_consolidadas')
         .select('*')
         .in('titulo_id', tituloIds)
         .order('vencimento', { ascending: true });

@@ -130,7 +130,7 @@ const Dashboard = () => {
       });
 
       const { data: parcelasData } = await supabase
-        .from('mv_parcelas_consolidadas')
+        .from('vw_parcelas_consolidadas')
         .select('*')
         .eq('status', 'vencida');
 

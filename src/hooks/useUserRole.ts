@@ -2,9 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type AppRole = 'admin' | 'gerente' | 'operador';
+export type AppRole = 'leitura' | 'operador' | 'financeiro' | 'admin' | 'super_admin';
 
-const RANK: Record<AppRole, number> = { operador: 1, gerente: 2, admin: 3 };
+const RANK: Record<AppRole, number> = {
+  leitura: 1,
+  operador: 2,
+  financeiro: 3,
+  admin: 4,
+  super_admin: 5,
+};
 
 export function useUserRole() {
   const { user } = useAuth();
@@ -35,9 +41,11 @@ export function useUserRole() {
   return {
     roles,
     role: highest,
-    isAdmin: roles.includes('admin'),
-    isGerente: hasMinRole('gerente'),
+    isSuperAdmin: roles.includes('super_admin'),
+    isAdmin: hasMinRole('admin'),
+    isFinanceiro: hasMinRole('financeiro'),
     isOperador: hasMinRole('operador'),
+    isReadOnly: highest === 'leitura',
     hasMinRole,
     isLoading: query.isLoading,
   };

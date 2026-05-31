@@ -1,1 +1,9 @@
 project_id = "cuejrnqdudadlbuiouph"
+
+# Injeta company_id e user_role nos claims do JWT (isolamento multi-tenant).
+# Em produção (projeto hospedado) habilite também no Dashboard:
+#   Authentication > Hooks > Customize Access Token (JWT) Claims
+#   -> selecione a função public.custom_access_token_hook
+[auth.hook.custom_access_token]
+enabled = true
+uri = "pg-functions://postgres/public/custom_access_token_hook"

@@ -65,7 +65,7 @@ export default function Titulos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isGerente } = useUserRole();
+  const { isFinanceiro } = useUserRole();
 
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
@@ -136,7 +136,7 @@ export default function Titulos() {
       queryKey: titulosKeys.parcelas(tituloId),
       queryFn: async () => {
         const { data, error } = await supabase
-          .from('mv_parcelas_consolidadas')
+          .from('vw_parcelas_consolidadas')
           .select('*')
           .eq('titulo_id', tituloId)
           .order('numero_parcela');
@@ -637,7 +637,7 @@ export default function Titulos() {
                                         <DollarSign className="h-4 w-4 mr-2" />
                                         Registrar Pagamento
                                       </DropdownMenuItem>
-                                      {isGerente && (
+                                      {isFinanceiro && (
                                         <>
                                           <DropdownMenuItem onClick={() => openEncargoModal(firstParcela)}>
                                             <Percent className="h-4 w-4 mr-2" />
@@ -652,7 +652,7 @@ export default function Titulos() {
                                     </>
                                   );
                                 })()}
-                                {isGerente && (
+                                {isFinanceiro && (
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
@@ -726,7 +726,7 @@ export default function Titulos() {
                                         <DollarSign className="h-4 w-4 mr-2" />
                                         Registrar Pagamento
                                       </DropdownMenuItem>
-                                      {isGerente && (
+                                      {isFinanceiro && (
                                         <>
                                           <DropdownMenuItem onClick={() => openEncargoModal(parcela)}>
                                             <Percent className="h-4 w-4 mr-2" />

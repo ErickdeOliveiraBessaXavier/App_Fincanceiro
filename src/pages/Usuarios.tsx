@@ -51,9 +51,11 @@ export default function Usuarios() {
   };
 
   const roleBadge = (role: AppRole | null) => {
+    if (role === 'super_admin') return { cls: 'bg-purple-100 text-purple-800', icon: <Shield className="h-4 w-4" />, label: 'super admin' };
     if (role === 'admin') return { cls: 'bg-red-100 text-red-800', icon: <Shield className="h-4 w-4" />, label: 'admin' };
-    if (role === 'gerente') return { cls: 'bg-amber-100 text-amber-800', icon: <UserCog className="h-4 w-4" />, label: 'gerente' };
+    if (role === 'financeiro') return { cls: 'bg-amber-100 text-amber-800', icon: <UserCog className="h-4 w-4" />, label: 'financeiro' };
     if (role === 'operador') return { cls: 'bg-blue-100 text-blue-800', icon: <User className="h-4 w-4" />, label: 'operador' };
+    if (role === 'leitura') return { cls: 'bg-slate-100 text-slate-800', icon: <User className="h-4 w-4" />, label: 'leitura' };
     return { cls: 'bg-gray-100 text-gray-800', icon: <User className="h-4 w-4" />, label: 'sem papel' };
   };
 
@@ -99,10 +101,10 @@ export default function Usuarios() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Gerentes</CardTitle>
+            <CardTitle className="text-sm font-medium">Financeiro</CardTitle>
             <UserCog className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{count('gerente')}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{count('financeiro')}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

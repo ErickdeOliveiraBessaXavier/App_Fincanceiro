@@ -18,6 +18,7 @@ const Relatorios = React.lazy(() => import("./pages/Relatorios"));
 const Usuarios = React.lazy(() => import("./pages/Usuarios"));
 const Telecobranca = React.lazy(() => import("./pages/Telecobranca"));
 const Auth = React.lazy(() => import("./pages/Auth"));
+const SetupEmpresa = React.lazy(() => import("./pages/SetupEmpresa"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -32,6 +33,7 @@ const App = () => (
           <React.Suspense fallback={<div>Loading...</div>}>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/setup-empresa" element={<SetupEmpresa />} />
               <Route path="/" element={<Layout><Dashboard /></Layout>} />
               <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
               <Route path="/titulos" element={<Layout><Titulos /></Layout>} />
