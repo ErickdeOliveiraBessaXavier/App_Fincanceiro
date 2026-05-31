@@ -14,16 +14,960 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      acordos: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          created_by: string
+          data_acordo: string
+          data_inicio: string
+          data_vencimento_primeira_parcela: string
+          desconto: number
+          id: string
+          observacoes: string | null
+          parcelas: number
+          status: string
+          taxa_juros: number | null
+          titulo_id: string
+          updated_at: string
+          valor_acordo: number
+          valor_original: number
+          valor_parcela: number
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          created_by: string
+          data_acordo?: string
+          data_inicio?: string
+          data_vencimento_primeira_parcela: string
+          desconto?: number
+          id?: string
+          observacoes?: string | null
+          parcelas?: number
+          status?: string
+          taxa_juros?: number | null
+          titulo_id: string
+          updated_at?: string
+          valor_acordo: number
+          valor_original: number
+          valor_parcela: number
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          created_by?: string
+          data_acordo?: string
+          data_inicio?: string
+          data_vencimento_primeira_parcela?: string
+          desconto?: number
+          id?: string
+          observacoes?: string | null
+          parcelas?: number
+          status?: string
+          taxa_juros?: number | null
+          titulo_id?: string
+          updated_at?: string
+          valor_acordo?: number
+          valor_original?: number
+          valor_parcela?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acordos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acordos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acordos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      activity_logs: {
+        Row: {
+          acao: string
+          created_at: string
+          descricao: string
+          id: string
+          recurso_id: string | null
+          recurso_tipo: string
+          user_id: string
+        }
+        Insert: {
+          acao: string
+          created_at?: string
+          descricao: string
+          id?: string
+          recurso_id?: string | null
+          recurso_tipo: string
+          user_id: string
+        }
+        Update: {
+          acao?: string
+          created_at?: string
+          descricao?: string
+          id?: string
+          recurso_id?: string | null
+          recurso_tipo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      agendamentos: {
+        Row: {
+          acordo_id: string | null
+          cliente_id: string
+          created_at: string | null
+          created_by: string
+          data_agendamento: string
+          descricao: string | null
+          id: string
+          resultado: string | null
+          status: string
+          tipo_evento: string
+          titulo_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          acordo_id?: string | null
+          cliente_id: string
+          created_at?: string | null
+          created_by: string
+          data_agendamento: string
+          descricao?: string | null
+          id?: string
+          resultado?: string | null
+          status?: string
+          tipo_evento: string
+          titulo_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          acordo_id?: string | null
+          cliente_id?: string
+          created_at?: string | null
+          created_by?: string
+          data_agendamento?: string
+          descricao?: string | null
+          id?: string
+          resultado?: string | null
+          status?: string
+          tipo_evento?: string
+          titulo_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agendamentos_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "agendamentos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "agendamentos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      anexos: {
+        Row: {
+          acordo_id: string | null
+          categoria: string | null
+          cliente_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          nome_arquivo: string
+          tamanho_arquivo: number | null
+          tipo_arquivo: string
+          titulo_id: string | null
+          url_arquivo: string
+        }
+        Insert: {
+          acordo_id?: string | null
+          categoria?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          nome_arquivo: string
+          tamanho_arquivo?: number | null
+          tipo_arquivo: string
+          titulo_id?: string | null
+          url_arquivo: string
+        }
+        Update: {
+          acordo_id?: string | null
+          categoria?: string | null
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          nome_arquivo?: string
+          tamanho_arquivo?: number | null
+          tipo_arquivo?: string
+          titulo_id?: string | null
+          url_arquivo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "anexos_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "anexos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      audit_log: {
+        Row: {
+          action: string
+          actor_email: string | null
+          actor_id: string | null
+          after_data: Json | null
+          before_data: Json | null
+          changed_fields: string[] | null
+          context: Json | null
+          id: string
+          occurred_at: string
+          record_id: string | null
+          reverted: boolean
+          reverted_by_id: string | null
+          table_name: string | null
+        }
+        Insert: {
+          action: string
+          actor_email?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_fields?: string[] | null
+          context?: Json | null
+          id?: string
+          occurred_at?: string
+          record_id?: string | null
+          reverted?: boolean
+          reverted_by_id?: string | null
+          table_name?: string | null
+        }
+        Update: {
+          action?: string
+          actor_email?: string | null
+          actor_id?: string | null
+          after_data?: Json | null
+          before_data?: Json | null
+          changed_fields?: string[] | null
+          context?: Json | null
+          id?: string
+          occurred_at?: string
+          record_id?: string | null
+          reverted?: boolean
+          reverted_by_id?: string | null
+          table_name?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_reverted_by_id_fkey"
+            columns: ["reverted_by_id"]
+            isOneToOne: false
+            referencedRelation: "audit_log"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campaign_logs: {
+        Row: {
+          campanha_id: string
+          cliente: string
+          contato: string
+          erro_mensagem: string | null
+          id: string
+          sent_at: string
+          status: string
+          titulo_id: string
+        }
+        Insert: {
+          campanha_id: string
+          cliente: string
+          contato: string
+          erro_mensagem?: string | null
+          id?: string
+          sent_at?: string
+          status?: string
+          titulo_id: string
+        }
+        Update: {
+          campanha_id?: string
+          cliente?: string
+          contato?: string
+          erro_mensagem?: string | null
+          id?: string
+          sent_at?: string
+          status?: string
+          titulo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campaign_logs_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_logs_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campaign_logs_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      campanhas: {
+        Row: {
+          canal: string
+          created_at: string
+          created_by: string
+          filtros: Json | null
+          id: string
+          mensagem: string
+          nome: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          canal: string
+          created_at?: string
+          created_by: string
+          filtros?: Json | null
+          id?: string
+          mensagem: string
+          nome: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          canal?: string
+          created_at?: string
+          created_by?: string
+          filtros?: Json | null
+          id?: string
+          mensagem?: string
+          nome?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      clientes: {
+        Row: {
+          cep: string | null
+          cidade: string | null
+          cpf_cnpj: string
+          created_at: string
+          created_by: string
+          email: string | null
+          endereco_completo: string | null
+          estado: string | null
+          id: string
+          nome: string
+          observacoes: string | null
+          status: string
+          telefone: string | null
+          updated_at: string
+        }
+        Insert: {
+          cep?: string | null
+          cidade?: string | null
+          cpf_cnpj: string
+          created_at?: string
+          created_by: string
+          email?: string | null
+          endereco_completo?: string | null
+          estado?: string | null
+          id?: string
+          nome: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cep?: string | null
+          cidade?: string | null
+          cpf_cnpj?: string
+          created_at?: string
+          created_by?: string
+          email?: string | null
+          endereco_completo?: string | null
+          estado?: string | null
+          id?: string
+          nome?: string
+          observacoes?: string | null
+          status?: string
+          telefone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      comunicacoes: {
+        Row: {
+          anexos: Json | null
+          assunto: string
+          canal: string
+          cliente_id: string
+          created_at: string
+          created_by: string
+          data_contato: string | null
+          id: string
+          mensagem: string | null
+          resultado: string | null
+          tipo: string
+        }
+        Insert: {
+          anexos?: Json | null
+          assunto: string
+          canal: string
+          cliente_id: string
+          created_at?: string
+          created_by: string
+          data_contato?: string | null
+          id?: string
+          mensagem?: string | null
+          resultado?: string | null
+          tipo: string
+        }
+        Update: {
+          anexos?: Json | null
+          assunto?: string
+          canal?: string
+          cliente_id?: string
+          created_at?: string
+          created_by?: string
+          data_contato?: string | null
+          id?: string
+          mensagem?: string | null
+          resultado?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comunicacoes_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comunicacoes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      eventos_parcela: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          efeito: number
+          estornado: boolean | null
+          estornado_por_id: string | null
+          id: string
+          meio_pagamento: string | null
+          metadata: Json | null
+          parcela_id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          efeito: number
+          estornado?: boolean | null
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_id: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          descricao?: string | null
+          efeito?: number
+          estornado?: boolean | null
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
+            referencedRelation: "eventos_parcela"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "mv_parcelas_consolidadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notificacoes: {
+        Row: {
+          created_at: string
+          data_agendamento: string | null
+          id: string
+          lida: boolean
+          mensagem: string
+          metadata: Json | null
+          prioridade: string
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_agendamento?: string | null
+          id?: string
+          lida?: boolean
+          mensagem: string
+          metadata?: Json | null
+          prioridade?: string
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_agendamento?: string | null
+          id?: string
+          lida?: boolean
+          mensagem?: string
+          metadata?: Json | null
+          prioridade?: string
+          tipo?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      parcelas: {
+        Row: {
+          created_at: string | null
+          id: string
+          numero_parcela: number
+          titulo_id: string
+          valor_nominal: number
+          vencimento: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          numero_parcela: number
+          titulo_id: string
+          valor_nominal: number
+          vencimento: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          numero_parcela?: number
+          titulo_id?: string
+          valor_nominal?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parcelas_acordo: {
+        Row: {
+          acordo_id: string
+          created_at: string
+          data_pagamento: string | null
+          data_vencimento: string
+          id: string
+          numero_parcela: number
+          observacoes: string | null
+          status: string
+          updated_at: string
+          valor: number
+          valor_juros: number
+          valor_total: number
+        }
+        Insert: {
+          acordo_id: string
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento: string
+          id?: string
+          numero_parcela: number
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor: number
+          valor_juros?: number
+          valor_total: number
+        }
+        Update: {
+          acordo_id?: string
+          created_at?: string
+          data_pagamento?: string | null
+          data_vencimento?: string
+          id?: string
+          numero_parcela?: number
+          observacoes?: string | null
+          status?: string
+          updated_at?: string
+          valor?: number
+          valor_juros?: number
+          valor_total?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_acordo_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      titulos: {
+        Row: {
+          cliente_id: string | null
+          created_at: string
+          created_by: string
+          descricao: string | null
+          id: string
+          metadata: Json | null
+          numero_documento: string | null
+          updated_at: string
+          valor_original: number
+          vencimento_original: string
+        }
+        Insert: {
+          cliente_id?: string | null
+          created_at?: string
+          created_by: string
+          descricao?: string | null
+          id?: string
+          metadata?: Json | null
+          numero_documento?: string | null
+          updated_at?: string
+          valor_original: number
+          vencimento_original: string
+        }
+        Update: {
+          cliente_id?: string | null
+          created_at?: string
+          created_by?: string
+          descricao?: string | null
+          id?: string
+          metadata?: Json | null
+          numero_documento?: string | null
+          updated_at?: string
+          valor_original?: number
+          vencimento_original?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "titulos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      mv_parcelas_consolidadas: {
+        Row: {
+          data_ultimo_pagamento: string | null
+          descontos: number | null
+          id: string | null
+          juros: number | null
+          multa: number | null
+          numero_parcela: number | null
+          saldo_atual: number | null
+          status: string | null
+          titulo_id: string | null
+          total_eventos: number | null
+          total_pago: number | null
+          valor_nominal: number | null
+          vencimento: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_titulos_completos: {
+        Row: {
+          cliente_cpf_cnpj: string | null
+          cliente_email: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          cliente_telefone: string | null
+          created_at: string | null
+          created_by: string | null
+          descricao: string | null
+          id: string | null
+          metadata: Json | null
+          numero_documento: string | null
+          parcelas_pagas: number | null
+          parcelas_pendentes: number | null
+          parcelas_vencidas: number | null
+          proximo_vencimento: string | null
+          quantidade_parcelas: number | null
+          saldo_devedor: number | null
+          status: string | null
+          tipo: string | null
+          total_descontos: number | null
+          total_juros: number | null
+          total_multa: number | null
+          total_pago: number | null
+          updated_at: string | null
+          valor_original: number | null
+          vencimento_original: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "titulos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
-      [_ in never]: never
+      aplicar_encargo_parcela: {
+        Args: {
+          p_created_by?: string
+          p_descricao?: string
+          p_motivo?: string
+          p_parcela_id: string
+          p_tipo: string
+          p_valor: number
+        }
+        Returns: Json
+      }
+      conceder_desconto_parcela: {
+        Args: {
+          p_created_by?: string
+          p_descricao?: string
+          p_motivo?: string
+          p_parcela_id: string
+          p_valor: number
+        }
+        Returns: Json
+      }
+      criar_titulo_com_parcelas: {
+        Args: {
+          p_cliente_id: string
+          p_created_by?: string
+          p_descricao?: string
+          p_intervalo_dias?: number
+          p_numero_documento?: string
+          p_numero_parcelas?: number
+          p_valor_original: number
+          p_vencimento_original: string
+        }
+        Returns: Json
+      }
+      estornar_evento_parcela: {
+        Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
+        Returns: Json
+      }
+      has_min_role: {
+        Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
+        Returns: boolean
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      refresh_mv_parcelas: { Args: never; Returns: undefined }
+      registrar_pagamento_parcela: {
+        Args: {
+          p_created_by?: string
+          p_descricao?: string
+          p_meio_pagamento: string
+          p_parcela_id: string
+          p_valor: number
+        }
+        Returns: Json
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operador" | "gerente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +1094,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operador", "gerente"],
+    },
   },
 } as const
