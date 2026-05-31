@@ -6,13 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, MailCheck } from 'lucide-react';
 
 const Auth = () => {
   const { user, signIn, signUp, loading } = useAuth();
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', nome: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [confirmationEmail, setConfirmationEmail] = useState<string | null>(null);
 
   if (loading) {
     return (
@@ -39,8 +40,12 @@ const Auth = () => {
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    await signUp(signupData.email, signupData.password, signupData.nome);
+    const { error, needsConfirmation } = await signUp(signupData.email, signupData.password, signupData.nome);
     setIsLoading(false);
+    if (!error && needsConfirmation) {
+      setConfirmationEmail(signupData.email);
+    }
+    // Se não precisa confirmar, a sessão já foi criada e o redirecionamento acontece automaticamente.
   };
 
   return (
@@ -100,6 +105,32 @@ const Auth = () => {
             <span className="text-2xl font-bold text-foreground">CobrançaPro</span>
           </div>
 
+          {confirmationEmail ? (
+            <Card className="border-0 shadow-none lg:shadow-card lg:border">
+              <CardHeader className="text-center pb-2">
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+                  <MailCheck className="h-7 w-7 text-primary" />
+                </div>
+                <CardTitle className="text-2xl font-bold">Confirme seu e-mail</CardTitle>
+                <CardDescription>
+                  Enviamos um link de confirmação para <strong>{confirmationEmail}</strong>.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground text-center">
+                  Abra o e-mail e clique no link para ativar sua conta. Depois é só voltar aqui e entrar.
+                  Não esqueça de verificar a caixa de spam.
+                </p>
+                <Button
+                  variant="outline"
+                  className="w-full h-11"
+                  onClick={() => setConfirmationEmail(null)}
+                >
+                  Voltar para o login
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
           <Card className="border-0 shadow-none lg:shadow-card lg:border">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl font-bold">Bem-vindo de volta</CardTitle>
@@ -213,6 +244,7 @@ const Auth = () => {
               </Tabs>
             </CardContent>
           </Card>
+          )}
         </div>
       </div>
     </div>

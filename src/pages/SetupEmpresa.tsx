@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Building2 } from 'lucide-react';
 
 export default function SetupEmpresa() {
-  const { user, companyId, loading, refreshClaims } = useAuth();
+  const { user, companyId, isSuperAdmin, loading, refreshClaims } = useAuth();
   const { toast } = useToast();
   const [nome, setNome] = useState('');
   const [cnpj, setCnpj] = useState('');
@@ -18,6 +18,8 @@ export default function SetupEmpresa() {
 
   if (loading) return null;
   if (!user) return <Navigate to="/auth" replace />;
+  // super_admin não pertence a empresa nenhuma — não deve configurar empresa.
+  if (isSuperAdmin) return <Navigate to="/" replace />;
   // Já tem empresa: nada a configurar.
   if (companyId) return <Navigate to="/" replace />;
 

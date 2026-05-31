@@ -19,6 +19,7 @@ const Usuarios = React.lazy(() => import("./pages/Usuarios"));
 const Telecobranca = React.lazy(() => import("./pages/Telecobranca"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const SetupEmpresa = React.lazy(() => import("./pages/SetupEmpresa"));
+const Plataforma = React.lazy(() => import("./pages/Plataforma"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/setup-empresa" element={<SetupEmpresa />} />
+              <Route path="/plataforma" element={<Plataforma />} />
               <Route path="/" element={<Layout><Dashboard /></Layout>} />
               <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
               <Route path="/titulos" element={<Layout><Titulos /></Layout>} />

@@ -1,35 +1,61 @@
 import { ReactNode, memo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCurrentCompany } from '@/hooks/useCurrentCompany';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { NotificationBell } from '@/components/NotificationBell';
+import { Button } from '@/components/ui/button';
+import { Clock, Ban } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-export const Layout = memo(({ children }: LayoutProps) => {
-  const { user, loading, companyId, isSuperAdmin } = useAuth();
+const Spinner = () => (
+  <div className="flex min-h-screen items-center justify-center bg-background">
+    <div className="flex flex-col items-center gap-4">
+      <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+      <p className="text-sm text-muted-foreground">Carregando...</p>
+    </div>
+  </div>
+);
 
-  if (loading) {
+export const Layout = memo(({ children }: LayoutProps) => {
+  const { user, loading, companyId, isSuperAdmin, signOut } = useAuth();
+  const { company, isLoading: companyLoading } = useCurrentCompany();
+
+  if (loading) return <Spinner />;
+  if (!user) return <Navigate to="/auth" replace />;
+  // super_admin tem área própria (administra a plataforma, não opera dentro de uma empresa).
+  if (isSuperAdmin) return <Navigate to="/plataforma" replace />;
+  // Usuário sem empresa precisa configurá-la.
+  if (!companyId) return <Navigate to="/setup-empresa" replace />;
+
+  // Aguarda os dados da empresa para decidir o gate de acesso.
+  if (companyLoading) return <Spinner />;
+
+  // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) para acessar.
+  if (company && company.status !== 'ativa') {
+    const suspensa = company.status === 'suspensa' || company.status === 'cancelada';
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">Carregando...</p>
+      <div className="flex min-h-screen items-center justify-center bg-background p-6">
+        <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+            {suspensa ? <Ban className="h-7 w-7 text-destructive" /> : <Clock className="h-7 w-7 text-primary" />}
+          </div>
+          <h1 className="mb-2 text-xl font-bold">
+            {suspensa ? 'Acesso suspenso' : 'Empresa aguardando aprovação'}
+          </h1>
+          <p className="mb-6 text-sm text-muted-foreground">
+            {suspensa
+              ? 'O acesso da sua empresa está suspenso. Entre em contato com o suporte para regularizar.'
+              : `A empresa "${company.nome}" foi cadastrada e está aguardando aprovação. Você receberá acesso assim que for ativada.`}
+          </p>
+          <Button variant="outline" className="w-full" onClick={signOut}>Sair</Button>
         </div>
       </div>
     );
-  }
-
-  if (!user) {
-    return <Navigate to="/auth" replace />;
-  }
-
-  // Usuário autenticado sem empresa (e não super_admin) precisa configurar a empresa.
-  if (!companyId && !isSuperAdmin) {
-    return <Navigate to="/setup-empresa" replace />;
   }
 
   return (

@@ -13,7 +13,7 @@ interface AuthContextType {
   /** Papel principal do usuário, lido do claim do JWT. */
   role: AppRole | null;
   isSuperAdmin: boolean;
-  signUp: (email: string, password: string, nome: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, nome: string) => Promise<{ error: any; needsConfirmation: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   /** Renova o token para recarregar os claims (ex.: após criar a empresa). */
@@ -110,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user?.id, companyId]);
 
   const signUp = async (email: string, password: string, nome: string) => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: { data: { nome } },
@@ -118,12 +118,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (error) {
       toast({ title: 'Erro no cadastro', description: error.message, variant: 'destructive' });
-    } else {
-      toast({ title: 'Cadastro realizado', description: 'Login automático em andamento...' });
-      await signIn(email, password);
+      return { error, needsConfirmation: false };
     }
 
-    return { error };
+    // Sem sessão na resposta => confirmação de e-mail está ativada.
+    const needsConfirmation = !data.session;
+    return { error: null, needsConfirmation };
   };
 
   const signIn = async (email: string, password: string) => {
