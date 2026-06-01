@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Edit, Shield, User, UserCog } from 'lucide-react';
+import { Search, Edit, Shield, User, UserCog, Clock, Check, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { EditarPapelModal } from '@/components/usuarios/EditarPapelModal';
 import { useUserRole, type AppRole } from '@/hooks/useUserRole';
 import { useRepresentantes, representantesKeys } from '@/lib/queries/representantes';
+import { usePendingConvites, useAutorizarConvite, useRevogarConvite, type ConvitePendente } from '@/lib/queries/convites';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus } from 'lucide-react';
 import { Label } from '@/components/ui/label';
@@ -34,7 +35,29 @@ export default function Usuarios() {
   const { toast } = useToast();
   const { isAdmin } = useUserRole();
   const { data: representantes = [] } = useRepresentantes();
+  const { data: pendentes = [] } = usePendingConvites();
+  const autorizarMut = useAutorizarConvite();
+  const revogarMut = useRevogarConvite();
   const qc = useQueryClient();
+
+  const handleAutorizar = async (c: ConvitePendente) => {
+    try {
+      await autorizarMut.mutateAsync(c);
+      toast({ title: 'Acesso autorizado', description: `${c.nome ?? 'Representante'} já pode entrar no sistema.` });
+      fetchUsuarios();
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message ?? 'Falha ao autorizar', variant: 'destructive' });
+    }
+  };
+
+  const handleRecusar = async (c: ConvitePendente) => {
+    try {
+      await revogarMut.mutateAsync(c.id);
+      toast({ title: 'Cadastro recusado', description: 'O convite foi cancelado.' });
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message ?? 'Falha ao recusar', variant: 'destructive' });
+    }
+  };
 
   const emptyNovo = { nome: '', email: '', senha: '', tipo: 'representante' as 'representante' | 'admin', representante_id: '' };
   const [createOpen, setCreateOpen] = useState(false);
@@ -163,6 +186,65 @@ export default function Usuarios() {
           <CardContent><div className="text-2xl font-bold">{count('operador')}</div></CardContent>
         </Card>
       </div>
+
+      {isAdmin && pendentes.length > 0 && (
+        <Card className="border-amber-200">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-amber-600" />
+              Aguardando autorização
+              <Badge className="bg-amber-100 text-amber-800">{pendentes.length}</Badge>
+            </CardTitle>
+            <CardDescription>
+              Representantes que se cadastraram pelo link e precisam da sua liberação para acessar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Carteira</TableHead>
+                    <TableHead>Cadastrado em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendentes.map((c) => (
+                    <TableRow key={c.id}>
+                      <TableCell className="font-medium">{c.nome ?? '—'}</TableCell>
+                      <TableCell>{c.email ?? '—'}</TableCell>
+                      <TableCell>{c.representante_nome ?? '—'}</TableCell>
+                      <TableCell>{formatDate(c.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          className="mr-2 gap-1"
+                          onClick={() => handleAutorizar(c)}
+                          disabled={autorizarMut.isPending || revogarMut.isPending}
+                        >
+                          <Check className="h-4 w-4" /> Autorizar
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="gap-1 text-destructive hover:text-destructive"
+                          onClick={() => handleRecusar(c)}
+                          disabled={autorizarMut.isPending || revogarMut.isPending}
+                        >
+                          <X className="h-4 w-4" /> Recusar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

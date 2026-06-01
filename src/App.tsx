@@ -19,6 +19,7 @@ const Relatorios = React.lazy(() => import("./pages/Relatorios"));
 const Usuarios = React.lazy(() => import("./pages/Usuarios"));
 const Telecobranca = React.lazy(() => import("./pages/Telecobranca"));
 const Auth = React.lazy(() => import("./pages/Auth"));
+const Convite = React.lazy(() => import("./pages/Convite"));
 const SetupEmpresa = React.lazy(() => import("./pages/SetupEmpresa"));
 const Plataforma = React.lazy(() => import("./pages/Plataforma"));
 const PlataformaImportar = React.lazy(() => import("./pages/PlataformaImportar"));
@@ -36,6 +37,7 @@ const App = () => (
           <React.Suspense fallback={<div>Loading...</div>}>
             <Routes>
               <Route path="/auth" element={<Auth />} />
+              <Route path="/convite" element={<Convite />} />
               <Route path="/setup-empresa" element={<SetupEmpresa />} />
               <Route path="/plataforma" element={<Plataforma />} />
               <Route path="/plataforma/importar" element={<PlataformaImportar />} />

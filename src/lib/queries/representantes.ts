@@ -12,6 +12,8 @@ export interface RepresentanteRow {
   created_at: string;
   /** Quantidade de clientes na carteira do representante. */
   carteira: number;
+  /** user_id do login vinculado (null = ainda sem acesso ao sistema). */
+  user_id?: string | null;
 }
 
 export const representantesKeys = {
@@ -26,7 +28,7 @@ export function useRepresentantes() {
     queryFn: async (): Promise<RepresentanteRow[]> => {
       const { data, error } = await supabase
         .from('representantes')
-        .select('id, nome, email, telefone, ativo, created_at, clientes(count)')
+        .select('id, nome, email, telefone, ativo, created_at, user_id, clientes(count)')
         .is('deleted_at', null)
         .order('nome');
       if (error) throw error;
@@ -37,6 +39,7 @@ export function useRepresentantes() {
         telefone: r.telefone,
         ativo: r.ativo,
         created_at: r.created_at,
+        user_id: r.user_id ?? null,
         carteira: r.clientes?.[0]?.count ?? 0,
       }));
     },

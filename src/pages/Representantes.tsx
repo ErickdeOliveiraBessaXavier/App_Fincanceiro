@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Edit, Trash2, Users, Briefcase } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Briefcase, Link2, Check, Copy, CheckCircle2 } from 'lucide-react';
 import {
   useRepresentantes,
   useCreateRepresentante,
@@ -7,6 +7,7 @@ import {
   useDeleteRepresentante,
   type RepresentanteRow,
 } from '@/lib/queries/representantes';
+import { useGerarConvite } from '@/lib/queries/convites';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ export default function Representantes() {
   const createMut = useCreateRepresentante();
   const updateMut = useUpdateRepresentante();
   const deleteMut = useDeleteRepresentante();
+  const gerarConvite = useGerarConvite();
   const { isAdmin } = useUserRole();
   const { toast } = useToast();
 
@@ -35,6 +37,31 @@ export default function Representantes() {
   const isEditing = !!form.id;
 
   const [toDelete, setToDelete] = useState<RepresentanteRow | null>(null);
+
+  // Link de convite gerado (para copiar e enviar ao representante).
+  const [linkRep, setLinkRep] = useState<{ nome: string; url: string } | null>(null);
+  const [copiado, setCopiado] = useState(false);
+
+  const handleGerarLink = async (r: RepresentanteRow) => {
+    try {
+      const token = await gerarConvite.mutateAsync({ representanteId: r.id, nomeSugerido: r.nome });
+      const url = `${window.location.origin}/convite?token=${token}`;
+      setCopiado(false);
+      setLinkRep({ nome: r.nome, url });
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message ?? 'Falha ao gerar o link', variant: 'destructive' });
+    }
+  };
+
+  const copiarLink = async () => {
+    if (!linkRep) return;
+    try {
+      await navigator.clipboard.writeText(linkRep.url);
+      setCopiado(true);
+    } catch {
+      setCopiado(false);
+    }
+  };
 
   const openNew = () => { setForm(empty); setOpen(true); };
   const openEdit = (r: RepresentanteRow) => {
@@ -158,6 +185,23 @@ export default function Representantes() {
                         <Switch checked={r.ativo} onCheckedChange={() => toggleAtivo(r)} />
                       </TableCell>
                       <TableCell className="text-right">
+                        {isAdmin && (
+                          r.user_id ? (
+                            <Badge variant="outline" className="mr-1 gap-1 text-green-600 border-green-200">
+                              <CheckCircle2 className="h-3 w-3" /> com acesso
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleGerarLink(r)}
+                              disabled={gerarConvite.isPending}
+                              title="Gerar link de acesso"
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </Button>
+                          )
+                        )}
                         <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
                           <Edit className="h-4 w-4" />
                         </Button>
@@ -234,6 +278,28 @@ export default function Representantes() {
             <Button variant="destructive" onClick={handleDelete} disabled={deleteMut.isPending}>
               Excluir
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!linkRep} onOpenChange={(o) => !o && setLinkRep(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Link de acesso gerado</DialogTitle>
+            <DialogDescription>
+              Envie este link para <strong>{linkRep?.nome}</strong> (WhatsApp, e-mail, etc.). Ele vai
+              criar a própria senha. Depois disso, você autoriza o acesso na tela de Usuários.
+              O link expira em 7 dias.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2">
+            <Input readOnly value={linkRep?.url ?? ''} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
+            <Button variant="outline" size="icon" onClick={copiarLink} title="Copiar link">
+              {copiado ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setLinkRep(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
