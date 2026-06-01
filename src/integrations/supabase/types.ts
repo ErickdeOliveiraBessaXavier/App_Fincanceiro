@@ -545,6 +545,7 @@ export type Database = {
           id: string
           nome: string
           observacoes: string | null
+          representante_id: string | null
           status: string
           telefone: string | null
           updated_at: string
@@ -563,6 +564,7 @@ export type Database = {
           id?: string
           nome: string
           observacoes?: string | null
+          representante_id?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
@@ -581,6 +583,7 @@ export type Database = {
           id?: string
           nome?: string
           observacoes?: string | null
+          representante_id?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
@@ -591,6 +594,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_representante_id_fkey"
+            columns: ["representante_id"]
+            isOneToOne: false
+            referencedRelation: "representantes"
             referencedColumns: ["id"]
           },
         ]
@@ -984,6 +994,56 @@ export type Database = {
           },
         ]
       }
+      representantes: {
+        Row: {
+          ativo: boolean
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          email: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "representantes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       titulos: {
         Row: {
           cliente_id: string | null
@@ -1257,10 +1317,15 @@ export type Database = {
         Returns: Json
       }
       current_company_id: { Args: never; Returns: string }
+      current_rep_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       estornar_evento_parcela: {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
+      }
+      find_or_create_representante: {
+        Args: { p_nome: string }
+        Returns: string
       }
       has_min_role: {
         Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
@@ -1272,6 +1337,19 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      importar_titulo: {
+        Args: {
+          p_cliente_nome: string
+          p_company_id: string
+          p_contato?: string
+          p_cpf_cnpj: string
+          p_descricao?: string
+          p_representante?: string
+          p_valor: number
+          p_vencimento: string
+        }
+        Returns: Json
       }
       is_super_admin: { Args: never; Returns: boolean }
       migrate_existing_titulos_to_clientes: { Args: never; Returns: undefined }
@@ -1286,6 +1364,8 @@ export type Database = {
         }
         Returns: Json
       }
+      rep_ve_cliente: { Args: { _cliente_id: string }; Returns: boolean }
+      rep_ve_titulo: { Args: { _titulo_id: string }; Returns: boolean }
       reverter_audit_log: {
         Args: { p_audit_id: string; p_motivo: string }
         Returns: Json

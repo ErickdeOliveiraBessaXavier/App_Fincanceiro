@@ -10,6 +10,7 @@ import {
   checkCpfCnpjExists,
   type ClienteRow,
 } from '@/lib/queries/clientes';
+import { useRepresentantes } from '@/lib/queries/representantes';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,6 +86,7 @@ export default function Clientes() {
 
   // === Data via React Query ===
   const { data: clientes = [], isLoading: loading } = useClientes();
+  const { data: representantes = [] } = useRepresentantes();
   const createClienteMutation = useCreateCliente();
   const updateClienteMutation = useUpdateCliente();
   const deleteClienteMutation = useDeleteCliente();
@@ -103,6 +105,7 @@ export default function Clientes() {
     cidade: '',
     estado: '',
     observacoes: '',
+    representante_id: '',
   });
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -118,6 +121,7 @@ export default function Clientes() {
     estado: '',
     observacoes: '',
     status: '',
+    representante_id: '',
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -180,7 +184,10 @@ export default function Clientes() {
     }
 
     try {
-      await createClienteMutation.mutateAsync(newCliente);
+      await createClienteMutation.mutateAsync({
+        ...newCliente,
+        representante_id: newCliente.representante_id || null,
+      });
 
       toast({
         title: "Sucesso",
@@ -196,7 +203,8 @@ export default function Clientes() {
         cep: '',
         cidade: '',
         estado: '',
-        observacoes: ''
+        observacoes: '',
+        representante_id: ''
       });
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
@@ -277,6 +285,7 @@ export default function Clientes() {
         estado: editingCliente.estado,
         observacoes: editingCliente.observacoes,
         status: editingCliente.status,
+        representante_id: editingCliente.representante_id || null,
       });
 
       toast({
@@ -500,6 +509,20 @@ export default function Clientes() {
               <Label htmlFor="observacoes">Observações</Label>
               <Input id="observacoes" value={newCliente.observacoes} onChange={(e) => setNewCliente({ ...newCliente, observacoes: e.target.value })} />
             </div>
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="representante">Representante (carteira)</Label>
+              <select
+                id="representante"
+                value={newCliente.representante_id}
+                onChange={(e) => setNewCliente({ ...newCliente, representante_id: e.target.value })}
+                className="px-3 py-2 border border-input rounded-md bg-background"
+              >
+                <option value="">Sem representante</option>
+                {representantes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nome}{r.ativo ? '' : ' (inativo)'}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={handleCreateCliente}>Salvar</Button>
@@ -552,6 +575,13 @@ export default function Clientes() {
                       <div>
                         <label className="text-sm font-medium">Endereço</label>
                         <p className="text-sm text-muted-foreground">{selectedCliente.endereco_completo}</p>
+                      </div>
+                    )}
+
+                    {selectedCliente.representante_nome && (
+                      <div>
+                        <label className="text-sm font-medium">Representante</label>
+                        <p className="text-sm text-muted-foreground">{selectedCliente.representante_nome}</p>
                       </div>
                     )}
                     
@@ -746,6 +776,21 @@ export default function Clientes() {
                 <option value="quitado">Quitado</option>
               </select>
             </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="edit-representante">Representante (carteira)</Label>
+              <select
+                id="edit-representante"
+                value={editingCliente.representante_id}
+                onChange={(e) => setEditingCliente({ ...editingCliente, representante_id: e.target.value })}
+                className="px-3 py-2 border border-input rounded-md bg-background"
+              >
+                <option value="">Sem representante</option>
+                {representantes.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nome}{r.ativo ? '' : ' (inativo)'}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={handleEditCliente}>Salvar</Button>
@@ -884,6 +929,11 @@ export default function Clientes() {
                           <span className="truncate">{cliente.email}</span>
                         </div>
                       )}
+                      {cliente.representante_nome && (
+                        <div className="text-sm text-muted-foreground">
+                          Representante: <span className="text-foreground">{cliente.representante_nome}</span>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 text-sm pt-3 border-t">
@@ -930,7 +980,8 @@ export default function Clientes() {
                               cidade: cliente.cidade || '',
                               estado: cliente.estado || '',
                               observacoes: cliente.observacoes || '',
-                              status: cliente.status
+                              status: cliente.status,
+                              representante_id: cliente.representante_id || ''
                             });
                             setIsEditModalOpen(true);
                           }}>
@@ -991,6 +1042,7 @@ export default function Clientes() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>CPF/CNPJ</TableHead>
                       <TableHead>Contato</TableHead>
+                      <TableHead>Representante</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Títulos</TableHead>
                       <TableHead>Valor Total</TableHead>
@@ -1008,6 +1060,7 @@ export default function Clientes() {
                             {cliente.email && <div className="text-muted-foreground">{cliente.email}</div>}
                           </div>
                         </TableCell>
+                        <TableCell className="text-sm">{cliente.representante_nome ?? '—'}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(cliente.status)}>
                             {cliente.status.replace('_', ' ')}
@@ -1048,7 +1101,8 @@ export default function Clientes() {
                                   cidade: cliente.cidade || '',
                                   estado: cliente.estado || '',
                                   observacoes: cliente.observacoes || '',
-                                  status: cliente.status
+                                  status: cliente.status,
+                                  representante_id: cliente.representante_id || ''
                                 });
                                 setIsEditModalOpen(true);
                               }}>

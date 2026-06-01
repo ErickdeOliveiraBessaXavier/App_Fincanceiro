@@ -76,9 +76,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
             <Select value={novoPapel} onValueChange={(v) => setNovoPapel(v as AppRole)}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="leitura">Leitura</SelectItem>
-                <SelectItem value="operador">Operador</SelectItem>
-                <SelectItem value="financeiro">Financeiro</SelectItem>
+                <SelectItem value="operador">Representante</SelectItem>
                 <SelectItem value="admin">Administrador</SelectItem>
               </SelectContent>
             </Select>

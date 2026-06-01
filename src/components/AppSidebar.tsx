@@ -4,11 +4,12 @@ import {
   FileText, 
   Handshake, 
   Megaphone, 
-  Users, 
-  BarChart3, 
+  Users,
+  BarChart3,
   Upload,
   LogOut,
   UserCheck,
+  Briefcase,
   Sparkles
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -32,6 +33,7 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Clientes", url: "/clientes", icon: UserCheck },
+  { title: "Representantes", url: "/representantes", icon: Briefcase },
   { title: "Títulos", url: "/titulos", icon: FileText },
   { title: "Acordos", url: "/acordos", icon: Handshake },
   { title: "Campanhas", url: "/campanhas", icon: Megaphone },
@@ -47,7 +49,8 @@ export const AppSidebar = memo(() => {
   const { isAdmin } = useUserRole();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
-  const visibleMenuItems = menuItems.filter(i => i.url !== "/usuarios" || isAdmin);
+  const adminOnly = ["/usuarios", "/importar"];
+  const visibleMenuItems = menuItems.filter(i => !adminOnly.includes(i.url) || isAdmin);
 
   const isActive = (path: string) => {
     if (path === '/') return currentPath === path;

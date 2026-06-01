@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom';
+import { Navigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building2, ShieldCheck, LogOut, Check, Pause, Play } from 'lucide-react';
+import { Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload } from 'lucide-react';
 
 interface CompanyRow {
   id: string;
@@ -76,9 +76,14 @@ export default function Plataforma() {
             <p className="text-xs text-muted-foreground">Administração de empresas (super admin)</p>
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={signOut}>
-          <LogOut className="mr-2 h-4 w-4" /> Sair
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/plataforma/importar"><Upload className="mr-2 h-4 w-4" /> Importar títulos</Link>
+          </Button>
+          <Button variant="ghost" size="sm" onClick={signOut}>
+            <LogOut className="mr-2 h-4 w-4" /> Sair
+          </Button>
+        </div>
       </header>
 
       <main className="mx-auto max-w-6xl space-y-6 p-6">

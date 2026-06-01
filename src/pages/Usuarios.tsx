@@ -8,7 +8,14 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { EditarPapelModal } from '@/components/usuarios/EditarPapelModal';
-import type { AppRole } from '@/hooks/useUserRole';
+import { useUserRole, type AppRole } from '@/hooks/useUserRole';
+import { useRepresentantes, representantesKeys } from '@/lib/queries/representantes';
+import { useQueryClient } from '@tanstack/react-query';
+import { Plus } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Usuario {
   id: string;
@@ -25,6 +32,47 @@ export default function Usuarios() {
   const [searchTerm, setSearchTerm] = useState('');
   const [editTarget, setEditTarget] = useState<Usuario | null>(null);
   const { toast } = useToast();
+  const { isAdmin } = useUserRole();
+  const { data: representantes = [] } = useRepresentantes();
+  const qc = useQueryClient();
+
+  const emptyNovo = { nome: '', email: '', senha: '', tipo: 'representante' as 'representante' | 'admin', representante_id: '' };
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [novoUser, setNovoUser] = useState(emptyNovo);
+
+  const handleCreateUser = async () => {
+    if (!novoUser.nome.trim() || !novoUser.email.trim() || novoUser.senha.length < 6) {
+      toast({ title: 'Dados incompletos', description: 'Preencha nome, e-mail e senha (mín. 6 caracteres).', variant: 'destructive' });
+      return;
+    }
+    setCreating(true);
+    try {
+      const isRep = novoUser.tipo === 'representante';
+      const { data, error } = await supabase.functions.invoke('criar-usuario-empresa', {
+        body: {
+          nome: novoUser.nome.trim(),
+          email: novoUser.email.trim(),
+          senha: novoUser.senha,
+          role: isRep ? 'operador' : 'admin',
+          as_representante: isRep,
+          representante_id: isRep ? (novoUser.representante_id || undefined) : undefined,
+        },
+      });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast({ title: 'Usuário criado', description: `${novoUser.nome} foi adicionado à empresa.` });
+      setCreateOpen(false);
+      setNovoUser(emptyNovo);
+      fetchUsuarios();
+      qc.invalidateQueries({ queryKey: representantesKeys.all });
+    } catch (e: any) {
+      toast({ title: 'Erro ao criar usuário', description: e.message ?? 'Falha desconhecida', variant: 'destructive' });
+    } finally {
+      setCreating(false);
+    }
+  };
 
   useEffect(() => { fetchUsuarios(); }, []);
 
@@ -51,10 +99,11 @@ export default function Usuarios() {
   };
 
   const roleBadge = (role: AppRole | null) => {
-    if (role === 'super_admin') return { cls: 'bg-purple-100 text-purple-800', icon: <Shield className="h-4 w-4" />, label: 'super admin' };
+    if (role === 'super_admin') return { cls: 'bg-purple-100 text-purple-800', icon: <Shield className="h-4 w-4" />, label: 'admin mestre' };
     if (role === 'admin') return { cls: 'bg-red-100 text-red-800', icon: <Shield className="h-4 w-4" />, label: 'admin' };
+    if (role === 'operador') return { cls: 'bg-blue-100 text-blue-800', icon: <UserCog className="h-4 w-4" />, label: 'representante' };
+    // papéis legados (não usados no modelo de 3 níveis)
     if (role === 'financeiro') return { cls: 'bg-amber-100 text-amber-800', icon: <UserCog className="h-4 w-4" />, label: 'financeiro' };
-    if (role === 'operador') return { cls: 'bg-blue-100 text-blue-800', icon: <User className="h-4 w-4" />, label: 'operador' };
     if (role === 'leitura') return { cls: 'bg-slate-100 text-slate-800', icon: <User className="h-4 w-4" />, label: 'leitura' };
     return { cls: 'bg-gray-100 text-gray-800', icon: <User className="h-4 w-4" />, label: 'sem papel' };
   };
@@ -79,12 +128,19 @@ export default function Usuarios() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Usuários</h1>
-        <p className="text-muted-foreground">Gerencie os papéis dos usuários do sistema</p>
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Usuários</h1>
+          <p className="text-muted-foreground">Gerencie os usuários e papéis da sua empresa</p>
+        </div>
+        {isAdmin && (
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-2 h-4 w-4" /> Novo Usuário
+          </Button>
+        )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total</CardTitle>
@@ -101,15 +157,8 @@ export default function Usuarios() {
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Financeiro</CardTitle>
+            <CardTitle className="text-sm font-medium">Representantes</CardTitle>
             <UserCog className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{count('financeiro')}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Operadores</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent><div className="text-2xl font-bold">{count('operador')}</div></CardContent>
         </Card>
@@ -182,6 +231,66 @@ export default function Usuarios() {
           onSaved={fetchUsuarios}
         />
       )}
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo usuário</DialogTitle>
+            <DialogDescription>Crie um usuário para a sua empresa e defina o papel.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="nu-nome">Nome <span className="text-red-500">*</span></Label>
+              <Input id="nu-nome" value={novoUser.nome} onChange={(e) => setNovoUser({ ...novoUser, nome: e.target.value })} />
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="nu-email">E-mail <span className="text-red-500">*</span></Label>
+                <Input id="nu-email" type="email" value={novoUser.email} onChange={(e) => setNovoUser({ ...novoUser, email: e.target.value })} />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="nu-senha">Senha <span className="text-red-500">*</span></Label>
+                <Input id="nu-senha" type="text" value={novoUser.senha} onChange={(e) => setNovoUser({ ...novoUser, senha: e.target.value })} placeholder="mín. 6 caracteres" />
+              </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="nu-tipo">Tipo de acesso</Label>
+              <select
+                id="nu-tipo"
+                value={novoUser.tipo}
+                onChange={(e) => setNovoUser({ ...novoUser, tipo: e.target.value as 'representante' | 'admin' })}
+                className="px-3 py-2 border border-input rounded-md bg-background"
+              >
+                <option value="representante">Representante (vê só a carteira dele)</option>
+                <option value="admin">Administrador (vê e gerencia tudo da empresa)</option>
+              </select>
+            </div>
+            {novoUser.tipo === 'representante' && (
+              <div className="grid gap-2">
+                <Label htmlFor="nu-repsel">Carteira</Label>
+                <select
+                  id="nu-repsel"
+                  value={novoUser.representante_id}
+                  onChange={(e) => setNovoUser({ ...novoUser, representante_id: e.target.value })}
+                  className="px-3 py-2 border border-input rounded-md bg-background"
+                >
+                  <option value="">Criar nova carteira com este nome</option>
+                  {representantes.map((r) => (
+                    <option key={r.id} value={r.id}>Usar carteira de {r.nome}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  O representante só enxerga os clientes da sua carteira.
+                </p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</Button>
+            <Button onClick={handleCreateUser} disabled={creating}>{creating ? 'Criando...' : 'Criar usuário'}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

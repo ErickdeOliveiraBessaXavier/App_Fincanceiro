@@ -1,13 +1,15 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Upload, FileText, CheckCircle, AlertCircle, Download } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface CSVPreview {
   headers: string[];
@@ -21,6 +23,7 @@ interface CSVRow {
   vencimento: string;
   contato?: string;
   descricao?: string;
+  representante?: string;
 }
 
 interface ImportResult {
@@ -38,7 +41,22 @@ export default function ImportarCSV() {
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
+
+  const [companies, setCompanies] = useState<{ id: string; nome: string; status: string }[]>([]);
+  const [selectedCompany, setSelectedCompany] = useState('');
+
+  // super_admin escolhe para qual empresa está importando.
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    supabase
+      .from('companies')
+      .select('id, nome, status')
+      .neq('status', 'cancelada')
+      .order('nome')
+      .then(({ data }) => setCompanies(data ?? []));
+  }, [isSuperAdmin]);
 
   const requiredHeaders = ['cliente', 'cpf_cnpj', 'valor', 'vencimento'];
 
@@ -61,48 +79,6 @@ export default function ImportarCSV() {
     const cleaned = valueString.replace(/[^\d.,]/g, '').replace(',', '.');
     const value = parseFloat(cleaned);
     return !isNaN(value) && value > 0;
-  };
-
-  // Função para encontrar ou criar cliente
-  const findOrCreateClient = async (nome: string, cpfCnpj: string, contato?: string): Promise<string | null> => {
-    try {
-      const cleanedCpfCnpj = cpfCnpj.replace(/[^\d]/g, '');
-      
-      const { data: existingClient, error: findError } = await supabase
-        .from('clientes')
-        .select('id')
-        .eq('cpf_cnpj', cleanedCpfCnpj)
-        .single();
-
-      if (findError && findError.code !== 'PGRST116') {
-        throw findError;
-      }
-
-      if (existingClient) {
-        return existingClient.id;
-      }
-
-      const { data: newClient, error: createError } = await supabase
-        .from('clientes')
-        .insert({
-          nome: nome.trim(),
-          cpf_cnpj: cleanedCpfCnpj,
-          telefone: contato || null,
-          created_by: user?.id || '',
-          status: 'ativo'
-        })
-        .select('id')
-        .single();
-
-      if (createError) {
-        throw createError;
-      }
-
-      return newClient.id;
-    } catch (error) {
-      console.error('Erro ao encontrar/criar cliente:', error);
-      return null;
-    }
   };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,6 +161,14 @@ export default function ImportarCSV() {
       }
       return;
     }
+    if (isSuperAdmin && !selectedCompany) {
+      toast({
+        title: "Selecione a empresa",
+        description: "Escolha para qual empresa este arquivo será importado.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setUploading(true);
     setUploadProgress(0);
@@ -237,58 +221,30 @@ export default function ImportarCSV() {
               continue;
             }
 
-            const clienteId = await findOrCreateClient(
-              rowData.cliente,
-              rowData.cpf_cnpj,
-              rowData.contato
-            );
+            const cleanedCpfCnpj = rowData.cpf_cnpj.replace(/[^\d]/g, '');
+            const valor = parseFloat(rowData.valor.replace(/[^\d.,]/g, '').replace(',', '.'));
 
-            if (!clienteId) {
-              result.errors.push(`Linha ${i + 2}: Erro ao processar cliente`);
+            // Importa via RPC (resolve cliente, representante, título e parcela no backend)
+            const { data: res, error: rpcError } = await supabase.rpc('importar_titulo', {
+              p_company_id: isSuperAdmin ? selectedCompany : null,
+              p_cliente_nome: rowData.cliente,
+              p_cpf_cnpj: rowData.cpf_cnpj,
+              p_valor: valor,
+              p_vencimento: rowData.vencimento,
+              p_contato: rowData.contato || null,
+              p_descricao: rowData.descricao || null,
+              p_representante: rowData.representante || null,
+            });
+
+            if (rpcError || (res as any)?.error) {
+              result.errors.push(`Linha ${i + 2}: ${rpcError?.message ?? (res as any)?.error}`);
               continue;
             }
 
-            const cleanedCpfCnpj = rowData.cpf_cnpj.replace(/[^\d]/g, '');
             if (!createdClients.has(cleanedCpfCnpj)) {
               createdClients.add(cleanedCpfCnpj);
               result.clientesCreated++;
             }
-
-            const valor = parseFloat(rowData.valor.replace(/[^\d.,]/g, '').replace(',', '.'));
-            
-            // Criar título
-            const { data: tituloData, error: tituloError } = await supabase
-              .from('titulos')
-              .insert({
-                cliente_id: clienteId,
-                valor_original: valor,
-                vencimento_original: rowData.vencimento,
-                descricao: rowData.descricao || null,
-                created_by: user.id
-              })
-              .select()
-              .single();
-
-            if (tituloError) {
-              result.errors.push(`Linha ${i + 2}: ${tituloError.message}`);
-              continue;
-            }
-
-            // Criar parcela única
-            const { error: parcelaError } = await supabase
-              .from('parcelas')
-              .insert({
-                titulo_id: tituloData.id,
-                numero_parcela: 1,
-                valor_nominal: valor,
-                vencimento: rowData.vencimento
-              });
-
-            if (parcelaError) {
-              result.errors.push(`Linha ${i + 2}: Erro ao criar parcela`);
-              continue;
-            }
-
             result.success++;
           } catch (error) {
             result.errors.push(`Linha ${i + 2}: Erro inesperado`);
@@ -340,9 +296,9 @@ export default function ImportarCSV() {
 
   const downloadTemplate = () => {
     const csvContent = [
-      'cliente,cpf_cnpj,valor,vencimento,contato,descricao',
-      'João Silva Santos,123.456.789-00,1500.00,2025-10-15,(11) 99999-9999,Mensalidade outubro 2025',
-      'Maria Oliveira LTDA,12.345.678/0001-90,2750.50,2025-10-30,(11) 88888-8888,Prestação de serviços'
+      'cliente,cpf_cnpj,valor,vencimento,contato,descricao,representante',
+      'João Silva Santos,123.456.789-00,1500.00,2026-07-15,(11) 99999-9999,Mensalidade julho 2026,Carlos Andrade',
+      'Maria Oliveira LTDA,12.345.678/0001-90,2750.50,2026-07-30,(11) 88888-8888,Prestação de serviços,Ana Paula'
     ].join('\n');
 
     const blob = new Blob(['\uFEFF' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -355,6 +311,21 @@ export default function ImportarCSV() {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Apenas administradores podem importar dados.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -381,6 +352,27 @@ export default function ImportarCSV() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {isSuperAdmin && (
+              <div className="grid gap-2">
+                <Label htmlFor="imp-company">Empresa de destino</Label>
+                <select
+                  id="imp-company"
+                  value={selectedCompany}
+                  onChange={(e) => setSelectedCompany(e.target.value)}
+                  className="px-3 py-2 border border-input rounded-md bg-background"
+                >
+                  <option value="">Selecione a empresa...</option>
+                  {companies.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}{c.status !== 'ativa' ? ` (${c.status})` : ''}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-muted-foreground">
+                  Como admin mestre, escolha para qual empresa este arquivo será importado.
+                </p>
+              </div>
+            )}
             <div
               className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
               onClick={() => fileInputRef.current?.click()}
@@ -461,6 +453,7 @@ export default function ImportarCSV() {
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                 <li><code>contato</code> - Telefone ou email</li>
                 <li><code>descricao</code> - Descrição do título</li>
+                <li><code>representante</code> - Nome do representante (carteira). Criado automaticamente se não existir.</li>
               </ul>
             </div>
 

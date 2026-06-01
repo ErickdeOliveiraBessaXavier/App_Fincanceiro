@@ -10,6 +10,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Clientes = React.lazy(() => import("./pages/Clientes"));
+const Representantes = React.lazy(() => import("./pages/Representantes"));
 const Titulos = React.lazy(() => import("./pages/Titulos"));
 const Acordos = React.lazy(() => import("./pages/Acordos"));
 const Campanhas = React.lazy(() => import("./pages/Campanhas"));
@@ -20,6 +21,7 @@ const Telecobranca = React.lazy(() => import("./pages/Telecobranca"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const SetupEmpresa = React.lazy(() => import("./pages/SetupEmpresa"));
 const Plataforma = React.lazy(() => import("./pages/Plataforma"));
+const PlataformaImportar = React.lazy(() => import("./pages/PlataformaImportar"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
@@ -36,8 +38,10 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/setup-empresa" element={<SetupEmpresa />} />
               <Route path="/plataforma" element={<Plataforma />} />
+              <Route path="/plataforma/importar" element={<PlataformaImportar />} />
               <Route path="/" element={<Layout><Dashboard /></Layout>} />
               <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
+              <Route path="/representantes" element={<Layout><Representantes /></Layout>} />
               <Route path="/titulos" element={<Layout><Titulos /></Layout>} />
               <Route path="/acordos" element={<Layout><Acordos /></Layout>} />
               <Route path="/campanhas" element={<Layout><Campanhas /></Layout>} />
