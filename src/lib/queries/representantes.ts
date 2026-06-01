@@ -89,3 +89,20 @@ export function useUpdateRepresentante() {
     },
   });
 }
+
+// Exclusão restrita a admin (RLS: representantes_delete_admin). Os clientes da
+// carteira não são apagados — a FK clientes.representante_id é ON DELETE SET NULL,
+// então eles apenas ficam sem representante.
+export function useDeleteRepresentante() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('representantes').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: representantesKeys.all });
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
+    },
+  });
+}

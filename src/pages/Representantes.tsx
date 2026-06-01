@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Plus, Edit, Users, Briefcase } from 'lucide-react';
+import { Plus, Edit, Trash2, Users, Briefcase } from 'lucide-react';
 import {
   useRepresentantes,
   useCreateRepresentante,
   useUpdateRepresentante,
+  useDeleteRepresentante,
   type RepresentanteRow,
 } from '@/lib/queries/representantes';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,11 +26,15 @@ export default function Representantes() {
   const { data: representantes = [], isLoading } = useRepresentantes();
   const createMut = useCreateRepresentante();
   const updateMut = useUpdateRepresentante();
+  const deleteMut = useDeleteRepresentante();
+  const { isAdmin } = useUserRole();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
   const isEditing = !!form.id;
+
+  const [toDelete, setToDelete] = useState<RepresentanteRow | null>(null);
 
   const openNew = () => { setForm(empty); setOpen(true); };
   const openEdit = (r: RepresentanteRow) => {
@@ -62,6 +68,17 @@ export default function Representantes() {
       await updateMut.mutateAsync({ id: r.id, ativo: !r.ativo });
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message ?? 'Falha', variant: 'destructive' });
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!toDelete) return;
+    try {
+      await deleteMut.mutateAsync(toDelete.id);
+      toast({ title: 'Excluído', description: `Representante ${toDelete.nome} excluído com sucesso.` });
+      setToDelete(null);
+    } catch (e: any) {
+      toast({ title: 'Erro', description: e.message ?? 'Falha ao excluir', variant: 'destructive' });
     }
   };
 
@@ -144,6 +161,16 @@ export default function Representantes() {
                         <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
                           <Edit className="h-4 w-4" />
                         </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => setToDelete(r)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))}
@@ -185,6 +212,28 @@ export default function Representantes() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={createMut.isPending || updateMut.isPending}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirmar exclusão</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir o representante <strong>{toDelete?.nome}</strong>?
+              {(toDelete?.carteira ?? 0) > 0 && (
+                <> Os {toDelete?.carteira} cliente{toDelete?.carteira === 1 ? '' : 's'} da carteira
+                  não serão apagados, apenas ficarão sem representante.</>
+              )}
+              {' '}Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => setToDelete(null)}>Cancelar</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteMut.isPending}>
+              Excluir
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
