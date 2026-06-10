@@ -36,7 +36,7 @@ const TEMPLATE_VARIABLES = [
 ];
 
 const CampanhaForm = ({ open, onOpenChange, campanha, onSuccess }: CampanhaFormProps) => {
-  const { user } = useAuth();
+  const { user, companyId } = useAuth();
   const [loading, setLoading] = useState(false);
   const [recipientCount, setRecipientCount] = useState(0);
   
@@ -147,15 +147,17 @@ const CampanhaForm = ({ open, onOpenChange, campanha, onSuccess }: CampanhaFormP
         if (error) throw error;
         toast.success('Campanha atualizada com sucesso!');
       } else {
+        if (!user || !companyId) throw new Error('Sessão inválida');
         const { error } = await supabase
           .from('campanhas')
           .insert({
+            company_id: companyId,
             nome: formData.nome,
             canal: formData.canal,
             mensagem: formData.mensagem,
             status: formData.status,
             filtros: formData.filtros,
-            created_by: user?.id,
+            created_by: user.id,
           });
 
         if (error) throw error;

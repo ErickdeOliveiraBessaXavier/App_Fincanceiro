@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { clientesKeys } from './clientes';
 
 // ============== Types ==============
@@ -57,7 +58,10 @@ export function useCreateCobrador() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateCobradorInput) => {
+      const companyId = await getCurrentCompanyId();
+      if (!companyId) throw new Error('Empresa não identificada');
       const { error } = await supabase.from('cobradores').insert({
+        company_id: companyId,
         nome: input.nome.trim(),
         email: input.email?.trim() || null,
         telefone: input.telefone?.trim() || null,

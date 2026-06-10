@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { titulosKeys } from './titulos';
 
 // ============== Types ==============
@@ -162,12 +163,15 @@ export function useCreateCliente() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
+      const companyId = await getCurrentCompanyId();
+      if (!companyId) throw new Error('Empresa não identificada');
 
       const { data, error } = await supabase
         .from('clientes')
         .insert([
           {
             ...input,
+            company_id: companyId,
             cpf_cnpj: input.cpf_cnpj.replace(/\D/g, ''),
             status: 'ativo',
             created_by: user.id,

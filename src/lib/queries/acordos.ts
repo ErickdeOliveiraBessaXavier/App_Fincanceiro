@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { titulosKeys } from './titulos';
 import { clientesKeys } from './clientes';
 
@@ -115,11 +116,14 @@ export function useCreateAcordo() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuário não autenticado');
+      const companyId = await getCurrentCompanyId();
+      if (!companyId) throw new Error('Empresa não identificada');
 
       const { data: acordoData, error: acordoError } = await supabase
         .from('acordos')
         .insert([
           {
+            company_id: companyId,
             titulo_id: input.titulo_id,
             cliente_id: input.cliente_id,
             valor_original: input.valor_original,
@@ -141,6 +145,7 @@ export function useCreateAcordo() {
 
       if (acordoData && input.cronograma.length > 0) {
         const parcelasInsert = input.cronograma.map((p) => ({
+          company_id: companyId,
           acordo_id: acordoData.id,
           numero_parcela: p.numero_parcela,
           valor: p.valor,
