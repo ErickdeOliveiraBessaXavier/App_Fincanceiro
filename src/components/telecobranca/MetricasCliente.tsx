@@ -7,6 +7,7 @@ import { ptBR } from 'date-fns/locale';
 
 interface MetricasClienteProps {
   clienteId: string;
+  refreshTrigger?: number;
 }
 
 interface Metricas {
@@ -16,7 +17,7 @@ interface Metricas {
   ultimoContato: string | null;
 }
 
-export function MetricasCliente({ clienteId }: MetricasClienteProps) {
+export function MetricasCliente({ clienteId, refreshTrigger }: MetricasClienteProps) {
   const [metricas, setMetricas] = useState<Metricas>({
     dividaTotal: 0,
     parcelasVencidas: 0,
@@ -27,7 +28,7 @@ export function MetricasCliente({ clienteId }: MetricasClienteProps) {
 
   useEffect(() => {
     fetchMetricas();
-  }, [clienteId]);
+  }, [clienteId, refreshTrigger]);
 
   const fetchMetricas = async () => {
     try {
@@ -73,11 +74,11 @@ export function MetricasCliente({ clienteId }: MetricasClienteProps) {
       let maiorAtraso = 0;
 
       parcelas?.forEach(parcela => {
-        if (parcela.status === 'vencida' || parcela.status === 'pendente') {
+        if (parcela.status === 'vencido' || parcela.status === 'a_vencer') {
           dividaTotal += Number(parcela.saldo_atual || 0);
         }
-        
-        if (parcela.status === 'vencida') {
+
+        if (parcela.status === 'vencido') {
           parcelasVencidas++;
           const diasAtraso = differenceInDays(hoje, new Date(parcela.vencimento!));
           if (diasAtraso > maiorAtraso) {

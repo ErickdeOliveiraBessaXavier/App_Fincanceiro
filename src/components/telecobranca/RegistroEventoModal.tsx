@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { TIPOS_EVENTO } from '@/constants/tiposEvento';
 import {
   Dialog,
@@ -48,6 +49,7 @@ export function RegistroEventoModal({
   const [horaAgendamento, setHoraAgendamento] = useState('09:00');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { companyId } = useAuth();
 
   const handleSubmit = async () => {
     if (!tipoEvento) {
@@ -73,6 +75,7 @@ export function RegistroEventoModal({
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('Usuário não autenticado');
+      if (!companyId) throw new Error('Empresa não identificada');
 
       if (isAgendamento && dataAgendamento) {
         // Criar agendamento
@@ -83,6 +86,7 @@ export function RegistroEventoModal({
         const { error } = await supabase
           .from('agendamentos')
           .insert({
+            company_id: companyId,
             cliente_id: clienteId,
             titulo_id: tituloId || null,
             acordo_id: acordoId || null,
@@ -106,9 +110,10 @@ export function RegistroEventoModal({
         const { error } = await supabase
           .from('comunicacoes')
           .insert({
+            company_id: companyId,
             cliente_id: clienteId,
             tipo: tipoEvento,
-            canal: tipoEvento === 'email' ? 'email' : tipoEvento === 'whatsapp' ? 'whatsapp' : 'telefone',
+            canal: 'manual',
             assunto: tipoEventoInfo?.label || 'Contato',
             mensagem: descricao,
             data_contato: new Date().toISOString(),
@@ -136,7 +141,8 @@ export function RegistroEventoModal({
       console.error('Erro ao registrar evento:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível registrar o evento",
+        description:
+          error instanceof Error ? error.message : "Não foi possível registrar o evento",
         variant: "destructive",
       });
     } finally {

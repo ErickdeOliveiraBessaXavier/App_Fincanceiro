@@ -108,10 +108,10 @@ const Dashboard = () => {
       const totalTitulos = titulosData.length;
       const valorTotal = titulosData.reduce((sum, t) => sum + Number(t.valor_original), 0);
       
-      const titulosVencidosArr = titulosData.filter(t => t.status === 'inadimplente');
+      const titulosVencidosArr = titulosData.filter(t => t.status === 'vencido');
       const titulosVencidos = titulosVencidosArr.length;
-      
-      const titulosPagosArr = titulosData.filter(t => t.status === 'quitado');
+
+      const titulosPagosArr = titulosData.filter(t => t.status === 'pago');
       const titulosPagos = titulosPagosArr.length;
       const valorRecuperado = titulosPagosArr.reduce((sum, t) => sum + Number(t.total_pago), 0);
 
@@ -132,7 +132,7 @@ const Dashboard = () => {
       const { data: parcelasData } = await supabase
         .from('vw_parcelas_consolidadas')
         .select('*')
-        .eq('status', 'vencida');
+        .eq('status', 'vencido');
 
       const parcelasVencidas = parcelasData || [];
       const aging = calculateAging(parcelasVencidas, today);
@@ -145,7 +145,7 @@ const Dashboard = () => {
         .filter(t => {
           if (!t.proximo_vencimento) return false;
           const venc = new Date(t.proximo_vencimento);
-          return venc >= today && venc <= seteDias && t.status === 'ativo';
+          return venc >= today && venc <= seteDias && t.status === 'a_vencer';
         })
         .map(t => ({
           id: t.id,
@@ -193,10 +193,10 @@ const Dashboard = () => {
       }, {} as Record<string, number>);
 
       const statusLabels: Record<string, string> = {
-        'ativo': 'Ativo',
-        'quitado': 'Quitado',
-        'inadimplente': 'Inadimplente',
-        'sem_parcelas': 'Sem Parcelas'
+        'a_vencer': 'Em dia',
+        'pago': 'Quitado',
+        'vencido': 'Inadimplente',
+        'renegociado': 'Renegociado'
       };
 
       setTitulosPorStatus(

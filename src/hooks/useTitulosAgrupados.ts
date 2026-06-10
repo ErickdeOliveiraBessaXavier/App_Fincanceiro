@@ -111,7 +111,7 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
             saldo_atual: p.saldo_atual || 0
           })),
           vencimento_mais_antigo: parcelas[0]?.vencimento || titulo.vencimento_original || '',
-          tem_vencido: parcelas.some(p => p.status === 'vencida')
+          tem_vencido: parcelas.some(p => p.status === 'vencido')
         };
 
         cliente.dividas.push(divida);

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 import { TIPOS_EVENTO } from '@/constants/tiposEvento';
 import {
   Dialog,
@@ -46,6 +47,7 @@ export function AgendamentoModal({
   const [horaAgendamento, setHoraAgendamento] = useState('09:00');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const { companyId } = useAuth();
 
   const handleSubmit = async () => {
     if (!dataAgendamento) {
@@ -62,6 +64,7 @@ export function AgendamentoModal({
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) throw new Error('Usuário não autenticado');
+      if (!companyId) throw new Error('Empresa não identificada');
 
       const [hora, minuto] = horaAgendamento.split(':');
       const dataCompleta = new Date(dataAgendamento);
@@ -70,6 +73,7 @@ export function AgendamentoModal({
       const { error } = await supabase
         .from('agendamentos')
         .insert({
+          company_id: companyId,
           cliente_id: clienteId,
           titulo_id: tituloId || null,
           acordo_id: acordoId || null,

@@ -84,16 +84,16 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; className: string }> = {
-      pendente: { label: 'Pendente', className: 'bg-yellow-100 text-yellow-800' },
-      vencida: { label: 'Vencida', className: 'bg-red-100 text-red-800' },
-      paga: { label: 'Paga', className: 'bg-green-100 text-green-800' },
+      a_vencer: { label: 'A Vencer', className: 'bg-yellow-100 text-yellow-800' },
+      vencido: { label: 'Vencida', className: 'bg-red-100 text-red-800' },
+      pago: { label: 'Paga', className: 'bg-green-100 text-green-800' },
     };
     const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
     return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   const totalEmAberto = parcelas
-    .filter(p => p.status === 'pendente' || p.status === 'vencida')
+    .filter(p => p.status === 'a_vencer' || p.status === 'vencido')
     .reduce((sum, p) => sum + Number(p.saldo_atual), 0);
 
   if (loading) {
@@ -145,7 +145,7 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
               <TableBody>
                 {parcelas.map((parcela) => {
                   const atraso = calcularAtraso(parcela.vencimento);
-                  const isVencida = parcela.status === 'vencida';
+                  const isVencida = parcela.status === 'vencido';
                   
                   return (
                       <TableRow key={parcela.id}>
@@ -180,7 +180,7 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
                         {getStatusBadge(parcela.status)}
                       </TableCell>
                       <TableCell className="text-right">
-                        {(parcela.status === 'pendente' || parcela.status === 'vencida') && (
+                        {(parcela.status === 'a_vencer' || parcela.status === 'vencido') && (
                           <Button 
                             size="sm" 
                             variant="outline"

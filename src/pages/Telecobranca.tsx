@@ -179,7 +179,7 @@ export default function Telecobranca() {
       </div>
 
       {/* Cards de Métricas */}
-      <MetricasCliente clienteId={cliente.id} />
+      <MetricasCliente clienteId={cliente.id} refreshTrigger={refreshTrigger} />
 
       {/* Layout Principal */}
       <div className="grid gap-6 lg:grid-cols-4">

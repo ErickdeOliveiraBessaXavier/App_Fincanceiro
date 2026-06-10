@@ -50,8 +50,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           mensagem,
           data_contato,
           created_at,
-          created_by,
-          profiles!comunicacoes_created_by_fkey (nome)
+          created_by
         `)
         .eq('cliente_id', clienteId)
         .order('created_at', { ascending: false });
@@ -68,13 +67,29 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           data_agendamento,
           status,
           created_at,
-          created_by,
-          profiles!agendamentos_created_by_fkey (nome)
+          created_by
         `)
         .eq('cliente_id', clienteId)
         .order('data_agendamento', { ascending: false });
 
       if (agError) throw agError;
+
+      // Resolver nomes dos operadores (created_by -> profiles.user_id).
+      // O FK created_by aponta para auth.users, então não dá para embutir
+      // profiles direto na query; buscamos os nomes à parte e mapeamos.
+      const operadorIds = [
+        ...(comunicacoes?.map(c => c.created_by) ?? []),
+        ...(agendamentos?.map(a => a.created_by) ?? []),
+      ].filter((id): id is string => !!id);
+
+      const operadorMap = new Map<string, string>();
+      if (operadorIds.length > 0) {
+        const { data: perfis } = await supabase
+          .from('profiles')
+          .select('user_id, nome')
+          .in('user_id', [...new Set(operadorIds)]);
+        perfis?.forEach(p => operadorMap.set(p.user_id, p.nome));
+      }
 
       // Unificar eventos
       const eventosUnificados: Evento[] = [];
@@ -86,7 +101,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           descricao: com.mensagem,
           data: com.data_contato || com.created_at,
           origem: 'comunicacao',
-          operador: com.profiles?.nome || 'Sistema'
+          operador: operadorMap.get(com.created_by) || 'Sistema'
         });
       });
 
@@ -98,7 +113,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           data: ag.data_agendamento,
           origem: 'agendamento',
           status: ag.status,
-          operador: ag.profiles?.nome || 'Sistema'
+          operador: operadorMap.get(ag.created_by) || 'Sistema'
         });
       });
 
