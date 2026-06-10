@@ -12,6 +12,7 @@ import {
 } from '@/lib/queries/clientes';
 import { useCobradores } from '@/lib/queries/cobradores';
 import { useVendedores } from '@/lib/queries/vendedores';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -89,6 +90,8 @@ export default function Clientes() {
   const { data: clientes = [], isLoading: loading } = useClientes();
   const { data: cobradores = [] } = useCobradores();
   const { data: vendedores = [] } = useVendedores();
+  // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
+  const { isOperador } = useUserRole();
   const createClienteMutation = useCreateCliente();
   const updateClienteMutation = useUpdateCliente();
   const deleteClienteMutation = useDeleteCliente();
@@ -419,11 +422,13 @@ export default function Clientes() {
           <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Gerencie os clientes e seu histórico</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} className="self-start sm:self-auto">
-          <Plus className="h-4 w-4 mr-2" />
-          <span className="hidden sm:inline">Novo Cliente</span>
-          <span className="sm:hidden">Novo</span>
-        </Button>
+        {isOperador && (
+          <Button onClick={() => setIsCreateModalOpen(true)} className="self-start sm:self-auto">
+            <Plus className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Novo Cliente</span>
+            <span className="sm:hidden">Novo</span>
+          </Button>
+        )}
       </div>
 
       <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
@@ -1016,6 +1021,8 @@ export default function Clientes() {
                             <Eye className="h-4 w-4 mr-2" />
                             Ver Detalhes
                           </DropdownMenuItem>
+                          {isOperador && (
+                          <>
                           <DropdownMenuItem onClick={() => {
                             setEditingCliente({
                               id: cliente.id,
@@ -1038,7 +1045,7 @@ export default function Clientes() {
                             Editar
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
+                          <DropdownMenuItem
                             className="text-destructive focus:text-destructive"
                             onClick={() => {
                               setClienteToDelete(cliente);
@@ -1048,6 +1055,8 @@ export default function Clientes() {
                             <Trash2 className="h-4 w-4 mr-2" />
                             Excluir
                           </DropdownMenuItem>
+                          </>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -1140,6 +1149,8 @@ export default function Clientes() {
                                 <Eye className="h-4 w-4 mr-2" />
                                 Ver Detalhes
                               </DropdownMenuItem>
+                              {isOperador && (
+                              <>
                               <DropdownMenuItem onClick={() => {
                                 setEditingCliente({
                                   id: cliente.id,
@@ -1153,7 +1164,8 @@ export default function Clientes() {
                                   estado: cliente.estado || '',
                                   observacoes: cliente.observacoes || '',
                                   status: cliente.status,
-                                  cobrador_id: cliente.cobrador_id || ''
+                                  cobrador_id: cliente.cobrador_id || '',
+                                  vendedor_id: cliente.vendedor_id || ''
                                 });
                                 setIsEditModalOpen(true);
                               }}>
@@ -1161,7 +1173,7 @@ export default function Clientes() {
                                 Editar
                               </DropdownMenuItem>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={() => {
                                   setClienteToDelete(cliente);
@@ -1171,6 +1183,8 @@ export default function Clientes() {
                                 <Trash2 className="h-4 w-4 mr-2" />
                                 Excluir
                               </DropdownMenuItem>
+                              </>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

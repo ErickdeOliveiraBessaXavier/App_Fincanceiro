@@ -65,7 +65,7 @@ export default function Titulos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isFinanceiro } = useUserRole();
+  const { isFinanceiro, isOperador } = useUserRole();
 
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
@@ -421,10 +421,12 @@ export default function Titulos() {
           <h1 className="text-xl sm:text-2xl font-bold">Títulos</h1>
           <p className="text-muted-foreground text-sm sm:text-base">Gerencie os títulos de cobrança</p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Título
-        </Button>
+        {isOperador && (
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Título
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -633,10 +635,12 @@ export default function Titulos() {
                                   }
                                   return (
                                     <>
-                                      <DropdownMenuItem onClick={() => openPagamentoModal(firstParcela)}>
-                                        <DollarSign className="h-4 w-4 mr-2" />
-                                        Registrar Pagamento
-                                      </DropdownMenuItem>
+                                      {isOperador && (
+                                        <DropdownMenuItem onClick={() => openPagamentoModal(firstParcela)}>
+                                          <DollarSign className="h-4 w-4 mr-2" />
+                                          Registrar Pagamento
+                                        </DropdownMenuItem>
+                                      )}
                                       {isFinanceiro && (
                                         <>
                                           <DropdownMenuItem onClick={() => openEncargoModal(firstParcela)}>
@@ -722,10 +726,12 @@ export default function Titulos() {
                                         </span>
                                       </DropdownMenuLabel>
                                       <DropdownMenuSeparator />
-                                      <DropdownMenuItem onClick={() => openPagamentoModal(parcela)}>
-                                        <DollarSign className="h-4 w-4 mr-2" />
-                                        Registrar Pagamento
-                                      </DropdownMenuItem>
+                                      {isOperador && (
+                                        <DropdownMenuItem onClick={() => openPagamentoModal(parcela)}>
+                                          <DollarSign className="h-4 w-4 mr-2" />
+                                          Registrar Pagamento
+                                        </DropdownMenuItem>
+                                      )}
                                       {isFinanceiro && (
                                         <>
                                           <DropdownMenuItem onClick={() => openEncargoModal(parcela)}>

@@ -14,6 +14,7 @@ import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { campanhasFilterConfig } from '@/constants/filterConfigs';
 import { campanhasPresets } from '@/constants/filterPresets';
 import { createCampanhasFilterFunctions } from '@/utils/filterFunctions';
+import { useUserRole } from '@/hooks/useUserRole';
 
 interface Campanha {
   id: string;
@@ -29,6 +30,8 @@ interface Campanha {
 export default function Campanhas() {
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [loading, setLoading] = useState(true);
+  // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
+  const { isOperador } = useUserRole();
   
   // Modais
   const [formOpen, setFormOpen] = useState(false);
@@ -175,10 +178,12 @@ export default function Campanhas() {
           <h1 className="text-2xl font-bold">Campanhas</h1>
           <p className="text-muted-foreground">Gerencie suas campanhas de cobrança</p>
         </div>
-        <Button onClick={handleNewCampanha}>
-          <Plus className="h-4 w-4 mr-2" />
-          Nova Campanha
-        </Button>
+        {isOperador && (
+          <Button onClick={handleNewCampanha}>
+            <Plus className="h-4 w-4 mr-2" />
+            Nova Campanha
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
@@ -254,9 +259,11 @@ export default function Campanhas() {
             <div className="text-center py-12 text-muted-foreground">
               <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
               <p>Nenhuma campanha encontrada</p>
-              <Button variant="outline" className="mt-4" onClick={handleNewCampanha}>
-                Criar primeira campanha
-              </Button>
+              {isOperador && (
+                <Button variant="outline" className="mt-4" onClick={handleNewCampanha}>
+                  Criar primeira campanha
+                </Button>
+              )}
             </div>
           ) : (
             <div className="rounded-md border overflow-x-auto">
@@ -292,42 +299,48 @@ export default function Campanhas() {
                       <TableCell className="hidden sm:table-cell">{formatDate(campanha.created_at)}</TableCell>
                       <TableCell>
                         <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => toggleCampanhaStatus(campanha.id, campanha.status)}
-                            title={campanha.status === 'ativa' ? 'Pausar' : 'Ativar'}
-                          >
-                            {campanha.status === 'ativa' ? 
-                              <Pause className="h-4 w-4" /> : 
-                              <Play className="h-4 w-4" />
-                            }
-                          </Button>
-                          <Button 
-                            variant="ghost" 
+                          {isOperador && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => toggleCampanhaStatus(campanha.id, campanha.status)}
+                              title={campanha.status === 'ativa' ? 'Pausar' : 'Ativar'}
+                            >
+                              {campanha.status === 'ativa' ?
+                                <Pause className="h-4 w-4" /> :
+                                <Play className="h-4 w-4" />
+                              }
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
                             size="sm"
                             onClick={() => handleView(campanha)}
                             title="Visualizar"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleEdit(campanha)}
-                            title="Editar"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDeleteClick(campanha)}
-                            title="Excluir"
-                            className="text-destructive hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isOperador && (
+                            <>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleEdit(campanha)}
+                                title="Editar"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleDeleteClick(campanha)}
+                                title="Excluir"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

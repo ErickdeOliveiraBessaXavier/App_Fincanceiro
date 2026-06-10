@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useTitulosAgrupados, TituloAgrupado } from '@/hooks/useTitulosAgrupados';
+import { useUserRole } from '@/hooks/useUserRole';
 import { SelecionarTitulosAcordo } from '@/components/acordos/SelecionarTitulosAcordo';
 
 interface Acordo {
@@ -127,6 +128,8 @@ export default function Acordos() {
   const [cronograma, setCronograma] = useState<CronogramaParcela[]>([]);
   const [showCronograma, setShowCronograma] = useState(false);
   const { toast } = useToast();
+  // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
+  const { isOperador } = useUserRole();
 
   const { clientes: clientesComDividas, loading: loadingTitulos, refetch: refetchTitulos } = useTitulosAgrupados();
 
@@ -367,13 +370,15 @@ export default function Acordos() {
           <h1 className="text-2xl font-bold">Acordos</h1>
           <p className="text-muted-foreground">Gerencie os acordos de pagamento</p>
         </div>
-        <Button onClick={() => {
-          refetchTitulos();
-          setIsCreateModalOpen(true);
-        }}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Acordo
-        </Button>
+        {isOperador && (
+          <Button onClick={() => {
+            refetchTitulos();
+            setIsCreateModalOpen(true);
+          }}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Acordo
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
@@ -491,16 +496,18 @@ export default function Acordos() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setAcordoToDelete(acordo);
-                            setIsDeleteModalOpen(true);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        {isOperador && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setAcordoToDelete(acordo);
+                              setIsDeleteModalOpen(true);
+                            }}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
