@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageHeader } from '@/components/PageHeader';
 import { Search, Edit, Shield, User, UserCog, Clock, Check, X, Trash2, Store } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -174,96 +175,99 @@ export default function Usuarios() {
   const count = (r: AppRole) => usuarios.filter(u => u.role === r).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Usuários</h1>
-          <p className="text-muted-foreground">Gerencie os usuários e papéis da sua empresa</p>
-        </div>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader
+        title="Usuários"
+        description="Gestão de acessos, papéis e autorizações da plataforma."
+      >
         {isAdmin && (
-          <Button onClick={() => setCreateOpen(true)}>
+          <Button 
+            onClick={() => setCreateOpen(true)}
+          >
             <Plus className="mr-2 h-4 w-4" /> Novo Administrador
           </Button>
         )}
-      </div>
+      </PageHeader>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <Card>
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total de Usuários</CardTitle>
+            <User className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{usuarios.length}</div></CardContent>
+          <CardContent><div className="text-2xl font-black tracking-tighter">{usuarios.length}</div></CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Administradores</CardTitle>
-            <Shield className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Administradores</CardTitle>
+            <Shield className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{count('admin')}</div></CardContent>
+          <CardContent className="relative z-10"><div className="text-2xl font-black tracking-tighter text-primary">{count('admin')}</div></CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cobradores</CardTitle>
-            <UserCog className="h-4 w-4 text-muted-foreground" />
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Cobradores</CardTitle>
+            <UserCog className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{count('operador')}</div></CardContent>
+          <CardContent className="relative z-10"><div className="text-2xl font-black tracking-tighter text-blue-600">{count('operador')}</div></CardContent>
         </Card>
       </div>
 
       {isAdmin && pendentes.length > 0 && (
-        <Card className="border-amber-200">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Clock className="h-5 w-5 text-amber-600" />
-              Aguardando autorização
-              <Badge className="bg-amber-100 text-amber-800">{pendentes.length}</Badge>
+        <Card className="border-2 border-amber-500/20 bg-amber-500/5 shadow-card rounded-2xl overflow-hidden">
+          <CardHeader className="pb-4 border-b border-amber-500/10 bg-amber-500/10">
+            <CardTitle className="flex items-center gap-3 text-amber-700">
+              <Clock className="h-5 w-5" />
+              <span className="font-bold tracking-tight">Aguardando Autorização</span>
+              <Badge className="bg-amber-600 text-white rounded-full px-2.5">{pendentes.length}</Badge>
             </CardTitle>
-            <CardDescription>
-              Cobradores e vendedores que se cadastraram pelo link e precisam da sua liberação para acessar.
+            <CardDescription className="text-amber-600/80 font-medium">
+              Novos membros aguardando liberação de acesso à plataforma.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border">
+          <CardContent className="pt-6">
+            <div className="rounded-xl border border-amber-500/20 overflow-hidden bg-white/50">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-amber-500/10">
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Carteira</TableHead>
-                    <TableHead>Cadastrado em</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Nome</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Email</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Tipo</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Carteira</TableHead>
+                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-amber-800">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {pendentes.map((c) => (
-                    <TableRow key={c.id}>
-                      <TableCell className="font-medium">{c.nome ?? '—'}</TableCell>
-                      <TableCell>{c.email ?? '—'}</TableCell>
+                    <TableRow key={c.id} className="hover:bg-amber-500/5 transition-colors">
+                      <TableCell className="font-bold text-sm text-amber-900">{c.nome ?? '—'}</TableCell>
+                      <TableCell className="text-xs font-medium text-amber-800/70">{c.email ?? '—'}</TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="capitalize">{c.tipo}</Badge>
+                        <Badge variant="secondary" className="capitalize rounded-lg font-bold text-[10px] bg-amber-200 text-amber-900">{c.tipo}</Badge>
                       </TableCell>
-                      <TableCell>{c.carteira_nome ?? '—'}</TableCell>
-                      <TableCell>{formatDate(c.created_at)}</TableCell>
+                      <TableCell className="text-xs font-medium text-amber-800/70">{c.carteira_nome ?? '—'}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          className="mr-2 gap-1"
-                          onClick={() => handleAutorizar(c)}
-                          disabled={autorizarMut.isPending || revogarMut.isPending}
-                        >
-                          <Check className="h-4 w-4" /> Autorizar
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1 text-destructive hover:text-destructive"
-                          onClick={() => handleRecusar(c)}
-                          disabled={autorizarMut.isPending || revogarMut.isPending}
-                        >
-                          <X className="h-4 w-4" /> Recusar
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            size="sm"
+                            className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 font-bold h-8"
+                            onClick={() => handleAutorizar(c)}
+                            disabled={autorizarMut.isPending || revogarMut.isPending}
+                          >
+                            <Check className="h-4 w-4 mr-2" /> Autorizar
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/5 rounded-lg h-8 px-3 font-bold"
+                            onClick={() => handleRecusar(c)}
+                            disabled={autorizarMut.isPending || revogarMut.isPending}
+                          >
+                            <X className="h-4 w-4 mr-2" /> Recusar
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -274,65 +278,71 @@ export default function Usuarios() {
         </Card>
       )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Usuários</CardTitle>
-          <CardDescription>Usuários cadastrados no sistema</CardDescription>
+      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold tracking-tight">Lista de Usuários</CardTitle>
+              <CardDescription className="text-xs font-medium">Controle de acesso e atribuição de responsabilidades</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 mb-6">
+        <CardContent className="pt-6">
+          <div className="flex gap-4 mb-8">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
               <Input
                 placeholder="Buscar por nome, email ou função..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 rounded-xl bg-muted/20 border-border/40"
               />
             </div>
           </div>
 
-          <div className="rounded-md border">
+          <div className="rounded-xl border border-border/50 overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Função</TableHead>
-                  <TableHead>Cadastrado em</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Email</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Função</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cadastro</TableHead>
+                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.map((u) => {
                   const b = roleBadge(u.role);
                   return (
-                    <TableRow key={u.id}>
-                      <TableCell className="font-medium">{u.nome}</TableCell>
-                      <TableCell>{u.email}</TableCell>
+                    <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
+                      <TableCell className="font-bold text-sm text-foreground">{u.nome}</TableCell>
+                      <TableCell className="text-xs font-medium text-muted-foreground">{u.email}</TableCell>
                       <TableCell>
-                        <Badge className={b.cls}>
-                          <div className="flex items-center gap-1">
+                        <Badge className={`${b.cls} rounded-lg border-none font-bold text-[10px] uppercase tracking-wider py-1`}>
+                          <div className="flex items-center gap-1.5">
                             {b.icon}
-                            <span className="capitalize">{b.label}</span>
+                            <span>{b.label}</span>
                           </div>
                         </Badge>
                       </TableCell>
-                      <TableCell>{formatDate(u.created_at)}</TableCell>
-                      <TableCell>
-                        <Button variant="ghost" size="sm" onClick={() => setEditTarget(u)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {u.user_id !== user?.id && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setDeleteTarget(u)}
-                          >
-                            <Trash2 className="h-4 w-4" />
+                      <TableCell className="text-xs font-medium text-muted-foreground">{formatDate(u.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => setEditTarget(u)} className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5">
+                            <Edit className="h-4 w-4" />
                           </Button>
-                        )}
+                          {u.user_id !== user?.id && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/5"
+                              onClick={() => setDeleteTarget(u)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { PageHeader } from '@/components/PageHeader';
 import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, FileText, FileSpreadsheet, FileIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -293,12 +294,11 @@ export default function Relatorios() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Relatórios</h1>
-          <p className="text-muted-foreground">Análise de desempenho e métricas</p>
-        </div>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader
+        title="Relatórios"
+        description="Análise de desempenho operacional e financeiro."
+      >
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button>
@@ -306,153 +306,195 @@ export default function Relatorios() {
               Exportar
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => handleExport('csv')}>
+          <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
+            <DropdownMenuItem onClick={() => handleExport('csv')} className="rounded-lg m-1 font-medium">
               <FileText className="h-4 w-4 mr-2" />
               Exportar CSV
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport('excel')}>
+            <DropdownMenuItem onClick={() => handleExport('excel')} className="rounded-lg m-1 font-medium">
               <FileSpreadsheet className="h-4 w-4 mr-2" />
               Exportar Excel
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => handleExport('pdf')}>
+            <DropdownMenuItem onClick={() => handleExport('pdf')} className="rounded-lg m-1 font-medium">
               <FileIcon className="h-4 w-4 mr-2" />
               Exportar PDF
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </PageHeader>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
-        <Select value={reportType} onValueChange={setReportType}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Tipo de relatório" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="geral">Relatório Geral</SelectItem>
-            <SelectItem value="titulos">Títulos</SelectItem>
-            <SelectItem value="acordos">Acordos</SelectItem>
-          </SelectContent>
-        </Select>
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border/50">
+        <div className="flex flex-col gap-1.5 flex-1 w-full sm:w-auto">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Tipo de Visão</label>
+          <Select value={reportType} onValueChange={setReportType}>
+            <SelectTrigger className="w-full sm:w-48 rounded-xl bg-background">
+              <SelectValue placeholder="Tipo de relatório" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="geral">Relatório Geral</SelectItem>
+              <SelectItem value="titulos">Títulos</SelectItem>
+              <SelectItem value="acordos">Acordos</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
 
-        <DatePickerWithRange 
-          date={dateRange} 
-          onDateChange={setDateRange}
-        />
+        <div className="flex flex-col gap-1.5 w-full sm:w-auto">
+          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Período</label>
+          <DatePickerWithRange 
+            date={dateRange} 
+            onDateChange={setDateRange}
+          />
+        </div>
       </div>
 
       {reportData && (
         <>
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Títulos</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+          <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total de Títulos</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                  <FileText className="h-4 w-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reportData.totalTitulos}</div>
-                <ComparisonIndicator value={reportData.comparisons.titulos} />
+              <CardContent className="relative z-10">
+                <div className="text-3xl font-black tracking-tighter">{reportData.totalTitulos}</div>
+                <div className="mt-2">
+                  <ComparisonIndicator value={reportData.comparisons.titulos} />
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Valor Total</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+                  <DollarSign className="h-4 w-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(reportData.totalValor)}</div>
-                <ComparisonIndicator value={reportData.comparisons.valor} />
+              <CardContent className="relative z-10">
+                <div className="text-3xl font-black tracking-tighter">{formatCurrency(reportData.totalValor)}</div>
+                <div className="mt-2">
+                  <ComparisonIndicator value={reportData.comparisons.valor} />
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total de Acordos</CardTitle>
-                <FileText className="h-4 w-4 text-muted-foreground" />
+            <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total de Acordos</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+                  <FileText className="h-4 w-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{reportData.totalAcordos}</div>
-                <ComparisonIndicator value={reportData.comparisons.acordos} />
+              <CardContent className="relative z-10">
+                <div className="text-3xl font-black tracking-tighter">{reportData.totalAcordos}</div>
+                <div className="mt-2">
+                  <ComparisonIndicator value={reportData.comparisons.acordos} />
+                </div>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Valor Acordado</CardTitle>
-                <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+              <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Valor Acordado</CardTitle>
+                <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center text-success group-hover:scale-110 transition-transform">
+                  <DollarSign className="h-4 w-4" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{formatCurrency(reportData.valorAcordos)}</div>
-                <ComparisonIndicator value={reportData.comparisons.valorAcordos} />
+              <CardContent className="relative z-10">
+                <div className="text-3xl font-black tracking-tighter">{formatCurrency(reportData.valorAcordos)}</div>
+                <div className="mt-2">
+                  <ComparisonIndicator value={reportData.comparisons.valorAcordos} />
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Títulos por Status</CardTitle>
-                <CardDescription>Distribuição dos títulos por status</CardDescription>
+          <div className="grid gap-10 grid-cols-1 md:grid-cols-2">
+            <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+              <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+                <CardTitle className="text-lg font-bold tracking-tight">Títulos por Status</CardTitle>
+                <CardDescription className="text-xs font-medium">Distribuição percentual da base</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={320}>
                   <PieChart>
                     <Pie
                       data={reportData.titulosPorStatus}
                       cx="50%"
                       cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={80}
-                      fill="#8884d8"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={8}
                       dataKey="value"
                     >
                       {reportData.titulosPorStatus.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={COLORS[index % COLORS.length]} 
+                          className="stroke-background hover:opacity-80 transition-opacity outline-none"
+                          strokeWidth={4}
+                        />
                       ))}
                     </Pie>
-                    <Tooltip />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: 'none', borderRadius: '12px', boxShadow: 'var(--shadow-card-hover)' }}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Títulos por Mês</CardTitle>
-                <CardDescription>Títulos criados nos últimos 6 meses</CardDescription>
+            <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+              <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+                <CardTitle className="text-lg font-bold tracking-tight">Títulos por Mês</CardTitle>
+                <CardDescription className="text-xs font-medium">Volume de novos títulos (semestral)</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+              <CardContent className="pt-6">
+                <ResponsiveContainer width="100%" height={320}>
                   <BarChart data={reportData.titulosPorMes}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Bar dataKey="count" fill="hsl(var(--primary))" />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} dx={-10} />
+                    <Tooltip 
+                      cursor={{ fill: 'hsl(var(--muted)/0.4)' }}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: 'none', borderRadius: '12px', boxShadow: 'var(--shadow-card-hover)' }}
+                    />
+                    <Bar dataKey="count" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} barSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
             </Card>
 
-            <Card className="md:col-span-2">
-              <CardHeader>
-                <CardTitle>Comparativo: Títulos vs Acordos</CardTitle>
-                <CardDescription>Evolução mensal de títulos e acordos</CardDescription>
+            <Card className="md:col-span-2 border-none shadow-card rounded-2xl overflow-hidden">
+              <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-bold tracking-tight">Comparativo: Títulos vs Acordos</CardTitle>
+                    <CardDescription className="text-xs font-medium">Evolução mensal de conversão em acordos</CardDescription>
+                  </div>
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                </div>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+              <CardContent className="pt-8">
+                <ResponsiveContainer width="100%" height={320}>
                   <LineChart data={reportData.titulosPorMes.map((item, index) => ({
                     ...item,
                     acordos: reportData.acordosPorMes[index]?.count || 0
                   }))}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="month" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" name="Títulos" strokeWidth={2} />
-                    <Line type="monotone" dataKey="acordos" stroke="#22c55e" name="Acordos" strokeWidth={2} />
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                    <YAxis fontSize={12} tickLine={false} axisLine={false} dx={-10} />
+                    <Tooltip 
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', border: 'none', borderRadius: '12px', boxShadow: 'var(--shadow-card-hover)' }}
+                    />
+                    <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" name="Títulos" strokeWidth={4} dot={{ r: 6, fill: 'hsl(var(--primary))', stroke: '#fff', strokeWidth: 2 }} />
+                    <Line type="monotone" dataKey="acordos" stroke="#22c55e" name="Acordos" strokeWidth={4} dot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }} />
                   </LineChart>
                 </ResponsiveContainer>
               </CardContent>

@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
+import { PageHeader } from '@/components/PageHeader';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, FileText, Clock, CheckCircle, TrendingUp, AlertTriangle } from 'lucide-react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { DollarSign, CheckCircle, TrendingUp, AlertTriangle, Wallet, LayoutGrid } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import AgingReport from '@/components/dashboard/AgingReport';
 import ProximosVencimentos from '@/components/dashboard/ProximosVencimentos';
 import TopDevedores from '@/components/dashboard/TopDevedores';
-import MetaRecuperacao from '@/components/dashboard/MetaRecuperacao';
-import { getStatusLabel } from '@/constants/statusConfig';
+import StatPillar from '@/components/dashboard/StatPillar';
+import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 
 interface DashboardStats {
   totalTitulos: number;
@@ -46,31 +47,17 @@ interface RecuperacaoMensal {
   valor: number;
 }
 
-interface TituloPorStatus {
-  name: string;
-  value: number;
-}
-
 interface TituloConsolidado {
   id: string;
-  cliente_id: string;
   valor_original: number;
-  vencimento_original: string;
-  cliente_nome: string;
-  cliente_cpf_cnpj: string;
-  quantidade_parcelas: number;
-  tipo: string;
   saldo_devedor: number;
   total_pago: number;
-  parcelas_pagas: number;
-  parcelas_vencidas: number;
-  parcelas_pendentes: number;
   status: string;
   proximo_vencimento: string | null;
   updated_at: string;
+  cliente_nome: string;
+  cliente_id: string;
 }
-
-const COLORS = ['hsl(262, 83%, 58%)', 'hsl(142, 71%, 45%)', 'hsl(0, 84%, 60%)', 'hsl(25, 95%, 53%)'];
 
 const Dashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
@@ -85,7 +72,6 @@ const Dashboard = () => {
   const [proximosVencimentos, setProximosVencimentos] = useState<Vencimento[]>([]);
   const [topDevedores, setTopDevedores] = useState<Devedor[]>([]);
   const [recuperacaoMensal, setRecuperacaoMensal] = useState<RecuperacaoMensal[]>([]);
-  const [titulosPorStatus, setTitulosPorStatus] = useState<TituloPorStatus[]>([]);
   const [loading, setLoading] = useState(true);
 
   const META_MENSAL = 50000;
@@ -187,19 +173,6 @@ const Dashboard = () => {
       const recuperacao = calculateRecuperacaoMensal(titulosPagosArr);
       setRecuperacaoMensal(recuperacao);
 
-      const statusCount = titulosData.reduce((acc, titulo) => {
-        const status = titulo.status || 'ativo';
-        acc[status] = (acc[status] || 0) + 1;
-        return acc;
-      }, {} as Record<string, number>);
-
-      setTitulosPorStatus(
-        Object.entries(statusCount).map(([status, count]) => ({
-          name: getStatusLabel('titulo', status),
-          value: count
-        }))
-      );
-
     } catch (error) {
       console.error('Erro ao buscar dados do dashboard:', error);
     } finally {
@@ -248,236 +221,119 @@ const Dashboard = () => {
     });
   };
 
-  const formatCurrency = (value: number) => {
+  const formatCurrency = (value: number, compact = false) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
+      maximumFractionDigits: compact ? 1 : 0,
+      notation: compact ? 'compact' : 'standard',
     }).format(value);
   };
 
-  const mesAtual = new Date().toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">Carregando dados...</p>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return <DashboardSkeleton />;
 
   const totalVencido = agingData.reduce((sum, a) => sum + a.value, 0);
+  const taxaInadimplencia = stats.totalTitulos > 0 ? (stats.titulosVencidos / stats.totalTitulos) * 100 : 0;
+  const taxaRecuperacao = stats.valorTotal > 0 ? (stats.valorRecuperado / stats.valorTotal) * 100 : 0;
+  const progressoMeta = (stats.valorRecuperadoMes / META_MENSAL) * 100;
 
   return (
-    <div className="space-y-8 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Visão geral do sistema de cobrança
-          </p>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader 
+        title="Resumo Executivo"
+        description="Monitoramento de performance e risco da carteira."
+      >
+        <div className="flex items-center gap-4 bg-card px-6 py-3 rounded-2xl shadow-card border border-border/40">
+          <div className="flex flex-col items-end">
+            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Atualizado em</span>
+            <span className="text-sm font-black text-foreground">
+              {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
+            </span>
+          </div>
+          <div className="h-10 w-[1px] bg-border/60" />
+          <LayoutGrid className="h-5 w-5 text-primary" />
         </div>
-        <div className="text-sm text-muted-foreground bg-muted px-4 py-2 rounded-xl">
-          {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })}
-        </div>
-      </div>
+      </PageHeader>
 
-      {/* KPI Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Total de Títulos</CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <FileText className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold">{stats.totalTitulos}</div>
-            <p className="text-xs text-muted-foreground mt-1">títulos cadastrados</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Valor Total</CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-primary/10 flex items-center justify-center">
-              <DollarSign className="h-4 w-4 text-primary" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold">{formatCurrency(stats.valorTotal)}</div>
-            <p className="text-xs text-muted-foreground mt-1">em carteira</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Inadimplentes</CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-destructive/10 flex items-center justify-center">
-              <AlertTriangle className="h-4 w-4 text-destructive" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold text-destructive">{stats.titulosVencidos}</div>
-            <p className="text-xs text-muted-foreground mt-1">requerem atenção</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Quitados</CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
-              <CheckCircle className="h-4 w-4 text-success" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl sm:text-3xl font-bold text-success">{stats.titulosPagos}</div>
-            <p className="text-xs text-muted-foreground mt-1">pagamentos recebidos</p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Valor Recuperado</CardTitle>
-            <div className="h-8 w-8 rounded-xl bg-success/10 flex items-center justify-center">
-              <TrendingUp className="h-4 w-4 text-success" />
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="text-xl sm:text-2xl font-bold text-success">{formatCurrency(stats.valorRecuperado)}</div>
-            <p className="text-xs text-muted-foreground mt-1">total recuperado</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Aging Report + Próximos Vencimentos */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <AgingReport data={agingData} totalValue={totalVencido} />
-        <ProximosVencimentos vencimentos={proximosVencimentos} />
-      </div>
-
-      {/* Top Devedores + Meta de Recuperação */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <TopDevedores devedores={topDevedores} />
-        <MetaRecuperacao 
-          valorRecuperado={stats.valorRecuperadoMes} 
-          meta={META_MENSAL} 
-          mesAtual={mesAtual}
+      {/* 3 Pilares Executivos */}
+      <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+        <StatPillar
+          title="Visão da Carteira"
+          mainValue={formatCurrency(stats.valorTotal, stats.valorTotal > 999999)}
+          subValue={`${stats.totalTitulos} títulos`}
+          description="Volume total de ativos sob gestão"
+          icon={Wallet}
+          variant="default"
+        />
+        <StatPillar
+          title="Situação de Risco"
+          mainValue={taxaInadimplencia.toFixed(1) + '%'}
+          subValue={formatCurrency(totalVencido, true)}
+          description="Inadimplência sobre a base total"
+          icon={AlertTriangle}
+          variant="destructive"
+          progress={{ value: taxaInadimplencia, label: "Exposição ao Risco" }}
+        />
+        <StatPillar
+          title="Eficiência de Recuperação"
+          mainValue={taxaRecuperacao.toFixed(1) + '%'}
+          subValue={formatCurrency(stats.valorRecuperado, true)}
+          description="Performance global de cobrança"
+          icon={CheckCircle}
+          variant="success"
+          progress={{ value: progressoMeta, label: "Meta Mensal" }}
         />
       </div>
 
-      {/* Gráficos */}
-      <div className="grid gap-6 grid-cols-1 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Evolução da Recuperação</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <LineChart data={recuperacaoMensal}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <YAxis tickFormatter={(v) => `R$ ${(v/1000).toFixed(0)}k`} stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                <Tooltip 
-                  formatter={(value: number) => [formatCurrency(value), 'Recuperado']}
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px',
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
-                  }}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="valor" 
-                  stroke="hsl(262, 83%, 58%)" 
-                  strokeWidth={3}
-                  dot={{ fill: 'hsl(262, 83%, 58%)', strokeWidth: 2, r: 5 }}
-                  activeDot={{ r: 7, fill: 'hsl(262, 83%, 58%)' }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      <div className="grid gap-10 grid-cols-1 xl:grid-cols-12">
+        {/* Lado Esquerdo: Saúde e Tendência */}
+        <div className="xl:col-span-8 space-y-10">
+          <Card className="border-none shadow-card overflow-hidden">
+            <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-bold tracking-tight">Evolução da Recuperação</CardTitle>
+                  <p className="text-xs text-muted-foreground font-medium mt-1">Tendência de recebimento nos últimos 6 meses</p>
+                </div>
+                <TrendingUp className="h-5 w-5 text-success" />
+              </div>
+            </CardHeader>
+            <CardContent className="pt-8">
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={recuperacaoMensal}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+                  <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                  <YAxis tickFormatter={(v) => `R$ ${(v/1000).toFixed(0)}k`} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} dx={-10} />
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: 'none', borderRadius: '16px', boxShadow: 'var(--shadow-card-hover)' }}
+                    formatter={(v: any) => [formatCurrency(v), 'Recuperado']}
+                  />
+                  <Line type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={4} dot={{ r: 6, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Títulos por Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={280}>
-              <PieChart>
-                <Pie
-                  data={titulosPorStatus}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={70}
-                  outerRadius={100}
-                  paddingAngle={4}
-                  dataKey="value"
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  labelLine={{ stroke: 'hsl(var(--muted-foreground))' }}
-                >
-                  {titulosPorStatus.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: 'hsl(var(--card))',
-                    border: '1px solid hsl(var(--border))',
-                    borderRadius: '12px'
-                  }}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
+          <AgingReport data={agingData} totalValue={totalVencido} />
+        </div>
 
-      {/* Taxas */}
-      <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 to-transparent pointer-events-none" />
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Taxa de Inadimplência</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-destructive">
-              {stats.totalTitulos > 0 
-                ? ((stats.titulosVencidos / stats.totalTitulos) * 100).toFixed(1) 
-                : 0}%
+        {/* Lado Direito: Centro de Ação Prioritária */}
+        <div className="xl:col-span-4 space-y-8">
+          <div className="bg-primary/5 rounded-3xl p-1 border border-primary/10">
+            <div className="bg-background rounded-[calc(1.5rem-2px)] p-6 space-y-8">
+              <div>
+                <h3 className="text-lg font-black tracking-tight mb-1">Prioridades de Hoje</h3>
+                <p className="text-xs text-muted-foreground font-medium">Ações imediatas para redução de risco</p>
+              </div>
+              
+              <div className="space-y-10">
+                <ProximosVencimentos vencimentos={proximosVencimentos} />
+                <div className="h-[1px] bg-border/60 mx-4" />
+                <TopDevedores devedores={topDevedores} />
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Percentual de títulos inadimplentes
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
-          <CardHeader>
-            <CardTitle className="text-lg font-semibold">Taxa de Recuperação</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-4xl font-bold text-success">
-              {stats.valorTotal > 0 
-                ? ((stats.valorRecuperado / stats.valorTotal) * 100).toFixed(1) 
-                : 0}%
-            </div>
-            <p className="text-sm text-muted-foreground mt-2">
-              Percentual do valor total recuperado
-            </p>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
     </div>
   );

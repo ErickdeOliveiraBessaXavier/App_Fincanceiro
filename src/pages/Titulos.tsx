@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -80,6 +81,9 @@ export default function Titulos() {
   const [tituloToHardDelete, setTituloToHardDelete] = useState<TituloConsolidado | null>(null);
   const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
   const [expandedTitulos, setExpandedTitulos] = useState<Set<string>>(new Set());
+  // Incrementado quando o cache de parcelas é atualizado, para forçar a
+  // re-derivação de `parcelasTitulo` (que lê o cache do React Query).
+  const [parcelasVersion, setParcelasVersion] = useState(0);
 
   // Modal states for financial actions
   const [pagamentoModal, setPagamentoModal] = useState<{
@@ -127,8 +131,9 @@ export default function Titulos() {
       if (cached && !expandedTitulos.has(selectedTitulo.id)) all.push(...cached);
     }
     return all;
-    // queryClient is stable; depend on changing keys to retrigger derivation
-  }, [expandedTitulos, selectedTitulo, queryClient, titulos]);
+    // queryClient is stable; depend on changing keys/versão para re-derivar
+    // quando uma busca de parcelas termina e popula o cache.
+  }, [expandedTitulos, selectedTitulo, queryClient, titulos, parcelasVersion]);
 
   const fetchParcelasTitulo = async (tituloId: string) => {
     await queryClient.fetchQuery({
@@ -143,6 +148,7 @@ export default function Titulos() {
         return (data || []) as Parcela[];
       },
     });
+    setParcelasVersion(v => v + 1);
   };
 
   const handleCreateTitulo = async () => {
@@ -205,16 +211,19 @@ export default function Titulos() {
   };
 
   const toggleTituloExpanded = (tituloId: string) => {
+    const isExpanding = !expandedTitulos.has(tituloId);
     setExpandedTitulos(prev => {
       const next = new Set(prev);
       if (next.has(tituloId)) {
         next.delete(tituloId);
       } else {
         next.add(tituloId);
-        fetchParcelasTitulo(tituloId);
       }
       return next;
     });
+    // Efeito fora do updater (updaters devem ser puros). A busca popula o
+    // cache e bumpa parcelasVersion, re-renderizando já no primeiro clique.
+    if (isExpanding) fetchParcelasTitulo(tituloId);
   };
 
   const openDetails = async (titulo: TituloConsolidado) => {
@@ -403,28 +412,33 @@ export default function Titulos() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold">Títulos</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Gerencie os títulos de cobrança</p>
-        </div>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader
+        title="Títulos"
+        description="Gestão detalhada de faturas e parcelas de cobrança."
+      >
         {isOperador && (
-          <Button onClick={() => setIsCreateModalOpen(true)}>
+          <Button 
+            onClick={() => setIsCreateModalOpen(true)}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Novo Título
           </Button>
         )}
-      </div>
+      </PageHeader>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Títulos</CardTitle>
-          <CardDescription>
-            {clientesComTitulosFiltrados.length} clientes, {totalTitulos} títulos
-          </CardDescription>
+      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold tracking-tight">Lista de Títulos</CardTitle>
+              <CardDescription className="text-xs font-medium">
+                {clientesComTitulosFiltrados.length} clientes, {totalTitulos} títulos sob gestão
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <GlobalFilter
             configs={titulosFilterConfig}
             filters={filters}
@@ -441,17 +455,17 @@ export default function Titulos() {
             defaultOpen={false}
           />
 
-          <div className="rounded-md border overflow-x-auto">
+          <div className="rounded-xl border border-border/50 overflow-hidden">
             <Table>
-              <TableHeader>
+              <TableHeader className="bg-muted/30">
                 <TableRow>
                   <TableHead className="w-10"></TableHead>
-                  <TableHead>Cliente / Título</TableHead>
-                  <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
-                  <TableHead>Saldo</TableHead>
-                  <TableHead className="hidden lg:table-cell">Títulos</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cliente / Título</TableHead>
+                  <TableHead className="hidden md:table-cell text-[10px] font-bold uppercase tracking-widest">CPF/CNPJ</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Saldo</TableHead>
+                  <TableHead className="hidden lg:table-cell text-[10px] font-bold uppercase tracking-widest">Títulos</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -855,6 +869,9 @@ export default function Titulos() {
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Detalhes do Título</DialogTitle>
+            <DialogDescription>
+              Informações do título, parcelas e histórico de pagamentos.
+            </DialogDescription>
           </DialogHeader>
           {selectedTitulo && (
             <div className="space-y-4">

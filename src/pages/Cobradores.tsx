@@ -1,3 +1,4 @@
+import { PageHeader } from '@/components/PageHeader';
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Users, Briefcase, Link2, Check, Copy, CheckCircle2 } from 'lucide-react';
 import {
@@ -139,108 +140,131 @@ export default function Cobradores() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Cobradores</h1>
-          <p className="text-muted-foreground">Funcionários e suas carteiras de cobrança</p>
-        </div>
-        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Novo Cobrador</Button>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader
+        title="Cobradores"
+        description="Equipe de cobrança e gestão de carteiras de clientes."
+      >
+        <Button 
+          onClick={openNew}
+        >
+          <Plus className="mr-2 h-4 w-4" /> 
+          Novo Cobrador
+        </Button>
+      </PageHeader>
+
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-black tracking-tighter">{cobradores.length}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
+          <CardHeader className="pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ativos</CardTitle>
+          </CardHeader>
+          <CardContent className="relative z-10">
+            <div className="text-2xl font-black tracking-tighter text-success">{ativos}</div>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Clientes em carteira</CardTitle>
+            <Briefcase className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
+          </CardHeader>
+          <CardContent className="relative z-10">
+            <div className="text-2xl font-black tracking-tighter">{totalCarteira}</div>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{cobradores.length}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ativos</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-green-600">{ativos}</div></CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Clientes em carteira</CardTitle>
-            <Briefcase className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{totalCarteira}</div></CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Cobradores</CardTitle>
-          <CardDescription>Cada cobrador administra a sua carteira de clientes</CardDescription>
+      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold tracking-tight">Lista de Cobradores</CardTitle>
+              <CardDescription className="text-xs font-medium">Cada cobrador administra a sua carteira de clientes</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {isLoading ? (
             <div className="flex h-32 items-center justify-center">
               <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
             </div>
           ) : cobradores.length === 0 ? (
-            <p className="py-8 text-center text-muted-foreground">
-              Nenhum cobrador ainda. Crie um, ou eles são criados automaticamente na importação de CSV.
-            </p>
+            <div className="text-center py-10 bg-muted/5 rounded-xl border border-dashed border-border/60">
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Nenhum cobrador registrado</p>
+              <p className="text-xs text-muted-foreground mt-1 font-medium">Eles são criados automaticamente na importação de CSV.</p>
+            </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-xl border border-border/50 overflow-hidden">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Carteira</TableHead>
-                    <TableHead>Ativo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Carteira</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ativo</TableHead>
+                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {cobradores.map((r) => (
-                    <TableRow key={r.id}>
-                      <TableCell className="font-medium">{r.nome}</TableCell>
-                      <TableCell className="text-sm">
-                        {r.email && <div>{r.email}</div>}
-                        {r.telefone && <div className="text-muted-foreground">{r.telefone}</div>}
-                        {!r.email && !r.telefone && <span className="text-muted-foreground">—</span>}
+                    <TableRow key={r.id} className="hover:bg-muted/10 transition-colors">
+                      <TableCell className="font-bold text-sm text-foreground">{r.nome}</TableCell>
+                      <TableCell>
+                        <div className="text-xs space-y-1">
+                          {r.email && <div className="font-bold text-foreground">{r.email}</div>}
+                          {r.telefone && <div className="text-muted-foreground font-medium">{r.telefone}</div>}
+                        </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary">{r.carteira} cliente{r.carteira === 1 ? '' : 's'}</Badge>
+                        <Badge variant="secondary" className="rounded-lg font-bold text-[10px] uppercase tracking-wider">{r.carteira} clientes</Badge>
                       </TableCell>
                       <TableCell>
                         <Switch checked={r.ativo} onCheckedChange={() => toggleAtivo(r)} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {isAdmin && (
-                          r.user_id ? (
-                            <Badge variant="outline" className="mr-1 gap-1 text-green-600 border-green-200">
-                              <CheckCircle2 className="h-3 w-3" /> com acesso
-                            </Badge>
-                          ) : (
+                        <div className="flex items-center justify-end gap-1">
+                          {isAdmin && (
+                            r.user_id ? (
+                              <Badge variant="outline" className="mr-1 gap-1 text-green-600 border-green-200 bg-green-50/50">
+                                <CheckCircle2 className="h-3 w-3" /> com acesso
+                              </Badge>
+                            ) : (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleGerarLink(r)}
+                                disabled={gerarConvite.isPending}
+                                className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"
+                                title="Gerar link de acesso"
+                              >
+                                <Link2 className="h-4 w-4" />
+                              </Button>
+                            )
+                          )}
+                          <Button variant="ghost" size="sm" onClick={() => openEdit(r)} className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          {isAdmin && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleGerarLink(r)}
-                              disabled={gerarConvite.isPending}
-                              title="Gerar link de acesso"
+                              className="h-8 w-8 p-0 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/5"
+                              onClick={() => setToDelete(r)}
                             >
-                              <Link2 className="h-4 w-4" />
+                              <Trash2 className="h-4 w-4" />
                             </Button>
-                          )
-                        )}
-                        <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        {isAdmin && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => setToDelete(r)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        )}
+                          )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

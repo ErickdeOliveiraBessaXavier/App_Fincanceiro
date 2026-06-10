@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
+import { PageHeader } from '@/components/PageHeader';
 import { useLocation } from 'react-router-dom';
-import { Plus, Eye, Trash2, FileText } from 'lucide-react';
+import { Plus, Eye, Trash2, FileText, CheckCircle, TrendingUp } from 'lucide-react';
 import { useAcordos, useCreateAcordo, useDeleteAcordo, type AcordoRow } from '@/lib/queries/acordos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -354,71 +355,98 @@ export default function Acordos() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Acordos</h1>
-          <p className="text-muted-foreground">Gerencie os acordos de pagamento</p>
-        </div>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader
+        title="Acordos"
+        description="Gestão e acompanhamento de acordos de parcelamento."
+      >
         {isOperador && (
-          <Button onClick={() => {
-            refetchTitulos();
-            setIsCreateModalOpen(true);
-          }}>
+          <Button 
+            onClick={() => {
+              refetchTitulos();
+              setIsCreateModalOpen(true);
+            }}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Novo Acordo
           </Button>
         )}
-      </div>
+      </PageHeader>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total de Acordos</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total de Acordos</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+              <FileText className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{acordos.length}</div>
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-black tracking-tighter">{acordos.length}</div>
+            <p className="text-[10px] font-medium text-muted-foreground mt-1">Acordos registrados</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Acordos Ativos</CardTitle>
+
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Acordos Ativos</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
+              <CheckCircle className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-black tracking-tighter text-blue-600">
               {acordos.filter(a => a.status === 'ativo').length}
             </div>
+            <p className="text-[10px] font-medium text-muted-foreground mt-1">Em andamento</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Acordos Cumpridos</CardTitle>
+
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Cumpridos</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center text-success group-hover:scale-110 transition-transform">
+              <Plus className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-black tracking-tighter text-success">
               {acordos.filter(a => a.status === 'cumprido').length}
             </div>
+            <p className="text-[10px] font-medium text-muted-foreground mt-1">Finalizados com sucesso</p>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
+
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Valor Total</CardTitle>
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+              <TrendingUp className="h-4 w-4" />
+            </div>
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
+          <CardContent className="relative z-10">
+            <div className="text-3xl font-black tracking-tighter">
               {formatCurrency(acordos.reduce((sum, a) => sum + a.valor_acordo, 0))}
             </div>
+            <p className="text-[10px] font-medium text-muted-foreground mt-1">Montante negociado</p>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Acordos</CardTitle>
-          <CardDescription>Total de {filteredAcordos.length} acordos</CardDescription>
+      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold tracking-tight">Lista de Acordos</CardTitle>
+              <CardDescription className="text-xs font-medium">Total de {filteredAcordos.length} acordos encontrados</CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <GlobalFilter
             configs={acordosFilterConfig}
             filters={filters}
@@ -635,6 +663,9 @@ export default function Acordos() {
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Detalhes do Acordo</DialogTitle>
+            <DialogDescription>
+              Condições do acordo, parcelas e situação atual.
+            </DialogDescription>
           </DialogHeader>
           {selectedAcordo && (
             <div className="space-y-4">

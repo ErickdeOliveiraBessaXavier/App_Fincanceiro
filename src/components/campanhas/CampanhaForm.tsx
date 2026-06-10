@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -188,6 +188,9 @@ const CampanhaForm = ({ open, onOpenChange, campanha, onSuccess }: CampanhaFormP
           <DialogTitle>
             {campanha ? 'Editar Campanha' : 'Nova Campanha'}
           </DialogTitle>
+          <DialogDescription>
+            Configure os dados da campanha de cobrança e os filtros de destinatários.
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6">

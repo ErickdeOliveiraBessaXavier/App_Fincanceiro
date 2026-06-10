@@ -1408,10 +1408,6 @@ export type Database = {
         }
         Returns: Json
       }
-      cancelar_titulo: {
-        Args: { p_motivo?: string; p_titulo_id: string }
-        Returns: Json
-      }
       check_overdue_parcelas: { Args: never; Returns: undefined }
       cobrador_ve_cliente: { Args: { _cliente_id: string }; Returns: boolean }
       cobrador_ve_titulo: { Args: { _titulo_id: string }; Returns: boolean }
@@ -1450,6 +1446,10 @@ export type Database = {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
       }
+      excluir_titulos_definitivo: {
+        Args: { p_titulo_ids: string[] }
+        Returns: Json
+      }
       find_or_create_cobrador: { Args: { p_nome: string }; Returns: string }
       find_or_create_vendedor: { Args: { p_nome: string }; Returns: string }
       has_min_role: {
@@ -1477,7 +1477,24 @@ export type Database = {
         }
         Returns: Json
       }
+      importar_titulo_completo: {
+        Args: {
+          p_cidade?: string
+          p_cliente_nome: string
+          p_cobrador?: string
+          p_company_id: string
+          p_contato?: string
+          p_cpf_cnpj: string
+          p_descricao?: string
+          p_estado?: string
+          p_numero_documento: string
+          p_parcelas: Json
+          p_vendedor?: string
+        }
+        Returns: Json
+      }
       is_super_admin: { Args: never; Returns: boolean }
+      limpar_titulos_empresa: { Args: { p_company_id: string }; Returns: Json }
       migrate_existing_titulos_to_clientes: { Args: never; Returns: undefined }
       refresh_mv_parcelas: { Args: never; Returns: undefined }
       registrar_pagamento_parcela: {

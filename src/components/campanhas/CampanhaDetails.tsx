@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -103,6 +103,9 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
             {campanha.nome}
             <StatusBadge domain="campanha" status={campanha.status} />
           </DialogTitle>
+          <DialogDescription>
+            Detalhes da campanha e histórico de envios aos destinatários.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6">
