@@ -7,6 +7,22 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, UserPlus, CheckCircle2, AlertTriangle } from 'lucide-react';
 
+// Definido fora do componente: se ficasse dentro, cada re-render (ao digitar)
+// criaria um novo tipo de componente, remontando os inputs e perdendo o foco.
+const Frame = ({ children }: { children: React.ReactNode }) => (
+  <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <div className="w-full max-w-md space-y-6">
+      <div className="flex items-center justify-center gap-3">
+        <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center">
+          <Sparkles className="h-6 w-6 text-white" />
+        </div>
+        <span className="text-2xl font-bold text-foreground">CobrançaPro</span>
+      </div>
+      {children}
+    </div>
+  </div>
+);
+
 export default function Convite() {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
@@ -39,20 +55,6 @@ export default function Convite() {
       setLoading(false);
     }
   };
-
-  const Frame = ({ children }: { children: React.ReactNode }) => (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md space-y-6">
-        <div className="flex items-center justify-center gap-3">
-          <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center">
-            <Sparkles className="h-6 w-6 text-white" />
-          </div>
-          <span className="text-2xl font-bold text-foreground">CobrançaPro</span>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
 
   if (!token) {
     return (

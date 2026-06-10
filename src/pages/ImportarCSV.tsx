@@ -23,7 +23,7 @@ interface CSVRow {
   vencimento: string;
   contato?: string;
   descricao?: string;
-  representante?: string;
+  cobrador?: string;
 }
 
 interface ImportResult {
@@ -224,7 +224,7 @@ export default function ImportarCSV() {
             const cleanedCpfCnpj = rowData.cpf_cnpj.replace(/[^\d]/g, '');
             const valor = parseFloat(rowData.valor.replace(/[^\d.,]/g, '').replace(',', '.'));
 
-            // Importa via RPC (resolve cliente, representante, título e parcela no backend)
+            // Importa via RPC (resolve cliente, cobrador, título e parcela no backend)
             const { data: res, error: rpcError } = await supabase.rpc('importar_titulo', {
               p_company_id: isSuperAdmin ? selectedCompany : null,
               p_cliente_nome: rowData.cliente,
@@ -233,7 +233,7 @@ export default function ImportarCSV() {
               p_vencimento: rowData.vencimento,
               p_contato: rowData.contato || null,
               p_descricao: rowData.descricao || null,
-              p_representante: rowData.representante || null,
+              p_cobrador: rowData.cobrador || null,
             });
 
             if (rpcError || (res as any)?.error) {
@@ -296,7 +296,7 @@ export default function ImportarCSV() {
 
   const downloadTemplate = () => {
     const csvContent = [
-      'cliente,cpf_cnpj,valor,vencimento,contato,descricao,representante',
+      'cliente,cpf_cnpj,valor,vencimento,contato,descricao,cobrador',
       'João Silva Santos,123.456.789-00,1500.00,2026-07-15,(11) 99999-9999,Mensalidade julho 2026,Carlos Andrade',
       'Maria Oliveira LTDA,12.345.678/0001-90,2750.50,2026-07-30,(11) 88888-8888,Prestação de serviços,Ana Paula'
     ].join('\n');
@@ -453,7 +453,7 @@ export default function ImportarCSV() {
               <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
                 <li><code>contato</code> - Telefone ou email</li>
                 <li><code>descricao</code> - Descrição do título</li>
-                <li><code>representante</code> - Nome do representante (carteira). Criado automaticamente se não existir.</li>
+                <li><code>cobrador</code> - Nome do cobrador (carteira). Criado automaticamente se não existir.</li>
               </ul>
             </div>
 

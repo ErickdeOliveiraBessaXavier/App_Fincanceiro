@@ -10,7 +10,7 @@ import {
   checkCpfCnpjExists,
   type ClienteRow,
 } from '@/lib/queries/clientes';
-import { useRepresentantes } from '@/lib/queries/representantes';
+import { useCobradores } from '@/lib/queries/cobradores';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -86,7 +86,7 @@ export default function Clientes() {
 
   // === Data via React Query ===
   const { data: clientes = [], isLoading: loading } = useClientes();
-  const { data: representantes = [] } = useRepresentantes();
+  const { data: cobradores = [] } = useCobradores();
   const createClienteMutation = useCreateCliente();
   const updateClienteMutation = useUpdateCliente();
   const deleteClienteMutation = useDeleteCliente();
@@ -105,7 +105,7 @@ export default function Clientes() {
     cidade: '',
     estado: '',
     observacoes: '',
-    representante_id: '',
+    cobrador_id: '',
   });
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -121,7 +121,7 @@ export default function Clientes() {
     estado: '',
     observacoes: '',
     status: '',
-    representante_id: '',
+    cobrador_id: '',
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -186,7 +186,7 @@ export default function Clientes() {
     try {
       await createClienteMutation.mutateAsync({
         ...newCliente,
-        representante_id: newCliente.representante_id || null,
+        cobrador_id: newCliente.cobrador_id || null,
       });
 
       toast({
@@ -204,7 +204,7 @@ export default function Clientes() {
         cidade: '',
         estado: '',
         observacoes: '',
-        representante_id: ''
+        cobrador_id: ''
       });
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
@@ -285,7 +285,7 @@ export default function Clientes() {
         estado: editingCliente.estado,
         observacoes: editingCliente.observacoes,
         status: editingCliente.status,
-        representante_id: editingCliente.representante_id || null,
+        cobrador_id: editingCliente.cobrador_id || null,
       });
 
       toast({
@@ -510,15 +510,15 @@ export default function Clientes() {
               <Input id="observacoes" value={newCliente.observacoes} onChange={(e) => setNewCliente({ ...newCliente, observacoes: e.target.value })} />
             </div>
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="representante">Representante (carteira)</Label>
+              <Label htmlFor="cobrador">Cobrador (carteira)</Label>
               <select
-                id="representante"
-                value={newCliente.representante_id}
-                onChange={(e) => setNewCliente({ ...newCliente, representante_id: e.target.value })}
+                id="cobrador"
+                value={newCliente.cobrador_id}
+                onChange={(e) => setNewCliente({ ...newCliente, cobrador_id: e.target.value })}
                 className="px-3 py-2 border border-input rounded-md bg-background"
               >
-                <option value="">Sem representante</option>
-                {representantes.map((r) => (
+                <option value="">Sem cobrador</option>
+                {cobradores.map((r) => (
                   <option key={r.id} value={r.id}>{r.nome}{r.ativo ? '' : ' (inativo)'}</option>
                 ))}
               </select>
@@ -578,10 +578,10 @@ export default function Clientes() {
                       </div>
                     )}
 
-                    {selectedCliente.representante_nome && (
+                    {selectedCliente.cobrador_nome && (
                       <div>
-                        <label className="text-sm font-medium">Representante</label>
-                        <p className="text-sm text-muted-foreground">{selectedCliente.representante_nome}</p>
+                        <label className="text-sm font-medium">Cobrador</label>
+                        <p className="text-sm text-muted-foreground">{selectedCliente.cobrador_nome}</p>
                       </div>
                     )}
                     
@@ -778,15 +778,15 @@ export default function Clientes() {
             </div>
 
             <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="edit-representante">Representante (carteira)</Label>
+              <Label htmlFor="edit-cobrador">Cobrador (carteira)</Label>
               <select
-                id="edit-representante"
-                value={editingCliente.representante_id}
-                onChange={(e) => setEditingCliente({ ...editingCliente, representante_id: e.target.value })}
+                id="edit-cobrador"
+                value={editingCliente.cobrador_id}
+                onChange={(e) => setEditingCliente({ ...editingCliente, cobrador_id: e.target.value })}
                 className="px-3 py-2 border border-input rounded-md bg-background"
               >
-                <option value="">Sem representante</option>
-                {representantes.map((r) => (
+                <option value="">Sem cobrador</option>
+                {cobradores.map((r) => (
                   <option key={r.id} value={r.id}>{r.nome}{r.ativo ? '' : ' (inativo)'}</option>
                 ))}
               </select>
@@ -929,9 +929,9 @@ export default function Clientes() {
                           <span className="truncate">{cliente.email}</span>
                         </div>
                       )}
-                      {cliente.representante_nome && (
+                      {cliente.cobrador_nome && (
                         <div className="text-sm text-muted-foreground">
-                          Representante: <span className="text-foreground">{cliente.representante_nome}</span>
+                          Cobrador: <span className="text-foreground">{cliente.cobrador_nome}</span>
                         </div>
                       )}
                     </div>
@@ -981,7 +981,7 @@ export default function Clientes() {
                               estado: cliente.estado || '',
                               observacoes: cliente.observacoes || '',
                               status: cliente.status,
-                              representante_id: cliente.representante_id || ''
+                              cobrador_id: cliente.cobrador_id || ''
                             });
                             setIsEditModalOpen(true);
                           }}>
@@ -1042,7 +1042,7 @@ export default function Clientes() {
                       <TableHead>Cliente</TableHead>
                       <TableHead>CPF/CNPJ</TableHead>
                       <TableHead>Contato</TableHead>
-                      <TableHead>Representante</TableHead>
+                      <TableHead>Cobrador</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Títulos</TableHead>
                       <TableHead>Valor Total</TableHead>
@@ -1060,7 +1060,7 @@ export default function Clientes() {
                             {cliente.email && <div className="text-muted-foreground">{cliente.email}</div>}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm">{cliente.representante_nome ?? '—'}</TableCell>
+                        <TableCell className="text-sm">{cliente.cobrador_nome ?? '—'}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(cliente.status)}>
                             {cliente.status.replace('_', ' ')}
@@ -1102,7 +1102,7 @@ export default function Clientes() {
                                   estado: cliente.estado || '',
                                   observacoes: cliente.observacoes || '',
                                   status: cliente.status,
-                                  representante_id: cliente.representante_id || ''
+                                  cobrador_id: cliente.cobrador_id || ''
                                 });
                                 setIsEditModalOpen(true);
                               }}>

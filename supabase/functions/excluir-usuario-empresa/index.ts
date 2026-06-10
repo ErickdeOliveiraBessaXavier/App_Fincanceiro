@@ -1,6 +1,8 @@
-// Edge Function: admin da empresa cria outro ADMINISTRADOR (acesso total).
-// Cobradores ganham acesso só pelo convite por link (página Cobradores).
+// Edge Function: admin da empresa exclui um usuário (conta de login).
 // Usa a service role (disponível no ambiente da função) — nunca exponha no frontend.
+// Apagar a conta de auth faz cascata: profiles e user_roles são removidos (ON DELETE
+// CASCADE); cobradores.user_id e convites.used_by viram NULL (ON DELETE SET NULL) —
+// ou seja, a carteira do cobrador é preservada, apenas perde o vínculo de acesso.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
@@ -32,45 +34,34 @@ Deno.serve(async (req) => {
     const callerId = callerData.user.id;
 
     // 2) Empresa + papel do chamador
-    const { data: prof } = await admin
+    const { data: callerProf } = await admin
       .from("profiles").select("company_id").eq("user_id", callerId).single();
-    const companyId = prof?.company_id as string | null;
+    const companyId = callerProf?.company_id as string | null;
     if (!companyId) return json(403, { error: "Chamador não pertence a uma empresa" });
 
     const { data: roles } = await admin
       .from("user_roles").select("role").eq("user_id", callerId);
     const isAdmin = (roles ?? []).some((r: { role: string }) =>
       r.role === "admin" || r.role === "super_admin");
-    if (!isAdmin) return json(403, { error: "Apenas administradores podem criar usuários" });
+    if (!isAdmin) return json(403, { error: "Apenas administradores podem excluir usuários" });
 
-    // 3) Valida entrada. Esta função cria SOMENTE administradores: o acesso de um
-    //    cobrador é concedido exclusivamente pelo fluxo de convite (página Cobradores),
-    //    evitando login de cobrador sem carteira (que veria todos os dados da empresa).
+    // 3) Valida entrada
     const body = await req.json();
-    const { email, nome, senha } = body ?? {};
-    if (!email || !nome || !senha)
-      return json(400, { error: "Informe email, nome e senha" });
-    if (String(senha).length < 6)
-      return json(400, { error: "A senha deve ter ao menos 6 caracteres" });
+    const targetId = String(body?.user_id ?? "");
+    if (!targetId) return json(400, { error: "Informe o usuário a excluir" });
+    if (targetId === callerId) return json(400, { error: "Você não pode excluir a própria conta" });
 
-    // 4) Cria o usuário (e-mail já confirmado)
-    const { data: created, error: createErr } = await admin.auth.admin.createUser({
-      email,
-      password: senha,
-      email_confirm: true,
-      user_metadata: { nome },
-    });
-    if (createErr || !created?.user)
-      return json(400, { error: createErr?.message ?? "Falha ao criar usuário" });
-    const newUserId = created.user.id;
+    // 4) O alvo precisa pertencer à mesma empresa do admin
+    const { data: targetProf } = await admin
+      .from("profiles").select("company_id").eq("user_id", targetId).single();
+    if (!targetProf || targetProf.company_id !== companyId)
+      return json(403, { error: "Usuário não pertence à sua empresa" });
 
-    // 5) Vincula empresa + papel admin (o trigger já criou o profile)
-    await admin.from("profiles").update({ company_id: companyId, nome }).eq("user_id", newUserId);
-    const { error: roleErr } = await admin
-      .from("user_roles").insert({ user_id: newUserId, company_id: companyId, role: "admin" });
-    if (roleErr) return json(400, { error: `Usuário criado, mas falhou ao atribuir papel: ${roleErr.message}` });
+    // 5) Exclui a conta de auth (cascata cuida do resto)
+    const { error: delErr } = await admin.auth.admin.deleteUser(targetId);
+    if (delErr) return json(400, { error: `Falha ao excluir usuário: ${delErr.message}` });
 
-    return json(200, { sucesso: true, user_id: newUserId });
+    return json(200, { sucesso: true });
   } catch (e) {
     return json(500, { error: String((e as Error)?.message ?? e) });
   }

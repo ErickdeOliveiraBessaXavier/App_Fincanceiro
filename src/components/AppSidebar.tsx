@@ -28,12 +28,13 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Clientes", url: "/clientes", icon: UserCheck },
-  { title: "Representantes", url: "/representantes", icon: Briefcase },
+  { title: "Cobradores", url: "/cobradores", icon: Briefcase },
   { title: "Títulos", url: "/titulos", icon: FileText },
   { title: "Acordos", url: "/acordos", icon: Handshake },
   { title: "Campanhas", url: "/campanhas", icon: Megaphone },
@@ -46,10 +47,10 @@ export const AppSidebar = memo(() => {
   const { state } = useSidebar();
   const location = useLocation();
   const { signOut } = useAuth();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
-  const adminOnly = ["/usuarios", "/importar"];
+  const adminOnly = ["/usuarios", "/importar", "/cobradores"];
   const visibleMenuItems = menuItems.filter(i => !adminOnly.includes(i.url) || isAdmin);
 
   const isActive = (path: string) => {
@@ -86,8 +87,22 @@ export const AppSidebar = memo(() => {
       <SidebarContent className={cn("px-3", isCollapsed && "px-0")}>
         <SidebarGroup className={cn(isCollapsed && "!p-1")}>
           <SidebarGroupContent>
-            <SidebarMenu className={cn("space-y-1", isCollapsed && "items-center")}> 
-              {visibleMenuItems.map((item) => {
+            <SidebarMenu className={cn("space-y-1", isCollapsed && "items-center")}>
+              {roleLoading ? (
+                // Primeiro acesso (sem cache de role): placeholders para o menu não
+                // "pular" quando os itens admin-only resolverem.
+                menuItems.map((_, i) => (
+                  <SidebarMenuItem key={`skeleton-${i}`}>
+                    <div className={cn(
+                      "flex items-center gap-3 rounded-xl px-3 py-2.5",
+                      isCollapsed && "justify-center px-2"
+                    )}>
+                      <Skeleton className="h-5 w-5 shrink-0 rounded-md bg-white/10" />
+                      {!isCollapsed && <Skeleton className="h-4 w-28 rounded bg-white/10" />}
+                    </div>
+                  </SidebarMenuItem>
+                ))
+              ) : visibleMenuItems.map((item) => {
                 const active = isActive(item.url);
                 return (
                   <SidebarMenuItem key={item.title}>

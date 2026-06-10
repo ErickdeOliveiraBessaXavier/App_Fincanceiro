@@ -12,6 +12,19 @@ const RANK: Record<AppRole, number> = {
   super_admin: 5,
 };
 
+// Cache leve da role no localStorage para o menu não "piscar" no reload.
+// É só UX/visibilidade — a segurança real continua na RLS do banco.
+const storageKey = (userId: string) => `user-roles:${userId}`;
+const readCachedRoles = (userId?: string): AppRole[] | undefined => {
+  if (!userId) return undefined;
+  try {
+    const raw = localStorage.getItem(storageKey(userId));
+    return raw ? (JSON.parse(raw) as AppRole[]) : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
 export function useUserRole() {
   const { user } = useAuth();
   const userId = user?.id;
@@ -20,13 +33,22 @@ export function useUserRole() {
     queryKey: ['user-roles', userId],
     enabled: !!userId,
     staleTime: 5 * 60 * 1000,
+    // Mostra a role do último acesso na hora (sem flash) e revalida em background.
+    initialData: () => readCachedRoles(userId),
+    initialDataUpdatedAt: 0,
     queryFn: async (): Promise<AppRole[]> => {
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', userId!);
       if (error) throw error;
-      return (data || []).map((r: any) => r.role as AppRole);
+      const roles = (data || []).map((r: any) => r.role as AppRole);
+      try {
+        if (userId) localStorage.setItem(storageKey(userId), JSON.stringify(roles));
+      } catch {
+        /* localStorage indisponível: segue sem cache */
+      }
+      return roles;
     },
   });
 

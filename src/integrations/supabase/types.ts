@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -534,6 +534,7 @@ export type Database = {
         Row: {
           cep: string | null
           cidade: string | null
+          cobrador_id: string | null
           company_id: string
           cpf_cnpj: string
           created_at: string
@@ -545,7 +546,6 @@ export type Database = {
           id: string
           nome: string
           observacoes: string | null
-          representante_id: string | null
           status: string
           telefone: string | null
           updated_at: string
@@ -553,6 +553,7 @@ export type Database = {
         Insert: {
           cep?: string | null
           cidade?: string | null
+          cobrador_id?: string | null
           company_id: string
           cpf_cnpj: string
           created_at?: string
@@ -564,7 +565,6 @@ export type Database = {
           id?: string
           nome: string
           observacoes?: string | null
-          representante_id?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
@@ -572,6 +572,7 @@ export type Database = {
         Update: {
           cep?: string | null
           cidade?: string | null
+          cobrador_id?: string | null
           company_id?: string
           cpf_cnpj?: string
           created_at?: string
@@ -583,12 +584,18 @@ export type Database = {
           id?: string
           nome?: string
           observacoes?: string | null
-          representante_id?: string | null
           status?: string
           telefone?: string | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_cobrador_id_fkey"
+            columns: ["cobrador_id"]
+            isOneToOne: false
+            referencedRelation: "cobradores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "clientes_company_id_fkey"
             columns: ["company_id"]
@@ -596,11 +603,54 @@ export type Database = {
             referencedRelation: "companies"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      cobradores: {
+        Row: {
+          ativo: boolean
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          email: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
           {
-            foreignKeyName: "clientes_representante_id_fkey"
-            columns: ["representante_id"]
+            foreignKeyName: "cobradores_company_id_fkey"
+            columns: ["company_id"]
             isOneToOne: false
-            referencedRelation: "representantes"
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
@@ -694,6 +744,60 @@ export type Database = {
           },
           {
             foreignKeyName: "comunicacoes_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      convites: {
+        Row: {
+          cobrador_id: string | null
+          company_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          nome_sugerido: string | null
+          status: string
+          token: string
+          used_by: string | null
+        }
+        Insert: {
+          cobrador_id?: string | null
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          nome_sugerido?: string | null
+          status?: string
+          token: string
+          used_by?: string | null
+        }
+        Update: {
+          cobrador_id?: string | null
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          nome_sugerido?: string | null
+          status?: string
+          token?: string
+          used_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "convites_cobrador_id_fkey"
+            columns: ["cobrador_id"]
+            isOneToOne: false
+            referencedRelation: "cobradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "convites_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
@@ -994,56 +1098,6 @@ export type Database = {
           },
         ]
       }
-      representantes: {
-        Row: {
-          ativo: boolean
-          company_id: string
-          created_at: string
-          created_by: string | null
-          deleted_at: string | null
-          email: string | null
-          id: string
-          nome: string
-          telefone: string | null
-          updated_at: string
-          user_id: string | null
-        }
-        Insert: {
-          ativo?: boolean
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          deleted_at?: string | null
-          email?: string | null
-          id?: string
-          nome: string
-          telefone?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Update: {
-          ativo?: boolean
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          deleted_at?: string | null
-          email?: string | null
-          id?: string
-          nome?: string
-          telefone?: string | null
-          updated_at?: string
-          user_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "representantes_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       titulos: {
         Row: {
           cliente_id: string | null
@@ -1289,6 +1343,8 @@ export type Database = {
         Returns: Json
       }
       check_overdue_parcelas: { Args: never; Returns: undefined }
+      cobrador_ve_cliente: { Args: { _cliente_id: string }; Returns: boolean }
+      cobrador_ve_titulo: { Args: { _titulo_id: string }; Returns: boolean }
       conceder_desconto_parcela: {
         Args: {
           p_created_by?: string
@@ -1316,17 +1372,14 @@ export type Database = {
         }
         Returns: Json
       }
+      current_cobrador_id: { Args: never; Returns: string }
       current_company_id: { Args: never; Returns: string }
-      current_rep_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       estornar_evento_parcela: {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
       }
-      find_or_create_representante: {
-        Args: { p_nome: string }
-        Returns: string
-      }
+      find_or_create_cobrador: { Args: { p_nome: string }; Returns: string }
       has_min_role: {
         Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
         Returns: boolean
@@ -1341,11 +1394,11 @@ export type Database = {
       importar_titulo: {
         Args: {
           p_cliente_nome: string
+          p_cobrador?: string
           p_company_id: string
           p_contato?: string
           p_cpf_cnpj: string
           p_descricao?: string
-          p_representante?: string
           p_valor: number
           p_vencimento: string
         }
@@ -1364,8 +1417,6 @@ export type Database = {
         }
         Returns: Json
       }
-      rep_ve_cliente: { Args: { _cliente_id: string }; Returns: boolean }
-      rep_ve_titulo: { Args: { _titulo_id: string }; Returns: boolean }
       reverter_audit_log: {
         Args: { p_audit_id: string; p_motivo: string }
         Returns: Json

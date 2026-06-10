@@ -1,9 +1,9 @@
 -- =====================================================================
--- CONVITES DE ACESSO — representante se cadastra por link e admin autoriza
+-- CONVITES DE ACESSO — cobrador se cadastra por link e admin autoriza
 -- =====================================================================
 -- Fluxo:
---   1. Admin gera um convite (link com token) para um representante.
---   2. Representante abre o link e cria a própria conta (e-mail + senha) via
+--   1. Admin gera um convite (link com token) para um cobrador.
+--   2. Cobrador abre o link e cria a própria conta (e-mail + senha) via
 --      Edge Function `registrar-convite` (service role valida o token e define
 --      a empresa no servidor — o cliente nunca se auto-atribui a um tenant).
 --   3. Conta fica SEM papel => Layout mostra "aguardando autorização".
@@ -14,7 +14,7 @@
 CREATE TABLE public.convites (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   company_id UUID NOT NULL REFERENCES public.companies(id) ON DELETE CASCADE,
-  representante_id UUID REFERENCES public.representantes(id) ON DELETE SET NULL,
+  cobrador_id UUID REFERENCES public.cobradores(id) ON DELETE SET NULL,
   token TEXT NOT NULL UNIQUE,
   nome_sugerido TEXT,
   status TEXT NOT NULL DEFAULT 'pendente'

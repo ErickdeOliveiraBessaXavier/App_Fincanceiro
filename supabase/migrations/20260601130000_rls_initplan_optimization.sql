@@ -10,7 +10,7 @@ CREATE POLICY "acordos_insert" ON public.acordos
 DROP POLICY IF EXISTS "acordos_select" ON public.acordos;
 CREATE POLICY "acordos_select" ON public.acordos
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND rep_ve_cliente(cliente_id))));
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND cobrador_ve_cliente(cliente_id))));
 
 DROP POLICY IF EXISTS "acordos_update" ON public.acordos;
 CREATE POLICY "acordos_update" ON public.acordos
@@ -40,7 +40,7 @@ CREATE POLICY "agendamentos_insert" ON public.agendamentos
 DROP POLICY IF EXISTS "agendamentos_select" ON public.agendamentos;
 CREATE POLICY "agendamentos_select" ON public.agendamentos
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND rep_ve_cliente(cliente_id))));
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND cobrador_ve_cliente(cliente_id))));
 
 DROP POLICY IF EXISTS "agendamentos_update" ON public.agendamentos;
 CREATE POLICY "agendamentos_update" ON public.agendamentos
@@ -110,7 +110,7 @@ CREATE POLICY "clientes_insert" ON public.clientes
 DROP POLICY IF EXISTS "clientes_select" ON public.clientes;
 CREATE POLICY "clientes_select" ON public.clientes
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND (((select current_rep_id()) IS NULL) OR (representante_id = (select current_rep_id()))))));
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND (((select current_cobrador_id()) IS NULL) OR (cobrador_id = (select current_cobrador_id()))))));
 
 DROP POLICY IF EXISTS "clientes_update" ON public.clientes;
 CREATE POLICY "clientes_update" ON public.clientes
@@ -142,7 +142,7 @@ CREATE POLICY "comunicacoes_insert" ON public.comunicacoes
 DROP POLICY IF EXISTS "comunicacoes_select" ON public.comunicacoes;
 CREATE POLICY "comunicacoes_select" ON public.comunicacoes
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND rep_ve_cliente(cliente_id))));
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND cobrador_ve_cliente(cliente_id))));
 
 DROP POLICY IF EXISTS "comunicacoes_update" ON public.comunicacoes;
 CREATE POLICY "comunicacoes_update" ON public.comunicacoes
@@ -178,9 +178,9 @@ CREATE POLICY "eventos_insert" ON public.eventos_parcela
 DROP POLICY IF EXISTS "eventos_select" ON public.eventos_parcela;
 CREATE POLICY "eventos_select" ON public.eventos_parcela
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND (((select current_rep_id()) IS NULL) OR (EXISTS ( SELECT 1
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND (((select current_cobrador_id()) IS NULL) OR (EXISTS ( SELECT 1
    FROM parcelas p
-  WHERE ((p.id = eventos_parcela.parcela_id) AND rep_ve_titulo(p.titulo_id))))))));
+  WHERE ((p.id = eventos_parcela.parcela_id) AND cobrador_ve_titulo(p.titulo_id))))))));
 
 DROP POLICY IF EXISTS "eventos_update" ON public.eventos_parcela;
 CREATE POLICY "eventos_update" ON public.eventos_parcela
@@ -210,7 +210,7 @@ CREATE POLICY "parcelas_insert" ON public.parcelas
 DROP POLICY IF EXISTS "parcelas_select" ON public.parcelas;
 CREATE POLICY "parcelas_select" ON public.parcelas
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND rep_ve_titulo(titulo_id))));
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND cobrador_ve_titulo(titulo_id))));
 
 DROP POLICY IF EXISTS "parcelas_update" ON public.parcelas;
 CREATE POLICY "parcelas_update" ON public.parcelas
@@ -225,9 +225,9 @@ CREATE POLICY "parcelas_acordo_insert" ON public.parcelas_acordo
 DROP POLICY IF EXISTS "parcelas_acordo_select" ON public.parcelas_acordo;
 CREATE POLICY "parcelas_acordo_select" ON public.parcelas_acordo
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND (((select current_rep_id()) IS NULL) OR (EXISTS ( SELECT 1
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND (((select current_cobrador_id()) IS NULL) OR (EXISTS ( SELECT 1
    FROM acordos a
-  WHERE ((a.id = parcelas_acordo.acordo_id) AND rep_ve_cliente(a.cliente_id))))))));
+  WHERE ((a.id = parcelas_acordo.acordo_id) AND cobrador_ve_cliente(a.cliente_id))))))));
 
 DROP POLICY IF EXISTS "parcelas_acordo_update" ON public.parcelas_acordo;
 CREATE POLICY "parcelas_acordo_update" ON public.parcelas_acordo
@@ -249,23 +249,23 @@ CREATE POLICY "profiles_update_self_or_admin" ON public.profiles
   AS PERMISSIVE FOR UPDATE TO authenticated
   USING ((((select auth.uid()) = user_id) OR ((company_id = (select current_company_id())) AND has_min_role((select auth.uid()), 'admin'::app_role))));
 
-DROP POLICY IF EXISTS "representantes_delete_admin" ON public.representantes;
-CREATE POLICY "representantes_delete_admin" ON public.representantes
+DROP POLICY IF EXISTS "cobradores_delete_admin" ON public.cobradores;
+CREATE POLICY "cobradores_delete_admin" ON public.cobradores
   AS PERMISSIVE FOR DELETE TO authenticated
   USING (((company_id = (select current_company_id())) AND has_min_role((select auth.uid()), 'admin'::app_role)));
 
-DROP POLICY IF EXISTS "representantes_insert" ON public.representantes;
-CREATE POLICY "representantes_insert" ON public.representantes
+DROP POLICY IF EXISTS "cobradores_insert" ON public.cobradores;
+CREATE POLICY "cobradores_insert" ON public.cobradores
   AS PERMISSIVE FOR INSERT TO authenticated
   WITH CHECK (((company_id = (select current_company_id())) AND has_min_role((select auth.uid()), 'operador'::app_role)));
 
-DROP POLICY IF EXISTS "representantes_select" ON public.representantes;
-CREATE POLICY "representantes_select" ON public.representantes
+DROP POLICY IF EXISTS "cobradores_select" ON public.cobradores;
+CREATE POLICY "cobradores_select" ON public.cobradores
   AS PERMISSIVE FOR SELECT TO authenticated
   USING (((select is_super_admin()) OR (company_id = (select current_company_id()))));
 
-DROP POLICY IF EXISTS "representantes_update" ON public.representantes;
-CREATE POLICY "representantes_update" ON public.representantes
+DROP POLICY IF EXISTS "cobradores_update" ON public.cobradores;
+CREATE POLICY "cobradores_update" ON public.cobradores
   AS PERMISSIVE FOR UPDATE TO authenticated
   USING (((company_id = (select current_company_id())) AND has_min_role((select auth.uid()), 'operador'::app_role)));
 
@@ -277,7 +277,7 @@ CREATE POLICY "titulos_insert" ON public.titulos
 DROP POLICY IF EXISTS "titulos_select" ON public.titulos;
 CREATE POLICY "titulos_select" ON public.titulos
   AS PERMISSIVE FOR SELECT TO authenticated
-  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND rep_ve_cliente(cliente_id))));
+  USING (((select is_super_admin()) OR ((company_id = (select current_company_id())) AND cobrador_ve_cliente(cliente_id))));
 
 DROP POLICY IF EXISTS "titulos_update" ON public.titulos;
 CREATE POLICY "titulos_update" ON public.titulos

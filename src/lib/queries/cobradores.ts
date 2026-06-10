@@ -3,31 +3,31 @@ import { supabase } from '@/integrations/supabase/client';
 import { clientesKeys } from './clientes';
 
 // ============== Types ==============
-export interface RepresentanteRow {
+export interface CobradorRow {
   id: string;
   nome: string;
   email?: string | null;
   telefone?: string | null;
   ativo: boolean;
   created_at: string;
-  /** Quantidade de clientes na carteira do representante. */
+  /** Quantidade de clientes na carteira do cobrador. */
   carteira: number;
   /** user_id do login vinculado (null = ainda sem acesso ao sistema). */
   user_id?: string | null;
 }
 
-export const representantesKeys = {
-  all: ['representantes'] as const,
-  list: () => [...representantesKeys.all, 'list'] as const,
+export const cobradoresKeys = {
+  all: ['cobradores'] as const,
+  list: () => [...cobradoresKeys.all, 'list'] as const,
 };
 
 // ============== Queries ==============
-export function useRepresentantes() {
+export function useCobradores() {
   return useQuery({
-    queryKey: representantesKeys.list(),
-    queryFn: async (): Promise<RepresentanteRow[]> => {
+    queryKey: cobradoresKeys.list(),
+    queryFn: async (): Promise<CobradorRow[]> => {
       const { data, error } = await supabase
-        .from('representantes')
+        .from('cobradores')
         .select('id, nome, email, telefone, ativo, created_at, user_id, clientes(count)')
         .is('deleted_at', null)
         .order('nome');
@@ -47,17 +47,17 @@ export function useRepresentantes() {
 }
 
 // ============== Mutations ==============
-export interface CreateRepresentanteInput {
+export interface CreateCobradorInput {
   nome: string;
   email?: string;
   telefone?: string;
 }
 
-export function useCreateRepresentante() {
+export function useCreateCobrador() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: CreateRepresentanteInput) => {
-      const { error } = await supabase.from('representantes').insert({
+    mutationFn: async (input: CreateCobradorInput) => {
+      const { error } = await supabase.from('cobradores').insert({
         nome: input.nome.trim(),
         email: input.email?.trim() || null,
         telefone: input.telefone?.trim() || null,
@@ -65,13 +65,13 @@ export function useCreateRepresentante() {
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: representantesKeys.all });
+      qc.invalidateQueries({ queryKey: cobradoresKeys.all });
       qc.invalidateQueries({ queryKey: clientesKeys.all });
     },
   });
 }
 
-export interface UpdateRepresentanteInput {
+export interface UpdateCobradorInput {
   id: string;
   nome?: string;
   email?: string | null;
@@ -79,32 +79,32 @@ export interface UpdateRepresentanteInput {
   ativo?: boolean;
 }
 
-export function useUpdateRepresentante() {
+export function useUpdateCobrador() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...rest }: UpdateRepresentanteInput) => {
-      const { error } = await supabase.from('representantes').update(rest).eq('id', id);
+    mutationFn: async ({ id, ...rest }: UpdateCobradorInput) => {
+      const { error } = await supabase.from('cobradores').update(rest).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: representantesKeys.all });
+      qc.invalidateQueries({ queryKey: cobradoresKeys.all });
       qc.invalidateQueries({ queryKey: clientesKeys.all });
     },
   });
 }
 
-// Exclusão restrita a admin (RLS: representantes_delete_admin). Os clientes da
-// carteira não são apagados — a FK clientes.representante_id é ON DELETE SET NULL,
-// então eles apenas ficam sem representante.
-export function useDeleteRepresentante() {
+// Exclusão restrita a admin (RLS: cobradores_delete_admin). Os clientes da
+// carteira não são apagados — a FK clientes.cobrador_id é ON DELETE SET NULL,
+// então eles apenas ficam sem cobrador.
+export function useDeleteCobrador() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('representantes').delete().eq('id', id);
+      const { error } = await supabase.from('cobradores').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: representantesKeys.all });
+      qc.invalidateQueries({ queryKey: cobradoresKeys.all });
       qc.invalidateQueries({ queryKey: clientesKeys.all });
     },
   });

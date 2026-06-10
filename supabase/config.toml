@@ -8,7 +8,7 @@ project_id = "cuejrnqdudadlbuiouph"
 enabled = true
 uri = "pg-functions://postgres/public/custom_access_token_hook"
 
-# Cadastro por convite é público: o representante ainda não tem login, então a
+# Cadastro por convite é público: o cobrador ainda não tem login, então a
 # função é chamada sem JWT (a segurança vem da validação do token do convite).
 [functions.registrar-convite]
 verify_jwt = false

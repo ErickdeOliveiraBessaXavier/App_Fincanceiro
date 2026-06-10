@@ -10,7 +10,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Clientes = React.lazy(() => import("./pages/Clientes"));
-const Representantes = React.lazy(() => import("./pages/Representantes"));
+const Cobradores = React.lazy(() => import("./pages/Cobradores"));
 const Titulos = React.lazy(() => import("./pages/Titulos"));
 const Acordos = React.lazy(() => import("./pages/Acordos"));
 const Campanhas = React.lazy(() => import("./pages/Campanhas"));
@@ -43,7 +43,7 @@ const App = () => (
               <Route path="/plataforma/importar" element={<PlataformaImportar />} />
               <Route path="/" element={<Layout><Dashboard /></Layout>} />
               <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
-              <Route path="/representantes" element={<Layout><Representantes /></Layout>} />
+              <Route path="/cobradores" element={<Layout><Cobradores /></Layout>} />
               <Route path="/titulos" element={<Layout><Titulos /></Layout>} />
               <Route path="/acordos" element={<Layout><Acordos /></Layout>} />
               <Route path="/campanhas" element={<Layout><Campanhas /></Layout>} />

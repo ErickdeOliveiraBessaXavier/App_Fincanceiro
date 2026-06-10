@@ -1,5 +1,5 @@
-// Edge Function: cadastro de representante via link de convite (PÚBLICA).
-// O representante informa nome/e-mail/senha; aqui validamos o token do convite
+// Edge Function: cadastro de cobrador via link de convite (PÚBLICA).
+// O cobrador informa nome/e-mail/senha; aqui validamos o token do convite
 // e criamos a conta com a service role. A empresa é definida no servidor a
 // partir do convite — o cliente nunca se auto-atribui a um tenant.
 // A conta nasce SEM papel: o admin precisa autorizar depois.

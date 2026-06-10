@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { Plus, Edit, Trash2, Users, Briefcase, Link2, Check, Copy, CheckCircle2 } from 'lucide-react';
 import {
-  useRepresentantes,
-  useCreateRepresentante,
-  useUpdateRepresentante,
-  useDeleteRepresentante,
-  type RepresentanteRow,
-} from '@/lib/queries/representantes';
+  useCobradores,
+  useCreateCobrador,
+  useUpdateCobrador,
+  useDeleteCobrador,
+  type CobradorRow,
+} from '@/lib/queries/cobradores';
 import { useGerarConvite } from '@/lib/queries/convites';
 import { useUserRole } from '@/hooks/useUserRole';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,28 +24,28 @@ import { useToast } from '@/hooks/use-toast';
 
 const empty = { id: '', nome: '', email: '', telefone: '', ativo: true };
 
-export default function Representantes() {
-  const { data: representantes = [], isLoading } = useRepresentantes();
-  const createMut = useCreateRepresentante();
-  const updateMut = useUpdateRepresentante();
-  const deleteMut = useDeleteRepresentante();
+export default function Cobradores() {
+  const { data: cobradores = [], isLoading } = useCobradores();
+  const createMut = useCreateCobrador();
+  const updateMut = useUpdateCobrador();
+  const deleteMut = useDeleteCobrador();
   const gerarConvite = useGerarConvite();
-  const { isAdmin } = useUserRole();
+  const { isAdmin, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
   const isEditing = !!form.id;
 
-  const [toDelete, setToDelete] = useState<RepresentanteRow | null>(null);
+  const [toDelete, setToDelete] = useState<CobradorRow | null>(null);
 
-  // Link de convite gerado (para copiar e enviar ao representante).
+  // Link de convite gerado (para copiar e enviar ao cobrador).
   const [linkRep, setLinkRep] = useState<{ nome: string; url: string } | null>(null);
   const [copiado, setCopiado] = useState(false);
 
-  const handleGerarLink = async (r: RepresentanteRow) => {
+  const handleGerarLink = async (r: CobradorRow) => {
     try {
-      const token = await gerarConvite.mutateAsync({ representanteId: r.id, nomeSugerido: r.nome });
+      const token = await gerarConvite.mutateAsync({ cobradorId: r.id, nomeSugerido: r.nome });
       const url = `${window.location.origin}/convite?token=${token}`;
       setCopiado(false);
       setLinkRep({ nome: r.nome, url });
@@ -64,14 +65,14 @@ export default function Representantes() {
   };
 
   const openNew = () => { setForm(empty); setOpen(true); };
-  const openEdit = (r: RepresentanteRow) => {
+  const openEdit = (r: CobradorRow) => {
     setForm({ id: r.id, nome: r.nome, email: r.email ?? '', telefone: r.telefone ?? '', ativo: r.ativo });
     setOpen(true);
   };
 
   const handleSave = async () => {
     if (form.nome.trim().length < 2) {
-      toast({ title: 'Nome obrigatório', description: 'Informe o nome do representante.', variant: 'destructive' });
+      toast({ title: 'Nome obrigatório', description: 'Informe o nome do cobrador.', variant: 'destructive' });
       return;
     }
     try {
@@ -83,14 +84,14 @@ export default function Representantes() {
       } else {
         await createMut.mutateAsync({ nome: form.nome, email: form.email, telefone: form.telefone });
       }
-      toast({ title: 'Salvo', description: `Representante ${isEditing ? 'atualizado' : 'criado'} com sucesso.` });
+      toast({ title: 'Salvo', description: `Cobrador ${isEditing ? 'atualizado' : 'criado'} com sucesso.` });
       setOpen(false);
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message ?? 'Falha ao salvar', variant: 'destructive' });
     }
   };
 
-  const toggleAtivo = async (r: RepresentanteRow) => {
+  const toggleAtivo = async (r: CobradorRow) => {
     try {
       await updateMut.mutateAsync({ id: r.id, ativo: !r.ativo });
     } catch (e: any) {
@@ -101,25 +102,50 @@ export default function Representantes() {
   const handleDelete = async () => {
     if (!toDelete) return;
     try {
+      // Se o cobrador tem um login vinculado, remove a conta de acesso junto —
+      // senão sobraria um usuário órfão (e um operador sem carteira passa a ver
+      // todos os dados da empresa pela RLS). A carteira de clientes é preservada.
+      if (toDelete.user_id) {
+        const { data, error } = await supabase.functions.invoke('excluir-usuario-empresa', {
+          body: { user_id: toDelete.user_id },
+        });
+        if (error) throw error;
+        if ((data as any)?.error) throw new Error((data as any).error);
+      }
       await deleteMut.mutateAsync(toDelete.id);
-      toast({ title: 'Excluído', description: `Representante ${toDelete.nome} excluído com sucesso.` });
+      toast({ title: 'Excluído', description: `Cobrador ${toDelete.nome} excluído com sucesso.` });
       setToDelete(null);
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message ?? 'Falha ao excluir', variant: 'destructive' });
     }
   };
 
-  const totalCarteira = representantes.reduce((s, r) => s + r.carteira, 0);
-  const ativos = representantes.filter((r) => r.ativo).length;
+  const totalCarteira = cobradores.reduce((s, r) => s + r.carteira, 0);
+  const ativos = cobradores.filter((r) => r.ativo).length;
+
+  if (roleLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+      </div>
+    );
+  }
+  if (!isAdmin) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-muted-foreground">Apenas administradores podem gerenciar cobradores.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Representantes</h1>
+          <h1 className="text-2xl font-bold">Cobradores</h1>
           <p className="text-muted-foreground">Funcionários e suas carteiras de cobrança</p>
         </div>
-        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Novo Representante</Button>
+        <Button onClick={openNew}><Plus className="mr-2 h-4 w-4" /> Novo Cobrador</Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
@@ -128,7 +154,7 @@ export default function Representantes() {
             <CardTitle className="text-sm font-medium">Total</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{representantes.length}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold">{cobradores.length}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ativos</CardTitle></CardHeader>
@@ -145,17 +171,17 @@ export default function Representantes() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Lista de Representantes</CardTitle>
-          <CardDescription>Cada representante administra a sua carteira de clientes</CardDescription>
+          <CardTitle>Lista de Cobradores</CardTitle>
+          <CardDescription>Cada cobrador administra a sua carteira de clientes</CardDescription>
         </CardHeader>
         <CardContent>
           {isLoading ? (
             <div className="flex h-32 items-center justify-center">
               <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
             </div>
-          ) : representantes.length === 0 ? (
+          ) : cobradores.length === 0 ? (
             <p className="py-8 text-center text-muted-foreground">
-              Nenhum representante ainda. Crie um, ou eles são criados automaticamente na importação de CSV.
+              Nenhum cobrador ainda. Crie um, ou eles são criados automaticamente na importação de CSV.
             </p>
           ) : (
             <div className="rounded-md border overflow-x-auto">
@@ -170,7 +196,7 @@ export default function Representantes() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {representantes.map((r) => (
+                  {cobradores.map((r) => (
                     <TableRow key={r.id}>
                       <TableCell className="font-medium">{r.nome}</TableCell>
                       <TableCell className="text-sm">
@@ -228,8 +254,8 @@ export default function Representantes() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{isEditing ? 'Editar representante' : 'Novo representante'}</DialogTitle>
-            <DialogDescription>Dados do representante (carteira de cobrança).</DialogDescription>
+            <DialogTitle>{isEditing ? 'Editar cobrador' : 'Novo cobrador'}</DialogTitle>
+            <DialogDescription>Dados do cobrador (carteira de cobrança).</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-2">
             <div className="grid gap-2">
@@ -265,10 +291,13 @@ export default function Representantes() {
           <DialogHeader>
             <DialogTitle>Confirmar exclusão</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir o representante <strong>{toDelete?.nome}</strong>?
+              Tem certeza que deseja excluir o cobrador <strong>{toDelete?.nome}</strong>?
+              {toDelete?.user_id && (
+                <> O <strong>login de acesso</strong> vinculado a este cobrador também será excluído.</>
+              )}
               {(toDelete?.carteira ?? 0) > 0 && (
                 <> Os {toDelete?.carteira} cliente{toDelete?.carteira === 1 ? '' : 's'} da carteira
-                  não serão apagados, apenas ficarão sem representante.</>
+                  não serão apagados, apenas ficarão sem cobrador.</>
               )}
               {' '}Esta ação não pode ser desfeita.
             </DialogDescription>

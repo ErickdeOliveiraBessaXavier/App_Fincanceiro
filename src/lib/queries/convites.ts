@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { representantesKeys } from './representantes';
+import { cobradoresKeys } from './cobradores';
 
 // A tabela `convites` foi adicionada por migration; o types.ts gerado ainda não
 // a conhece, então acessamos via cliente sem tipagem forte para esta tabela.
@@ -9,11 +9,11 @@ const db = supabase as any;
 export interface ConvitePendente {
   id: string;
   company_id: string;
-  representante_id: string | null;
-  representante_nome: string | null;
+  cobrador_id: string | null;
+  cobrador_nome: string | null;
   used_by: string | null;
   created_at: string;
-  /** Nome/e-mail informados pelo representante no cadastro. */
+  /** Nome/e-mail informados pelo cobrador no cadastro. */
   nome: string | null;
   email: string | null;
 }
@@ -23,14 +23,14 @@ export const convitesKeys = {
   pendentes: () => [...convitesKeys.all, 'pendentes'] as const,
 };
 
-/** Gera um convite para um representante e devolve o token (para montar o link). */
+/** Gera um convite para um cobrador e devolve o token (para montar o link). */
 export function useGerarConvite() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (input: { representanteId: string; nomeSugerido?: string }): Promise<string> => {
+    mutationFn: async (input: { cobradorId: string; nomeSugerido?: string }): Promise<string> => {
       const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
       const { error } = await db.from('convites').insert({
-        representante_id: input.representanteId,
+        cobrador_id: input.cobradorId,
         nome_sugerido: input.nomeSugerido ?? null,
         token,
       });
@@ -39,7 +39,7 @@ export function useGerarConvite() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: convitesKeys.all });
-      qc.invalidateQueries({ queryKey: representantesKeys.all });
+      qc.invalidateQueries({ queryKey: cobradoresKeys.all });
     },
   });
 }
@@ -51,7 +51,7 @@ export function usePendingConvites() {
     queryFn: async (): Promise<ConvitePendente[]> => {
       const { data, error } = await db
         .from('convites')
-        .select('id, company_id, representante_id, used_by, created_at, representantes(nome)')
+        .select('id, company_id, cobrador_id, used_by, created_at, cobradores(nome)')
         .eq('status', 'aguardando')
         .order('created_at', { ascending: false });
       if (error) throw error;
@@ -71,8 +71,8 @@ export function usePendingConvites() {
       return rows.map((r) => ({
         id: r.id,
         company_id: r.company_id,
-        representante_id: r.representante_id,
-        representante_nome: r.representantes?.nome ?? null,
+        cobrador_id: r.cobrador_id,
+        cobrador_nome: r.cobradores?.nome ?? null,
         used_by: r.used_by,
         created_at: r.created_at,
         nome: r.used_by ? profilesById[r.used_by]?.nome ?? null : null,
@@ -82,7 +82,7 @@ export function usePendingConvites() {
   });
 }
 
-/** Autoriza o cadastro: atribui papel 'operador' e vincula o representante. */
+/** Autoriza o cadastro: atribui papel 'operador' e vincula o cobrador. */
 export function useAutorizarConvite() {
   const qc = useQueryClient();
   return useMutation({
@@ -97,11 +97,11 @@ export function useAutorizarConvite() {
       });
       if (roleErr && !/duplicate|unique/i.test(roleErr.message ?? '')) throw roleErr;
 
-      // 2) Vincula o login à carteira do representante.
-      if (convite.representante_id) {
-        const { error: repErr } = await db.from('representantes')
+      // 2) Vincula o login à carteira do cobrador.
+      if (convite.cobrador_id) {
+        const { error: repErr } = await db.from('cobradores')
           .update({ user_id: convite.used_by, ativo: true, email: convite.email })
-          .eq('id', convite.representante_id);
+          .eq('id', convite.cobrador_id);
         if (repErr) throw repErr;
       }
 
@@ -113,7 +113,7 @@ export function useAutorizarConvite() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: convitesKeys.all });
-      qc.invalidateQueries({ queryKey: representantesKeys.all });
+      qc.invalidateQueries({ queryKey: cobradoresKeys.all });
     },
   });
 }

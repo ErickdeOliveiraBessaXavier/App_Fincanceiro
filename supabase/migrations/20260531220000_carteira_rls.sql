@@ -1,36 +1,36 @@
 -- ============================================================
--- Carteira do representante: usuário "representante" vê só os clientes
--- da sua carteira (clientes.representante_id = seu representante).
--- Usuários não-representantes (admin/financeiro/operador/leitura) veem
+-- Carteira do cobrador: usuário "cobrador" vê só os clientes
+-- da sua carteira (clientes.cobrador_id = seu cobrador).
+-- Usuários não-cobradores (admin/financeiro/operador/leitura) veem
 -- todos os dados da empresa, como antes.
 -- ============================================================
 
--- Representante (ativo) vinculado ao usuário logado, ou NULL se não for representante.
-CREATE OR REPLACE FUNCTION public.current_rep_id()
+-- Cobrador (ativo) vinculado ao usuário logado, ou NULL se não for cobrador.
+CREATE OR REPLACE FUNCTION public.current_cobrador_id()
 RETURNS uuid LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT id FROM public.representantes
+  SELECT id FROM public.cobradores
   WHERE user_id = auth.uid() AND ativo AND deleted_at IS NULL
   LIMIT 1;
 $$;
 
--- true se o usuário NÃO é representante restrito, OU o cliente é da sua carteira.
-CREATE OR REPLACE FUNCTION public.rep_ve_cliente(_cliente_id uuid)
+-- true se o usuário NÃO é cobrador restrito, OU o cliente é da sua carteira.
+CREATE OR REPLACE FUNCTION public.cobrador_ve_cliente(_cliente_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT public.current_rep_id() IS NULL
+  SELECT public.current_cobrador_id() IS NULL
       OR EXISTS (
         SELECT 1 FROM public.clientes c
-        WHERE c.id = _cliente_id AND c.representante_id = public.current_rep_id()
+        WHERE c.id = _cliente_id AND c.cobrador_id = public.current_cobrador_id()
       );
 $$;
 
 -- idem, a partir de um título (via cliente do título).
-CREATE OR REPLACE FUNCTION public.rep_ve_titulo(_titulo_id uuid)
+CREATE OR REPLACE FUNCTION public.cobrador_ve_titulo(_titulo_id uuid)
 RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT public.current_rep_id() IS NULL
+  SELECT public.current_cobrador_id() IS NULL
       OR EXISTS (
         SELECT 1 FROM public.titulos t
         JOIN public.clientes c ON c.id = t.cliente_id
-        WHERE t.id = _titulo_id AND c.representante_id = public.current_rep_id()
+        WHERE t.id = _titulo_id AND c.cobrador_id = public.current_cobrador_id()
       );
 $$;
 
@@ -40,48 +40,48 @@ DROP POLICY IF EXISTS "clientes_select" ON public.clientes;
 CREATE POLICY "clientes_select" ON public.clientes FOR SELECT TO authenticated
   USING (public.is_super_admin()
     OR (company_id = public.current_company_id()
-        AND (public.current_rep_id() IS NULL OR representante_id = public.current_rep_id())));
+        AND (public.current_cobrador_id() IS NULL OR cobrador_id = public.current_cobrador_id())));
 
 DROP POLICY IF EXISTS "titulos_select" ON public.titulos;
 CREATE POLICY "titulos_select" ON public.titulos FOR SELECT TO authenticated
   USING (public.is_super_admin()
-    OR (company_id = public.current_company_id() AND public.rep_ve_cliente(cliente_id)));
+    OR (company_id = public.current_company_id() AND public.cobrador_ve_cliente(cliente_id)));
 
 DROP POLICY IF EXISTS "parcelas_select" ON public.parcelas;
 CREATE POLICY "parcelas_select" ON public.parcelas FOR SELECT TO authenticated
   USING (public.is_super_admin()
-    OR (company_id = public.current_company_id() AND public.rep_ve_titulo(titulo_id)));
+    OR (company_id = public.current_company_id() AND public.cobrador_ve_titulo(titulo_id)));
 
 DROP POLICY IF EXISTS "eventos_select" ON public.eventos_parcela;
 CREATE POLICY "eventos_select" ON public.eventos_parcela FOR SELECT TO authenticated
   USING (public.is_super_admin()
     OR (company_id = public.current_company_id()
-        AND (public.current_rep_id() IS NULL
+        AND (public.current_cobrador_id() IS NULL
              OR EXISTS (SELECT 1 FROM public.parcelas p
-                        WHERE p.id = eventos_parcela.parcela_id AND public.rep_ve_titulo(p.titulo_id)))));
+                        WHERE p.id = eventos_parcela.parcela_id AND public.cobrador_ve_titulo(p.titulo_id)))));
 
 DROP POLICY IF EXISTS "acordos_select" ON public.acordos;
 CREATE POLICY "acordos_select" ON public.acordos FOR SELECT TO authenticated
   USING (public.is_super_admin()
-    OR (company_id = public.current_company_id() AND public.rep_ve_cliente(cliente_id)));
+    OR (company_id = public.current_company_id() AND public.cobrador_ve_cliente(cliente_id)));
 
 DROP POLICY IF EXISTS "parcelas_acordo_select" ON public.parcelas_acordo;
 CREATE POLICY "parcelas_acordo_select" ON public.parcelas_acordo FOR SELECT TO authenticated
   USING (public.is_super_admin()
     OR (company_id = public.current_company_id()
-        AND (public.current_rep_id() IS NULL
+        AND (public.current_cobrador_id() IS NULL
              OR EXISTS (SELECT 1 FROM public.acordos a
-                        WHERE a.id = parcelas_acordo.acordo_id AND public.rep_ve_cliente(a.cliente_id)))));
+                        WHERE a.id = parcelas_acordo.acordo_id AND public.cobrador_ve_cliente(a.cliente_id)))));
 
 DROP POLICY IF EXISTS "agendamentos_select" ON public.agendamentos;
 CREATE POLICY "agendamentos_select" ON public.agendamentos FOR SELECT TO authenticated
   USING (public.is_super_admin()
-    OR (company_id = public.current_company_id() AND public.rep_ve_cliente(cliente_id)));
+    OR (company_id = public.current_company_id() AND public.cobrador_ve_cliente(cliente_id)));
 
 DROP POLICY IF EXISTS "comunicacoes_select" ON public.comunicacoes;
 CREATE POLICY "comunicacoes_select" ON public.comunicacoes FOR SELECT TO authenticated
   USING (public.is_super_admin()
-    OR (company_id = public.current_company_id() AND public.rep_ve_cliente(cliente_id)));
+    OR (company_id = public.current_company_id() AND public.cobrador_ve_cliente(cliente_id)));
 
 -- ============== Views: aplicar o mesmo filtro de carteira ==============
 
@@ -89,7 +89,7 @@ CREATE OR REPLACE VIEW public.vw_parcelas_consolidadas AS
 SELECT * FROM public.mv_parcelas_consolidadas
 WHERE public.is_super_admin()
    OR (company_id = public.current_company_id()
-       AND (public.current_rep_id() IS NULL OR public.rep_ve_titulo(titulo_id)));
+       AND (public.current_cobrador_id() IS NULL OR public.cobrador_ve_titulo(titulo_id)));
 
 CREATE OR REPLACE VIEW public.vw_titulos_completos AS
 SELECT
@@ -134,7 +134,7 @@ LEFT JOIN (
 WHERE t.deleted_at IS NULL
   AND (public.is_super_admin()
        OR (t.company_id = public.current_company_id()
-           AND (public.current_rep_id() IS NULL OR public.rep_ve_cliente(t.cliente_id))));
+           AND (public.current_cobrador_id() IS NULL OR public.cobrador_ve_cliente(t.cliente_id))));
 
 -- ============== Fix de segurança: handle_new_user não confia no metadata ==============
 -- A empresa do usuário é definida apenas por criar_empresa_e_admin (self-service)
