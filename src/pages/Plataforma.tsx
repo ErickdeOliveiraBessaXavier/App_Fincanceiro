@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Navigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -6,8 +7,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload } from 'lucide-react';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
+} from '@/components/ui/dialog';
+import { Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2 } from 'lucide-react';
 
 interface CompanyRow {
   id: string;
@@ -54,6 +59,26 @@ export default function Plataforma() {
     },
     onError: (e: any) =>
       toast({ title: 'Erro', description: e.message ?? 'Falha ao atualizar', variant: 'destructive' }),
+  });
+
+  // Limpeza de títulos de uma empresa (hard delete) — só super admin, com
+  // confirmação digitando o nome da empresa.
+  const [limparAlvo, setLimparAlvo] = useState<CompanyRow | null>(null);
+  const [confirmacao, setConfirmacao] = useState('');
+  const limparTitulos = useMutation({
+    mutationFn: async (companyId: string) => {
+      const { data, error } = await supabase.rpc('limpar_titulos_empresa', { p_company_id: companyId });
+      if (error) throw error;
+      return (data as any)?.excluidos ?? 0;
+    },
+    onSuccess: (excluidos) => {
+      toast({ title: 'Títulos removidos', description: `${excluidos} título(s) apagados do banco.` });
+      setLimparAlvo(null);
+      setConfirmacao('');
+      qc.invalidateQueries({ queryKey: ['plataforma', 'companies'] });
+    },
+    onError: (e: any) =>
+      toast({ title: 'Erro', description: e.message ?? 'Falha ao limpar', variant: 'destructive' }),
   });
 
   if (loading) return null;
@@ -163,6 +188,11 @@ export default function Plataforma() {
                                 <Play className="mr-1 h-4 w-4" /> Reativar
                               </Button>
                             )}
+                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+                              title="Limpar todos os títulos desta empresa"
+                              onClick={() => { setConfirmacao(''); setLimparAlvo(c); }}>
+                              <Trash2 className="mr-1 h-4 w-4" /> Limpar títulos
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -174,6 +204,35 @@ export default function Plataforma() {
           </CardContent>
         </Card>
       </main>
+
+      <Dialog open={!!limparAlvo} onOpenChange={(o) => { if (!o) { setLimparAlvo(null); setConfirmacao(''); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Limpar títulos da empresa</DialogTitle>
+            <DialogDescription>
+              Isto <strong>apaga do banco TODOS os títulos</strong> de{' '}
+              <strong>{limparAlvo?.nome}</strong> (com parcelas, pagamentos, acordos e anexos).
+              Os clientes, cobradores e vendedores são mantidos. <strong>Não dá para desfazer.</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2 py-2">
+            <p className="text-sm text-muted-foreground">
+              Para confirmar, digite o nome da empresa: <strong>{limparAlvo?.nome}</strong>
+            </p>
+            <Input value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} placeholder={limparAlvo?.nome ?? ''} />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="ghost" onClick={() => { setLimparAlvo(null); setConfirmacao(''); }}>Cancelar</Button>
+            <Button
+              variant="destructive"
+              disabled={limparTitulos.isPending || confirmacao.trim() !== (limparAlvo?.nome ?? '').trim()}
+              onClick={() => limparAlvo && limparTitulos.mutate(limparAlvo.id)}
+            >
+              {limparTitulos.isPending ? 'Limpando...' : 'Apagar todos os títulos'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

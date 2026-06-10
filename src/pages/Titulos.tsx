@@ -8,7 +8,7 @@ import {
   useClientesSelect,
   useParcelasByTitulo,
   useCreateTitulo,
-  useDeleteTitulo,
+  useHardDeleteTitulos,
   titulosKeys,
 } from '@/lib/queries/titulos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -65,20 +65,19 @@ export default function Titulos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isFinanceiro, isOperador } = useUserRole();
+  const { isFinanceiro, isOperador, isSuperAdmin } = useUserRole();
 
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
   const { data: clientes = [] } = useClientesSelect();
   const createTituloMutation = useCreateTitulo();
-  const deleteTituloMutation = useDeleteTitulo();
+  const hardDeleteMutation = useHardDeleteTitulos();
 
   // UI state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedTitulo, setSelectedTitulo] = useState<TituloConsolidado | null>(null);
-  const [tituloToDelete, setTituloToDelete] = useState<TituloConsolidado | null>(null);
+  const [tituloToHardDelete, setTituloToHardDelete] = useState<TituloConsolidado | null>(null);
   const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
   const [expandedTitulos, setExpandedTitulos] = useState<Set<string>>(new Set());
 
@@ -224,26 +223,15 @@ export default function Titulos() {
     setIsDetailsModalOpen(true);
   };
 
-  const handleDeleteTitulo = async () => {
-    if (!tituloToDelete) return;
-
+  // Exclusão DEFINITIVA (super admin): apaga fisicamente o título. Irreversível.
+  const handleHardDeleteTitulo = async () => {
+    if (!tituloToHardDelete) return;
     try {
-      await deleteTituloMutation.mutateAsync(tituloToDelete.id);
-
-      toast({
-        title: "Sucesso",
-        description: "Título excluído com sucesso",
-      });
-
-      setIsDeleteModalOpen(false);
-      setTituloToDelete(null);
-    } catch (error) {
-      console.error('Erro ao excluir título:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível excluir o título",
-        variant: "destructive",
-      });
+      await hardDeleteMutation.mutateAsync([tituloToHardDelete.id]);
+      toast({ title: 'Excluído definitivamente', description: 'O título foi removido do banco de dados.' });
+      setTituloToHardDelete(null);
+    } catch (error: any) {
+      toast({ title: 'Erro', description: error?.message ?? 'Não foi possível excluir definitivamente', variant: 'destructive' });
     }
   };
 
@@ -656,18 +644,15 @@ export default function Titulos() {
                                     </>
                                   );
                                 })()}
-                                {isFinanceiro && (
+                                {isSuperAdmin && (
                                   <>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                       className="text-destructive focus:text-destructive"
-                                      onClick={() => {
-                                        setTituloToDelete(titulo);
-                                        setIsDeleteModalOpen(true);
-                                      }}
+                                      onClick={() => setTituloToHardDelete(titulo)}
                                     >
                                       <Trash2 className="h-4 w-4 mr-2" />
-                                      Excluir
+                                      Excluir definitivamente
                                     </DropdownMenuItem>
                                   </>
                                 )}
@@ -928,23 +913,23 @@ export default function Titulos() {
         </DialogContent>
       </Dialog>
 
-      {/* Modal Confirmar Exclusão */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+      {/* Modal Exclusão DEFINITIVA (super admin) */}
+      <Dialog open={!!tituloToHardDelete} onOpenChange={(o) => !o && setTituloToHardDelete(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
+            <DialogTitle>Excluir definitivamente</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir o título{' '}
-              <span className="font-medium">{tituloToDelete?.numero_documento}</span>?
-              Esta ação não pode ser desfeita.
+              Isto <strong>apaga do banco</strong> o título{' '}
+              <span className="font-medium">{tituloToHardDelete?.numero_documento}</span> e tudo
+              vinculado a ele (parcelas, pagamentos, acordos, anexos). <strong>Não dá para desfazer.</strong>
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
+            <Button variant="outline" onClick={() => setTituloToHardDelete(null)}>
               Cancelar
             </Button>
-            <Button variant="destructive" onClick={handleDeleteTitulo}>
-              Excluir
+            <Button variant="destructive" onClick={handleHardDeleteTitulo} disabled={hardDeleteMutation.isPending}>
+              {hardDeleteMutation.isPending ? 'Excluindo...' : 'Excluir definitivamente'}
             </Button>
           </DialogFooter>
         </DialogContent>

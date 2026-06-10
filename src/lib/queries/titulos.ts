@@ -110,16 +110,15 @@ export function useCreateTitulo() {
 }
 
 /**
- * Cancela um titulo (soft delete) preservando o histórico financeiro.
- * Nunca apaga registros — usa a RPC `cancelar_titulo` (auditada).
+ * Exclusão DEFINITIVA (hard delete) de títulos — só super admin (validado no
+ * banco pela RPC). Apaga fisicamente o título e seus dependentes. Irreversível.
  */
-export function useDeleteTitulo() {
+export function useHardDeleteTitulos() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (tituloId: string) => {
-      const { error } = await supabase.rpc('cancelar_titulo', {
-        p_titulo_id: tituloId,
-        p_motivo: 'Cancelado pelo usuário',
+    mutationFn: async (tituloIds: string[]) => {
+      const { error } = await supabase.rpc('excluir_titulos_definitivo', {
+        p_titulo_ids: tituloIds,
       });
       if (error) throw error;
       await supabase.rpc('refresh_mv_parcelas');
