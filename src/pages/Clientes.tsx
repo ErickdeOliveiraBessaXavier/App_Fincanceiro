@@ -293,7 +293,6 @@ export default function Clientes() {
         cidade: editingCliente.cidade,
         estado: editingCliente.estado,
         observacoes: editingCliente.observacoes,
-        status: editingCliente.status,
         cobrador_id: editingCliente.cobrador_id || null,
         vendedor_id: editingCliente.vendedor_id || null,
       });
@@ -630,15 +629,37 @@ export default function Clientes() {
                     </div>
 
                     <div className="flex gap-2 pt-4">
-                      <Button className="flex-1">
+                      <Button
+                        className="flex-1"
+                        disabled={!selectedCliente.telefone}
+                        onClick={() => {
+                          window.location.href = `tel:${(selectedCliente.telefone ?? '').replace(/\D/g, '')}`;
+                        }}
+                      >
                         <Phone className="h-4 w-4 mr-2" />
                         Ligar
                       </Button>
-                      <Button variant="outline" className="flex-1">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        disabled={!selectedCliente.email}
+                        onClick={() => {
+                          window.location.href = `mailto:${selectedCliente.email}`;
+                        }}
+                      >
                         <Mail className="h-4 w-4 mr-2" />
                         Email
                       </Button>
-                      <Button variant="outline" className="flex-1">
+                      <Button
+                        variant="outline"
+                        className="flex-1"
+                        disabled={!selectedCliente.telefone}
+                        onClick={() => {
+                          const num = (selectedCliente.telefone ?? '').replace(/\D/g, '');
+                          const comDdi = num.length <= 11 ? `55${num}` : num;
+                          window.open(`https://wa.me/${comDdi}`, '_blank');
+                        }}
+                      >
                         <MessageSquare className="h-4 w-4 mr-2" />
                         WhatsApp
                       </Button>
@@ -793,21 +814,6 @@ export default function Clientes() {
                 value={editingCliente.observacoes}
                 onChange={(e) => setEditingCliente({ ...editingCliente, observacoes: e.target.value })}
               />
-            </div>
-
-            <div className="grid grid-cols-1 gap-2">
-              <Label htmlFor="edit-status">Status</Label>
-              <select
-                id="edit-status"
-                value={editingCliente.status}
-                onChange={(e) => setEditingCliente({ ...editingCliente, status: e.target.value })}
-                className="px-3 py-2 border border-input rounded-md bg-background"
-              >
-                <option value="ativo">Ativo</option>
-                <option value="inadimplente">Inadimplente</option>
-                <option value="em_acordo">Em Acordo</option>
-                <option value="quitado">Quitado</option>
-              </select>
             </div>
 
             <div className="grid grid-cols-1 gap-2">

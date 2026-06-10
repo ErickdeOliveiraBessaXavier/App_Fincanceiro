@@ -48,35 +48,70 @@ export const clientesKeys = {
 // ============== Queries ==============
 
 /**
- * Lista clientes com agregados (total_titulos, total_valor).
+ * Deriva o status do cliente a partir dos status (computados) dos seus títulos.
+ * Precedência: inadimplente > em_acordo > quitado > ativo.
+ */
+function derivarStatusCliente(statuses: string[]): string {
+  if (statuses.length === 0) return 'ativo';
+  if (statuses.includes('vencido')) return 'inadimplente';
+  if (statuses.includes('renegociado')) return 'em_acordo';
+  if (statuses.every((s) => s === 'pago')) return 'quitado';
+  return 'ativo';
+}
+
+/**
+ * Lista clientes com agregados (total_titulos, total_valor) e status derivado
+ * dos títulos. O status armazenado em `clientes.status` é ignorado para exibição,
+ * pois não é mantido em sincronia com a realidade financeira.
  */
 export function useClientes() {
   return useQuery({
     queryKey: clientesKeys.list(),
     queryFn: async (): Promise<ClienteRow[]> => {
-      const { data, error } = await supabase
-        .from('clientes')
-        .select(`
-          *,
-          cobradores ( nome ),
-          vendedores ( nome ),
-          titulos (
-            id,
-            valor_original
-          )
-        `)
-        .order('created_at', { ascending: false });
+      const [clientesRes, titulosRes] = await Promise.all([
+        supabase
+          .from('clientes')
+          .select(`
+            *,
+            cobradores ( nome ),
+            vendedores ( nome )
+          `)
+          .order('created_at', { ascending: false }),
+        // vw_titulos_completos já exclui títulos cancelados/excluídos (deleted_at)
+        // e traz o status consolidado (a_vencer/vencido/pago/renegociado).
+        supabase
+          .from('vw_titulos_completos')
+          .select('cliente_id, status, valor_original'),
+      ]);
 
-      if (error) throw error;
+      if (clientesRes.error) throw clientesRes.error;
+      if (titulosRes.error) throw titulosRes.error;
 
-      return (data || []).map((c: any) => ({
-        ...c,
-        cobrador_nome: c.cobradores?.nome ?? null,
-        vendedor_nome: c.vendedores?.nome ?? null,
-        total_titulos: c.titulos?.length || 0,
-        total_valor:
-          c.titulos?.reduce((sum: number, t: any) => sum + (t.valor_original || 0), 0) || 0,
-      })) as ClienteRow[];
+      // Agrega títulos por cliente.
+      const porCliente = new Map<
+        string,
+        { total: number; valor: number; statuses: string[] }
+      >();
+      (titulosRes.data ?? []).forEach((t: any) => {
+        if (!t.cliente_id) return;
+        const agg = porCliente.get(t.cliente_id) ?? { total: 0, valor: 0, statuses: [] };
+        agg.total += 1;
+        agg.valor += Number(t.valor_original || 0);
+        agg.statuses.push(t.status);
+        porCliente.set(t.cliente_id, agg);
+      });
+
+      return (clientesRes.data || []).map((c: any) => {
+        const agg = porCliente.get(c.id);
+        return {
+          ...c,
+          cobrador_nome: c.cobradores?.nome ?? null,
+          vendedor_nome: c.vendedores?.nome ?? null,
+          status: derivarStatusCliente(agg?.statuses ?? []),
+          total_titulos: agg?.total ?? 0,
+          total_valor: agg?.valor ?? 0,
+        };
+      }) as ClienteRow[];
     },
   });
 }
@@ -163,7 +198,7 @@ export interface UpdateClienteInput {
   cidade?: string;
   estado?: string;
   observacoes?: string;
-  status: string;
+  // status do cliente é derivado dos títulos (useClientes); não é editável aqui.
   cobrador_id?: string | null;
   vendedor_id?: string | null;
 }
