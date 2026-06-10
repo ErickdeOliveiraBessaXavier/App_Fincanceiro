@@ -2,10 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { cobradoresKeys } from './cobradores';
 import { vendedoresKeys } from './vendedores';
-
-// A tabela `convites` foi adicionada por migration; o types.ts gerado ainda não
-// a conhece, então acessamos via cliente sem tipagem forte para esta tabela.
-const db = supabase as any;
+import { getCurrentCompanyId } from '@/lib/currentCompany';
 
 /** Tipo de carteira do convite: cobrança (cobrador) ou vendas (vendedor). */
 export type ConviteTipo = 'cobrador' | 'vendedor';
@@ -42,7 +39,10 @@ export function useGerarConvite() {
       input: { cobradorId?: string; vendedorId?: string; nomeSugerido?: string },
     ): Promise<string> => {
       const token = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-      const { error } = await db.from('convites').insert({
+      const companyId = await getCurrentCompanyId();
+      if (!companyId) throw new Error('Empresa não identificada');
+      const { error } = await supabase.from('convites').insert({
+        company_id: companyId,
         cobrador_id: input.cobradorId ?? null,
         vendedor_id: input.vendedorId ?? null,
         nome_sugerido: input.nomeSugerido ?? null,
@@ -64,7 +64,7 @@ export function usePendingConvites() {
   return useQuery({
     queryKey: convitesKeys.pendentes(),
     queryFn: async (): Promise<ConvitePendente[]> => {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('convites')
         .select('id, company_id, cobrador_id, vendedor_id, used_by, created_at, cobradores(nome), vendedores(nome)')
         .eq('status', 'aguardando')
@@ -76,7 +76,7 @@ export function usePendingConvites() {
       const userIds = rows.map((r) => r.used_by).filter(Boolean);
       let profilesById: Record<string, { nome: string; email: string }> = {};
       if (userIds.length) {
-        const { data: profs } = await db
+        const { data: profs } = await supabase
           .from('profiles')
           .select('user_id, nome, email')
           .in('user_id', userIds);
@@ -116,25 +116,31 @@ export function useAutorizarConvite() {
       const role = convite.tipo === 'vendedor' ? 'vendedor' : 'operador';
 
       // 1) Concede acesso. Ignora conflito se já tiver o papel.
-      const { error: roleErr } = await db.from('user_roles').insert({
+      const { error: roleErr } = await supabase.from('user_roles').insert({
         user_id: convite.used_by,
         company_id: convite.company_id,
         role,
       });
       if (roleErr && !/duplicate|unique/i.test(roleErr.message ?? '')) throw roleErr;
 
-      // 2) Vincula o login à carteira correspondente.
-      const tabela = convite.tipo === 'vendedor' ? 'vendedores' : 'cobradores';
-      const carteiraId = convite.tipo === 'vendedor' ? convite.vendedor_id : convite.cobrador_id;
-      if (carteiraId) {
-        const { error: repErr } = await db.from(tabela)
-          .update({ user_id: convite.used_by, ativo: true, email: convite.email })
-          .eq('id', carteiraId);
+      // 2) Vincula o login à carteira correspondente (tabela explícita p/ tipagem).
+      const vinculo = { user_id: convite.used_by, ativo: true, email: convite.email };
+      if (convite.tipo === 'vendedor' && convite.vendedor_id) {
+        const { error: repErr } = await supabase
+          .from('vendedores')
+          .update(vinculo)
+          .eq('id', convite.vendedor_id);
+        if (repErr) throw repErr;
+      } else if (convite.cobrador_id) {
+        const { error: repErr } = await supabase
+          .from('cobradores')
+          .update(vinculo)
+          .eq('id', convite.cobrador_id);
         if (repErr) throw repErr;
       }
 
       // 3) Fecha o convite.
-      const { error: cErr } = await db.from('convites')
+      const { error: cErr } = await supabase.from('convites')
         .update({ status: 'aprovado' })
         .eq('id', convite.id);
       if (cErr) throw cErr;
@@ -152,7 +158,7 @@ export function useRevogarConvite() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (conviteId: string) => {
-      const { error } = await db.from('convites').update({ status: 'revogado' }).eq('id', conviteId);
+      const { error } = await supabase.from('convites').update({ status: 'revogado' }).eq('id', conviteId);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: convitesKeys.all }),

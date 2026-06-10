@@ -1,10 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { clientesKeys } from './clientes';
-
-// A tabela `vendedores` foi adicionada por migration; o types.ts gerado ainda
-// não a conhece, então acessamos via cliente sem tipagem forte (igual convites).
-const db = supabase as any;
 
 // ============== Types ==============
 export interface VendedorRow {
@@ -30,7 +27,7 @@ export function useVendedores() {
   return useQuery({
     queryKey: vendedoresKeys.list(),
     queryFn: async (): Promise<VendedorRow[]> => {
-      const { data, error } = await db
+      const { data, error } = await supabase
         .from('vendedores')
         .select('id, nome, email, telefone, ativo, created_at, user_id, clientes(count)')
         .is('deleted_at', null)
@@ -61,7 +58,10 @@ export function useCreateVendedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (input: CreateVendedorInput) => {
-      const { error } = await db.from('vendedores').insert({
+      const companyId = await getCurrentCompanyId();
+      if (!companyId) throw new Error('Empresa não identificada');
+      const { error } = await supabase.from('vendedores').insert({
+        company_id: companyId,
         nome: input.nome.trim(),
         email: input.email?.trim() || null,
         telefone: input.telefone?.trim() || null,
@@ -87,7 +87,7 @@ export function useUpdateVendedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...rest }: UpdateVendedorInput) => {
-      const { error } = await db.from('vendedores').update(rest).eq('id', id);
+      const { error } = await supabase.from('vendedores').update(rest).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -104,7 +104,7 @@ export function useDeleteVendedor() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await db.from('vendedores').delete().eq('id', id);
+      const { error } = await supabase.from('vendedores').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
