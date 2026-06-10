@@ -11,6 +11,7 @@ import { AdminRoute } from "@/components/AdminRoute";
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Clientes = React.lazy(() => import("./pages/Clientes"));
 const Cobradores = React.lazy(() => import("./pages/Cobradores"));
+const Vendedores = React.lazy(() => import("./pages/Vendedores"));
 const Titulos = React.lazy(() => import("./pages/Titulos"));
 const Acordos = React.lazy(() => import("./pages/Acordos"));
 const Campanhas = React.lazy(() => import("./pages/Campanhas"));
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/" element={<Layout><Dashboard /></Layout>} />
               <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
               <Route path="/cobradores" element={<Layout><Cobradores /></Layout>} />
+              <Route path="/vendedores" element={<Layout><Vendedores /></Layout>} />
               <Route path="/titulos" element={<Layout><Titulos /></Layout>} />
               <Route path="/acordos" element={<Layout><Acordos /></Layout>} />
               <Route path="/campanhas" element={<Layout><Campanhas /></Layout>} />

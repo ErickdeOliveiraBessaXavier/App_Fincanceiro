@@ -10,6 +10,7 @@ import {
   LogOut,
   UserCheck,
   Briefcase,
+  Store,
   Sparkles
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -35,6 +36,7 @@ const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Clientes", url: "/clientes", icon: UserCheck },
   { title: "Cobradores", url: "/cobradores", icon: Briefcase },
+  { title: "Vendedores", url: "/vendedores", icon: Store },
   { title: "Títulos", url: "/titulos", icon: FileText },
   { title: "Acordos", url: "/acordos", icon: Handshake },
   { title: "Campanhas", url: "/campanhas", icon: Megaphone },
@@ -50,7 +52,7 @@ export const AppSidebar = memo(() => {
   const { isAdmin, isLoading: roleLoading } = useUserRole();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
-  const adminOnly = ["/usuarios", "/importar", "/cobradores"];
+  const adminOnly = ["/usuarios", "/importar", "/cobradores", "/vendedores"];
   const visibleMenuItems = menuItems.filter(i => !adminOnly.includes(i.url) || isAdmin);
 
   const isActive = (path: string) => {

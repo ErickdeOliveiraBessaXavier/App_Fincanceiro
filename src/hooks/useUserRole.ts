@@ -2,14 +2,17 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
-export type AppRole = 'leitura' | 'operador' | 'financeiro' | 'admin' | 'super_admin';
+export type AppRole = 'leitura' | 'vendedor' | 'operador' | 'financeiro' | 'admin' | 'super_admin';
 
+// Espelha public.role_rank no banco: 'vendedor' fica abaixo de 'operador'
+// (read-only). Só a ordem relativa importa.
 const RANK: Record<AppRole, number> = {
   leitura: 1,
-  operador: 2,
-  financeiro: 3,
-  admin: 4,
-  super_admin: 5,
+  vendedor: 2,
+  operador: 3,
+  financeiro: 4,
+  admin: 5,
+  super_admin: 6,
 };
 
 // Cache leve da role no localStorage para o menu não "piscar" no reload.
@@ -67,6 +70,7 @@ export function useUserRole() {
     isAdmin: hasMinRole('admin'),
     isFinanceiro: hasMinRole('financeiro'),
     isOperador: hasMinRole('operador'),
+    isVendedor: highest === 'vendedor',
     isReadOnly: highest === 'leitura',
     hasMinRole,
     isLoading: query.isLoading,

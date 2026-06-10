@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Edit, Shield, User, UserCog, Clock, Check, X, Trash2 } from 'lucide-react';
+import { Search, Edit, Shield, User, UserCog, Clock, Check, X, Trash2, Store } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,8 @@ export default function Usuarios() {
   const handleAutorizar = async (c: ConvitePendente) => {
     try {
       await autorizarMut.mutateAsync(c);
-      toast({ title: 'Acesso autorizado', description: `${c.nome ?? 'Cobrador'} já pode entrar no sistema.` });
+      const papel = c.tipo === 'vendedor' ? 'Vendedor' : 'Cobrador';
+      toast({ title: 'Acesso autorizado', description: `${c.nome ?? papel} já pode entrar no sistema.` });
       fetchUsuarios();
     } catch (e: any) {
       toast({ title: 'Erro', description: e.message ?? 'Falha ao autorizar', variant: 'destructive' });
@@ -147,6 +148,7 @@ export default function Usuarios() {
     if (role === 'super_admin') return { cls: 'bg-purple-100 text-purple-800', icon: <Shield className="h-4 w-4" />, label: 'admin mestre' };
     if (role === 'admin') return { cls: 'bg-red-100 text-red-800', icon: <Shield className="h-4 w-4" />, label: 'admin' };
     if (role === 'operador') return { cls: 'bg-blue-100 text-blue-800', icon: <UserCog className="h-4 w-4" />, label: 'cobrador' };
+    if (role === 'vendedor') return { cls: 'bg-teal-100 text-teal-800', icon: <Store className="h-4 w-4" />, label: 'vendedor' };
     // papéis legados (não usados no modelo de 3 níveis)
     if (role === 'financeiro') return { cls: 'bg-amber-100 text-amber-800', icon: <UserCog className="h-4 w-4" />, label: 'financeiro' };
     if (role === 'leitura') return { cls: 'bg-slate-100 text-slate-800', icon: <User className="h-4 w-4" />, label: 'leitura' };
@@ -218,7 +220,7 @@ export default function Usuarios() {
               <Badge className="bg-amber-100 text-amber-800">{pendentes.length}</Badge>
             </CardTitle>
             <CardDescription>
-              Cobradores que se cadastraram pelo link e precisam da sua liberação para acessar.
+              Cobradores e vendedores que se cadastraram pelo link e precisam da sua liberação para acessar.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -228,6 +230,7 @@ export default function Usuarios() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email</TableHead>
+                    <TableHead>Tipo</TableHead>
                     <TableHead>Carteira</TableHead>
                     <TableHead>Cadastrado em</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
@@ -238,7 +241,10 @@ export default function Usuarios() {
                     <TableRow key={c.id}>
                       <TableCell className="font-medium">{c.nome ?? '—'}</TableCell>
                       <TableCell>{c.email ?? '—'}</TableCell>
-                      <TableCell>{c.cobrador_nome ?? '—'}</TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="capitalize">{c.tipo}</Badge>
+                      </TableCell>
+                      <TableCell>{c.carteira_nome ?? '—'}</TableCell>
                       <TableCell>{formatDate(c.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <Button

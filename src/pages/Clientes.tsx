@@ -11,6 +11,7 @@ import {
   type ClienteRow,
 } from '@/lib/queries/clientes';
 import { useCobradores } from '@/lib/queries/cobradores';
+import { useVendedores } from '@/lib/queries/vendedores';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,6 +88,7 @@ export default function Clientes() {
   // === Data via React Query ===
   const { data: clientes = [], isLoading: loading } = useClientes();
   const { data: cobradores = [] } = useCobradores();
+  const { data: vendedores = [] } = useVendedores();
   const createClienteMutation = useCreateCliente();
   const updateClienteMutation = useUpdateCliente();
   const deleteClienteMutation = useDeleteCliente();
@@ -106,6 +108,7 @@ export default function Clientes() {
     estado: '',
     observacoes: '',
     cobrador_id: '',
+    vendedor_id: '',
   });
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -122,6 +125,7 @@ export default function Clientes() {
     observacoes: '',
     status: '',
     cobrador_id: '',
+    vendedor_id: '',
   });
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
@@ -187,6 +191,7 @@ export default function Clientes() {
       await createClienteMutation.mutateAsync({
         ...newCliente,
         cobrador_id: newCliente.cobrador_id || null,
+        vendedor_id: newCliente.vendedor_id || null,
       });
 
       toast({
@@ -204,7 +209,8 @@ export default function Clientes() {
         cidade: '',
         estado: '',
         observacoes: '',
-        cobrador_id: ''
+        cobrador_id: '',
+        vendedor_id: ''
       });
     } catch (error) {
       console.error('Erro ao criar cliente:', error);
@@ -286,6 +292,7 @@ export default function Clientes() {
         observacoes: editingCliente.observacoes,
         status: editingCliente.status,
         cobrador_id: editingCliente.cobrador_id || null,
+        vendedor_id: editingCliente.vendedor_id || null,
       });
 
       toast({
@@ -523,6 +530,20 @@ export default function Clientes() {
                 ))}
               </select>
             </div>
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="vendedor">Vendedor (carteira)</Label>
+              <select
+                id="vendedor"
+                value={newCliente.vendedor_id}
+                onChange={(e) => setNewCliente({ ...newCliente, vendedor_id: e.target.value })}
+                className="px-3 py-2 border border-input rounded-md bg-background"
+              >
+                <option value="">Sem vendedor</option>
+                {vendedores.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nome}{r.ativo ? '' : ' (inativo)'}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={handleCreateCliente}>Salvar</Button>
@@ -582,6 +603,13 @@ export default function Clientes() {
                       <div>
                         <label className="text-sm font-medium">Cobrador</label>
                         <p className="text-sm text-muted-foreground">{selectedCliente.cobrador_nome}</p>
+                      </div>
+                    )}
+
+                    {selectedCliente.vendedor_nome && (
+                      <div>
+                        <label className="text-sm font-medium">Vendedor</label>
+                        <p className="text-sm text-muted-foreground">{selectedCliente.vendedor_nome}</p>
                       </div>
                     )}
                     
@@ -791,6 +819,21 @@ export default function Clientes() {
                 ))}
               </select>
             </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <Label htmlFor="edit-vendedor">Vendedor (carteira)</Label>
+              <select
+                id="edit-vendedor"
+                value={editingCliente.vendedor_id}
+                onChange={(e) => setEditingCliente({ ...editingCliente, vendedor_id: e.target.value })}
+                className="px-3 py-2 border border-input rounded-md bg-background"
+              >
+                <option value="">Sem vendedor</option>
+                {vendedores.map((r) => (
+                  <option key={r.id} value={r.id}>{r.nome}{r.ativo ? '' : ' (inativo)'}</option>
+                ))}
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={handleEditCliente}>Salvar</Button>
@@ -934,6 +977,11 @@ export default function Clientes() {
                           Cobrador: <span className="text-foreground">{cliente.cobrador_nome}</span>
                         </div>
                       )}
+                      {cliente.vendedor_nome && (
+                        <div className="text-sm text-muted-foreground">
+                          Vendedor: <span className="text-foreground">{cliente.vendedor_nome}</span>
+                        </div>
+                      )}
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 text-sm pt-3 border-t">
@@ -981,7 +1029,8 @@ export default function Clientes() {
                               estado: cliente.estado || '',
                               observacoes: cliente.observacoes || '',
                               status: cliente.status,
-                              cobrador_id: cliente.cobrador_id || ''
+                              cobrador_id: cliente.cobrador_id || '',
+                              vendedor_id: cliente.vendedor_id || ''
                             });
                             setIsEditModalOpen(true);
                           }}>
@@ -1043,6 +1092,7 @@ export default function Clientes() {
                       <TableHead>CPF/CNPJ</TableHead>
                       <TableHead>Contato</TableHead>
                       <TableHead>Cobrador</TableHead>
+                      <TableHead>Vendedor</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Títulos</TableHead>
                       <TableHead>Valor Total</TableHead>
@@ -1061,6 +1111,7 @@ export default function Clientes() {
                           </div>
                         </TableCell>
                         <TableCell className="text-sm">{cliente.cobrador_nome ?? '—'}</TableCell>
+                        <TableCell className="text-sm">{cliente.vendedor_nome ?? '—'}</TableCell>
                         <TableCell>
                           <Badge className={getStatusColor(cliente.status)}>
                             {cliente.status.replace('_', ' ')}

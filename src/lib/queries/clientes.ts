@@ -17,6 +17,8 @@ export interface ClienteRow {
   observacoes?: string | null;
   cobrador_id?: string | null;
   cobrador_nome?: string | null;
+  vendedor_id?: string | null;
+  vendedor_nome?: string | null;
   created_by: string;
   created_at: string;
   updated_at: string;
@@ -57,6 +59,7 @@ export function useClientes() {
         .select(`
           *,
           cobradores ( nome ),
+          vendedores ( nome ),
           titulos (
             id,
             valor_original
@@ -69,6 +72,7 @@ export function useClientes() {
       return (data || []).map((c: any) => ({
         ...c,
         cobrador_nome: c.cobradores?.nome ?? null,
+        vendedor_nome: c.vendedores?.nome ?? null,
         total_titulos: c.titulos?.length || 0,
         total_valor:
           c.titulos?.reduce((sum: number, t: any) => sum + (t.valor_original || 0), 0) || 0,
@@ -112,6 +116,7 @@ export interface CreateClienteInput {
   estado?: string;
   observacoes?: string;
   cobrador_id?: string | null;
+  vendedor_id?: string | null;
 }
 
 export function useCreateCliente() {
@@ -160,6 +165,7 @@ export interface UpdateClienteInput {
   observacoes?: string;
   status: string;
   cobrador_id?: string | null;
+  vendedor_id?: string | null;
 }
 
 export function useUpdateCliente() {

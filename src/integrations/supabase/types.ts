@@ -549,6 +549,7 @@ export type Database = {
           status: string
           telefone: string | null
           updated_at: string
+          vendedor_id: string | null
         }
         Insert: {
           cep?: string | null
@@ -568,6 +569,7 @@ export type Database = {
           status?: string
           telefone?: string | null
           updated_at?: string
+          vendedor_id?: string | null
         }
         Update: {
           cep?: string | null
@@ -587,6 +589,7 @@ export type Database = {
           status?: string
           telefone?: string | null
           updated_at?: string
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -601,6 +604,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
             referencedColumns: ["id"]
           },
         ]
@@ -763,6 +773,7 @@ export type Database = {
           status: string
           token: string
           used_by: string | null
+          vendedor_id: string | null
         }
         Insert: {
           cobrador_id?: string | null
@@ -775,6 +786,7 @@ export type Database = {
           status?: string
           token: string
           used_by?: string | null
+          vendedor_id?: string | null
         }
         Update: {
           cobrador_id?: string | null
@@ -787,6 +799,7 @@ export type Database = {
           status?: string
           token?: string
           used_by?: string | null
+          vendedor_id?: string | null
         }
         Relationships: [
           {
@@ -801,6 +814,13 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "convites_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
             referencedColumns: ["id"]
           },
         ]
@@ -1193,6 +1213,56 @@ export type Database = {
           },
         ]
       }
+      vendedores: {
+        Row: {
+          ativo: boolean
+          company_id: string
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          email: string | null
+          id: string
+          nome: string
+          telefone: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          nome: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          nome?: string
+          telefone?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vendedores_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       mv_parcelas_consolidadas: {
@@ -1374,12 +1444,14 @@ export type Database = {
       }
       current_cobrador_id: { Args: never; Returns: string }
       current_company_id: { Args: never; Returns: string }
+      current_vendedor_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       estornar_evento_parcela: {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
       }
       find_or_create_cobrador: { Args: { p_nome: string }; Returns: string }
+      find_or_create_vendedor: { Args: { p_nome: string }; Returns: string }
       has_min_role: {
         Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
         Returns: boolean
@@ -1401,6 +1473,7 @@ export type Database = {
           p_descricao?: string
           p_valor: number
           p_vencimento: string
+          p_vendedor?: string
         }
         Returns: Json
       }
@@ -1427,7 +1500,13 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "leitura" | "operador" | "financeiro" | "admin" | "super_admin"
+      app_role:
+        | "leitura"
+        | "vendedor"
+        | "operador"
+        | "financeiro"
+        | "admin"
+        | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1558,7 +1637,14 @@ export const Constants = {
   },
   public: {
     Enums: {
-      app_role: ["leitura", "operador", "financeiro", "admin", "super_admin"],
+      app_role: [
+        "leitura",
+        "vendedor",
+        "operador",
+        "financeiro",
+        "admin",
+        "super_admin",
+      ],
     },
   },
 } as const

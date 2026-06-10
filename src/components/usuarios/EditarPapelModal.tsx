@@ -22,10 +22,12 @@ interface Props {
   onSaved: () => void;
 }
 
-// Este modal só PROMOVE/REBAIXA administrador. O vínculo de cobrador vem
-// exclusivamente do convite por link (página Cobradores), então não atribuímos
-// o papel 'operador' a quem não tem carteira — isso evitaria um operador órfão
-// que, pela RLS, enxergaria todos os dados da empresa.
+// Este modal só PROMOVE/REBAIXA administrador. O vínculo de cobrador/vendedor
+// vem exclusivamente do convite por link (páginas Cobradores/Vendedores), então
+// não atribuímos um papel de carteira a quem não tem carteira — isso evitaria um
+// usuário órfão que, pela RLS, enxergaria todos os dados da empresa.
+const db = supabase as any;
+
 export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props) {
   const [admin, setAdmin] = useState(usuario.role === 'admin');
   const [saving, setSaving] = useState(false);
@@ -34,23 +36,30 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
   const { user, companyId } = useAuth();
   const qc = useQueryClient();
 
-  // O usuário tem carteira de cobrador vinculada? Se não tiver, não pode ser
-  // rebaixado para cobrador (viraria órfão) — nesse caso, exclua-o.
-  const { data: temCarteira } = useQuery({
-    queryKey: ['cobrador-by-user', usuario.user_id],
+  // O usuário tem carteira (cobrança ou vendas) vinculada? Se não tiver, não pode
+  // ser rebaixado para um papel de carteira (viraria órfão) — nesse caso, exclua-o.
+  // O tipo da carteira define para qual papel ele volta ao perder o admin.
+  const { data: carteira } = useQuery({
+    queryKey: ['carteira-by-user', usuario.user_id],
     enabled: open,
     queryFn: async () => {
-      const { count } = await supabase
-        .from('cobradores')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', usuario.user_id)
-        .is('deleted_at', null);
-      return (count ?? 0) > 0;
+      const [{ count: cobCount }, { count: venCount }] = await Promise.all([
+        db.from('cobradores').select('id', { count: 'exact', head: true })
+          .eq('user_id', usuario.user_id).is('deleted_at', null),
+        db.from('vendedores').select('id', { count: 'exact', head: true })
+          .eq('user_id', usuario.user_id).is('deleted_at', null),
+      ]);
+      return { cobrador: (cobCount ?? 0) > 0, vendedor: (venCount ?? 0) > 0 };
     },
   });
 
+  // Papel de carteira para onde o usuário volta ao perder o admin.
+  const baseRole: AppRole = carteira?.vendedor ? 'vendedor' : 'operador';
+  const baseLabel = carteira?.vendedor ? 'vendedor' : 'cobrador';
+  const temCarteira = carteira ? carteira.cobrador || carteira.vendedor : undefined;
+
   const isSelf = user?.id === usuario.user_id;
-  const novoPapel: AppRole = admin ? 'admin' : 'operador';
+  const novoPapel: AppRole = admin ? 'admin' : baseRole;
   const reduzindoSelf = isSelf && usuario.role === 'admin' && !admin;
   const rebaixandoSemCarteira = usuario.role === 'admin' && !admin && temCarteira === false;
   const semMudanca = novoPapel === usuario.role;
@@ -69,7 +78,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
         title: 'Permissão atualizada',
         description: admin
           ? `${usuario.nome} agora é administrador.`
-          : `${usuario.nome} voltou a ser cobrador.`,
+          : `${usuario.nome} voltou a ser ${baseLabel}.`,
       });
       qc.invalidateQueries({ queryKey: ['user-roles', usuario.user_id] });
       onSaved();
@@ -101,7 +110,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
               <div>
                 <Label htmlFor="ep-admin">Administrador da empresa</Label>
                 <p className="text-xs text-muted-foreground">
-                  Admin vê e gerencia tudo. Sem isso, atua como cobrador (só a carteira dele).
+                  Admin vê e gerencia tudo. Sem isso, atua como {baseLabel} (só a carteira dele).
                 </p>
               </div>
               <Switch
@@ -118,7 +127,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
             )}
             {rebaixandoSemCarteira && (
               <p className="text-sm text-destructive">
-                Este usuário não tem carteira de cobrador, então não pode ser rebaixado aqui.
+                Este usuário não tem carteira de cobrador nem de vendedor, então não pode ser rebaixado aqui.
                 Para remover o acesso dele, exclua o usuário.
               </p>
             )}
@@ -144,7 +153,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
             <AlertDialogDescription>
               {admin
                 ? <>Tornar <strong>{usuario.nome}</strong> administrador (acesso total à empresa)?</>
-                : <>Remover o acesso de administrador de <strong>{usuario.nome}</strong>? Ele voltará a atuar como cobrador, vendo apenas a carteira dele.</>}
+                : <>Remover o acesso de administrador de <strong>{usuario.nome}</strong>? Ele voltará a atuar como {baseLabel}, vendo apenas a carteira dele.</>}
               {' '}Esta ação será registrada no log de auditoria.
             </AlertDialogDescription>
           </AlertDialogHeader>
