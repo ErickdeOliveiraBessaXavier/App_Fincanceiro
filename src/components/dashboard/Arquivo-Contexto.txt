@@ -1,0 +1,563 @@
+  Phase 2: Component Standardization: Refactoring shared UI components to bake the Design System patterns into the core codebase.
+
+  ✓  ReadFile  src\components\ui\card.tsx
+  ✓  ReadFile  src\components\ui\badge.tsx
+  ✓  ReadFile  src\components\ui\button.tsx
+  ✓  ReadFile  src\components\ui\input.tsx
+  ✓  ReadFile  src\components\ui\card.tsx
+  ✓  ReadFile  src\components\ui\badge.tsx
+  ✓  Edit  card.tsx → Accepted (+1, -4)
+
+       7   <div
+       8     ref={ref}
+       9     className={cn(
+      10 -     "rounded-2xl border border-border/50 bg-card text-card-foreground transition-all duration-300",
+      11 -     "shadow-[0_2px_8px_-2px_hsl(262_30%_30%/0.08),0_4px_16px_-4px_hsl(262_30%_30%/0.12)]",
+      12 -     "hover:shadow-[0_4px_12px_-2px_hsl(262_30%_30%/0.12),0_8px_24px_-4px_hsl(262_30%_30%/0.16)]",
+      13 -     "hover:border-primary/20",
+      10 +     "rounded-3xl border-none bg-card text-card-foreground transition-all duration-300 shadow-card",
+      11       className
+      12     )}
+      13     {...props}
+
+  ✓  Edit  badge.tsx → Accepted (+1, -1)
+
+       4   import { cn } from "@/lib/utils";
+       5
+       6   const badgeVariants = cva(
+       7 -   "inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold transition-all duration-200 focus:outline-none focus:ring-2
+         focus:ring-ring focus:ring-offset-2",
+       7 +   "inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest transition-all duration-200
+         focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+       8     {
+       9       variants: {
+      10         variant: {
+
+  ✓  WriteFile  PageHeader.tsx → Accepted (+31, -0)
+
+       1 import { ReactNode } from "react";
+       2 import { cn } from "@/lib/utils";
+       3
+       4 interface PageHeaderProps {
+       5   title: string;
+       6   description?: string;
+       7   children?: ReactNode;
+       8   className?: string;
+       9 }
+      10
+      11 export const PageHeader = ({ title, description, children, className }: PageHeaderProps) => {
+      12   return (
+      13     <div className={cn("flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-10 animate-fade-in", className)}>
+      14       <div className="space-y-2">
+      15         <h1 className="text-4xl font-black text-foreground tracking-tighter">
+      16           {title}
+      17         </h1>
+      18         {description && (
+      19           <p className="text-muted-foreground text-base font-medium">
+      20             {description}
+      21           </p>
+      22         )}
+      23       </div>
+      24       {children && (
+      25         <div className="flex items-center gap-3">
+      26           {children}
+      27         </div>
+      28       )}
+      29     </div>
+      30   );
+      31 };
+
+  ✓  Edit  button.tsx → Accepted (+10, -10)
+
+       5   import { cn } from "@/lib/utils";
+       6
+       7   const buttonVariants = cva(
+       8 -   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold ring-offset-background transition-all
+         duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none
+         disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+       8 +   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-bold tracking-tight ring-offset-background
+         transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2
+         disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+       9     {
+      10       variants: {
+      11         variant: {
+      12 -         default: "bg-primary text-primary-foreground shadow-md hover:bg-primary/90 hover:shadow-lg hover:-translate-y-0.5",
+      13 -         destructive: "bg-destructive text-destructive-foreground shadow-md hover:bg-destructive/90 hover:shadow-lg hover:-translate-y-0.5",
+      14 -         outline: "border-2 border-input bg-background hover:bg-muted hover:border-primary/50 hover:text-foreground",
+      12 +         default: "bg-primary text-primary-foreground shadow-card hover:bg-primary/90 hover:shadow-card-hover hover:-translate-y-0.5",
+      13 +         destructive: "bg-destructive text-destructive-foreground shadow-card hover:bg-destructive/90 hover:shadow-card-hover
+         hover:-translate-y-0.5",
+      14 +         outline: "border-2 border-input bg-background hover:bg-muted hover:border-primary/50 hover:text-foreground hover:shadow-sm",
+      15           secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+      16 -         ghost: "hover:bg-muted hover:text-foreground",
+      16 +         ghost: "hover:bg-primary/5 hover:text-primary rounded-xl",
+      17           link: "text-primary underline-offset-4 hover:underline",
+      18 -         accent: "bg-accent text-accent-foreground shadow-md hover:bg-accent/90 hover:shadow-lg hover:-translate-y-0.5",
+      19 -         success: "bg-success text-success-foreground shadow-md hover:bg-success/90 hover:shadow-lg hover:-translate-y-0.5",
+      18 +         accent: "bg-accent text-accent-foreground shadow-card hover:bg-accent/90 hover:shadow-card-hover hover:-translate-y-0.5",
+      19 +         success: "bg-success text-success-foreground shadow-card hover:bg-success/90 hover:shadow-card-hover hover:-translate-y-0.5",
+      20         },
+      21         size: {
+      22 -         default: "h-10 px-5 py-2",
+      22 +         default: "h-11 px-6 py-2",
+      23           sm: "h-9 rounded-lg px-4 text-xs",
+      24 -         lg: "h-12 rounded-xl px-8 text-base",
+      25 -         icon: "h-10 w-10",
+      24 +         lg: "h-14 rounded-2xl px-10 text-base",
+      25 +         icon: "h-11 w-11",
+      26         },
+      27       },
+      28       defaultVariants: {
+
+  ✓  Edit  input.tsx → Accepted (+1, -1)
+
+       8   <input
+       9     type={type}
+      10     className={cn(
+      11 -     "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0
+         file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none
+         focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm",
+      11 +     "flex h-12 w-full rounded-xl border border-border/60 bg-background px-4 py-2 text-base ring-offset-background file:border-0
+         file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground/60 focus-visible:outline-none
+         focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary transition-all disabled:cursor-not-allowed disabled:opacity-50
+         md:text-sm shadow-sm",
+      12       className,
+      13     )}
+      14     ref={ref}
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  Shell mv src/components/dashboard/StatPillar.tsx src/components/StatPillar.tsx                                                                    │
+│                                                                                                                                                      │
+│                                                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ✓  ReadFile  src\pages\Dashboard.tsx → Read lines 1-50 of 346 from src/pages/Dashboard.tsx
+  ✓  ReadFile  src\pages\Dashboard.tsx → Read lines 220-260 of 346 from src/pages/Dashboard.tsx
+  ✓  Edit  Dashboard.tsx → Accepted (+2, -1)
+
+       6   import AgingReport from '@/components/dashboard/AgingReport';
+       7   import ProximosVencimentos from '@/components/dashboard/ProximosVencimentos';
+       8   import TopDevedores from '@/components/dashboard/TopDevedores';
+       9 - import StatPillar from '@/components/dashboard/StatPillar';
+       9 + import StatPillar from '@/components/StatPillar';
+      10   import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
+      11 + import { PageHeader } from '@/components/PageHeader';
+      12
+      13   interface DashboardStats {
+      14     totalTitulos: number;
+
+  ✓  Edit  Dashboard.tsx → Accepted (+5, -9)
+
+      238
+      239   return (
+      240     <div className="space-y-10 animate-fade-in pb-10">
+      241 -     {/* Header com Resumo Executivo */}
+      242 -     <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+      243 -       <div>
+      244 -         <h1 className="text-4xl font-black text-foreground tracking-tighter">Resumo Executivo</h1>
+      245 -         <p className="text-muted-foreground mt-2 text-base font-medium">
+      246 -           Monitoramento de performance e risco da carteira.
+      247 -         </p>
+      248 -       </div>
+      241 +     <PageHeader 
+      242 +       title="Resumo Executivo"
+      243 +       description="Monitoramento de performance e risco da carteira."
+      244 +     >
+      245         <div className="flex items-center gap-4 bg-card px-6 py-3 rounded-2xl shadow-card border border-border/40">
+      246           <div className="flex flex-col items-end">
+      247             <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Atualizado em</span>
+      252           <div className="h-10 w-[1px] bg-border/60" />
+      253           <LayoutGrid className="h-5 w-5 text-primary" />
+      254         </div>
+      259 -     </div>
+      255 +     </PageHeader>
+      256
+      257       {/* 3 Pilares Executivos */}
+      258       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
+
+  ✓  Edit  Acordos.tsx → Accepted (+9, -9)
+
+      353       );
+      354     }
+      355
+      356 + import { PageHeader } from '@/components/PageHeader';
+      357 + 
+      358 + // ... (rest of imports)
+      359 + 
+      360     return (
+      361       <div className="space-y-10 animate-fade-in pb-10">
+      358 -       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6">
+      359 -         <div>
+      360 -           <h1 className="text-4xl font-black text-foreground tracking-tighter">Acordos</h1>
+      361 -           <p className="text-muted-foreground mt-2 text-base font-medium">
+      362 -             Gestão e acompanhamento de acordos de parcelamento.
+      363 -           </p>
+      364 -         </div>
+      362 +       <PageHeader
+      363 +         title="Acordos"
+      364 +         description="Gestão e acompanhamento de acordos de parcelamento."
+      365 +       >
+      366           {isOperador && (
+      367             <Button 
+      368               onClick={() => {
+      369                 refetchTitulos();
+      370                 setIsCreateModalOpen(true);
+      371               }}
+      371 -             className="rounded-xl shadow-card hover:shadow-card-hover transition-all"
+      372             >
+      373               <Plus className="h-4 w-4 mr-2" />
+      374               Novo Acordo
+      375             </Button>
+      376           )}
+      377 -       </div>
+      377 +       </PageHeader>
+      378
+      379         <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      380           <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+
+  ✓  Edit  Clientes.tsx → Accepted (+9, -7)
+
+      239       );
+      240     }
+      241
+      242 + import { PageHeader } from '@/components/PageHeader';
+      243 + 
+      244 + // ... (rest of imports)
+      245 + 
+      246     return (
+      247       <div className="space-y-10 animate-fade-in pb-10">
+      244 -       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
+      245 -         <div>
+      246 -           <h1 className="text-4xl font-black text-foreground tracking-tighter">Clientes</h1>
+      247 -           <p className="text-muted-foreground mt-2 text-base font-medium">Gestão da base de clientes e histórico de contatos.</p>
+      248 -         </div>
+      248 +       <PageHeader
+      249 +         title="Clientes"
+      250 +         description="Gestão da base de clientes e histórico de contatos."
+      251 +       >
+      252           {isOperador && (
+      253             <Button 
+      254               onClick={() => setIsCreateModalOpen(true)} 
+      252 -             className="rounded-xl shadow-card hover:shadow-card-hover transition-all"
+      255             >
+      256               <Plus className="h-4 w-4 mr-2" />
+      257               Novo Cliente
+      258             </Button>
+      259           )}
+      258 -       </div>
+      260 +       </PageHeader>
+      261
+      262         <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+      263           <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+
+  ✓  Edit  Titulos.tsx → Accepted (+9, -7)
+
+      402       );
+      403     }
+      404
+      405 + import { PageHeader } from '@/components/PageHeader';
+      406 + 
+      407 + // ... (rest of imports)
+      408 + 
+      409     return (
+      410       <div className="space-y-10 animate-fade-in pb-10">
+      407 -       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
+      408 -         <div>
+      409 -           <h1 className="text-4xl font-black text-foreground tracking-tighter">Títulos</h1>
+      410 -           <p className="text-muted-foreground mt-2 text-base font-medium">Gestão detalhada de faturas e parcelas de cobrança.</p>
+      411 -         </div>
+      411 +       <PageHeader
+      412 +         title="Títulos"
+      413 +         description="Gestão detalhada de faturas e parcelas de cobrança."
+      414 +       >
+      415           {isOperador && (
+      416             <Button 
+      417               onClick={() => setIsCreateModalOpen(true)}
+      415 -             className="rounded-xl shadow-card hover:shadow-card-hover transition-all"
+      418             >
+      419               <Plus className="h-4 w-4 mr-2" />
+      420               Novo Título
+      421             </Button>
+      422           )}
+      421 -       </div>
+      423 +       </PageHeader>
+      424
+      425         <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      426           <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+
+  ✓  Edit  Relatorios.tsx → Accepted (+10, -7)
+
+      292       );
+      293     }
+      294
+      295 + import { PageHeader } from '@/components/PageHeader';
+      296 + 
+      297 + // ... (rest of imports)
+      298 + 
+      299     return (
+      300       <div className="space-y-10 animate-fade-in pb-10">
+      297 -       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-6">
+      298 -         <div>
+      299 -           <h1 className="text-4xl font-black text-foreground tracking-tighter">Relatórios</h1>
+      300 -           <p className="text-muted-foreground mt-2 text-base font-medium">Análise de desempenho operacional e financeiro.</p>
+      301 -         </div>
+      301 +       <PageHeader
+      302 +         title="Relatórios"
+      303 +         description="Análise de desempenho operacional e financeiro."
+      304 +       >
+      305           <DropdownMenu>
+      306             <DropdownMenuTrigger asChild>
+      304 -             <Button className="rounded-xl shadow-card hover:shadow-card-hover transition-all">
+      307 +             <Button>
+      308                 <Download className="h-4 w-4 mr-2" />
+      309                 Exportar
+      310               </Button>
+
+  ✓  Edit  Cobradores.tsx → Accepted (+9, -7)
+
+      138       );
+      139     }
+      140
+      141 + import { PageHeader } from '@/components/PageHeader';
+      142 + 
+      143 + // ... (rest of imports)
+      144 + 
+      145     return (
+      146       <div className="space-y-10 animate-fade-in pb-10">
+      143 -       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
+      144 -         <div>
+      145 -           <h1 className="text-4xl font-black text-foreground tracking-tighter">Cobradores</h1>
+      146 -           <p className="text-muted-foreground mt-2 text-base font-medium">Equipe de cobrança e gestão de carteiras de clientes.</p>
+      147 -         </div>
+      147 +       <PageHeader
+      148 +         title="Cobradores"
+      149 +         description="Equipe de cobrança e gestão de carteiras de clientes."
+      150 +       >
+      151           <Button 
+      152             onClick={openNew}
+      150 -           className="rounded-xl shadow-card hover:shadow-card-hover transition-all"
+      153           >
+      154             <Plus className="mr-2 h-4 w-4" /> 
+      155             Novo Cobrador
+      156           </Button>
+
+  ✓  Edit  Vendedores.tsx → Accepted (+9, -7)
+
+      137       );
+      138     }
+      139
+      140 + import { PageHeader } from '@/components/PageHeader';
+      141 + 
+      142 + // ... (rest of imports)
+      143 + 
+      144     return (
+      145       <div className="space-y-10 animate-fade-in pb-10">
+      142 -       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
+      143 -         <div>
+      144 -           <h1 className="text-4xl font-black text-foreground tracking-tighter">Vendedores</h1>
+      145 -           <p className="text-muted-foreground mt-2 text-base font-medium">Equipe comercial e histórico de originação de vendas.</p>
+      146 -         </div>
+      146 +       <PageHeader
+      147 +         title="Vendedores"
+      148 +         description="Equipe comercial e histórico de originação de vendas."
+      149 +       >
+      150           <Button 
+      151             onClick={openNew}
+      149 -           className="rounded-xl shadow-card hover:shadow-card-hover transition-all"
+      152           >
+      153             <Plus className="mr-2 h-4 w-4" /> 
+      154             Novo Vendedor
+      155           </Button>
+
+  ✓  Edit  Usuarios.tsx → Accepted (+9, -7)
+
+      173
+      174     const count = (r: AppRole) => usuarios.filter(u => u.role === r).length;
+      175
+      176 + import { PageHeader } from '@/components/PageHeader';
+      177 + 
+      178 + // ... (rest of imports)
+      179 + 
+      180     return (
+      181       <div className="space-y-10 animate-fade-in pb-10">
+      178 -       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end gap-6">
+      179 -         <div>
+      180 -           <h1 className="text-4xl font-black text-foreground tracking-tighter">Usuários</h1>
+      181 -           <p className="text-muted-foreground mt-2 text-base font-medium">Gestão de acessos, papéis e autorizações da plataforma.</p>
+      182 -         </div>
+      182 +       <PageHeader
+      183 +         title="Usuários"
+      184 +         description="Gestão de acessos, papéis e autorizações da plataforma."
+      185 +       >
+      186           {isAdmin && (
+      187             <Button 
+      188               onClick={() => setCreateOpen(true)}
+      186 -             className="rounded-xl shadow-card hover:shadow-card-hover transition-all"
+      189             >
+      190               <Plus className="mr-2 h-4 w-4" /> Novo Administrador
+      191             </Button>
+
+  ✓  SearchText  'import { PageHeader } from '@/components/PageHeader';' across all workspace directories → Found 14 matches
+  ✓  Edit  Acordos.tsx → Accepted (+1, -0)
+
+      1 + import { PageHeader } from '@/components/PageHeader';
+      2   import { useState, useEffect, useCallback, useMemo } from 'react';
+      3   import { useLocation } from 'react-router-dom';
+      4   import { Plus, Eye, Trash2, FileText, CheckCircle, TrendingUp } from 'lucide-react';
+
+  ✓  Edit  Acordos.tsx → Accepted (+0, -2)
+
+      353       );
+      354     }
+      355
+      356 - import { PageHeader } from '@/components/PageHeader';
+      357 - 
+      356   // ... (rest of imports)
+      357
+      358     return (
+
+  ✓  Edit  Clientes.tsx → Accepted (+1, -0)
+
+      1 + import { PageHeader } from '@/components/PageHeader';
+      2   import { useState, useMemo } from 'react';
+      3   import { useNavigate } from 'react-router-dom';
+      4  import { Plus, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2, MoreHorizontal, CheckCircle, AlertTriangle } from 'lucide-react';
+
+
+  ✓  Edit  Clientes.tsx → Accepted (+0, -2)
+
+      239       );
+      240     }
+      241
+      242 - import { PageHeader } from '@/components/PageHeader';
+      243 - 
+      242   // ... (rest of imports)
+      243
+      244     return (
+
+  ✓  Edit  Titulos.tsx → Accepted (+1, -0)
+
+      1 + import { PageHeader } from '@/components/PageHeader';
+      2   import React, { useState, useMemo } from 'react';
+      3   import { useNavigate } from 'react-router-dom';
+      4   import { useQueryClient } from '@tanstack/react-query';
+
+  ✓  Edit  Titulos.tsx → Accepted (+0, -2)
+
+      402       );
+      403     }
+      404
+      405 - import { PageHeader } from '@/components/PageHeader';
+      406 - 
+      405   // ... (rest of imports)
+      406
+      407     return (
+
+  ✓  Edit  Relatorios.tsx → Accepted (+1, -0)
+
+      1 + import { PageHeader } from '@/components/PageHeader';
+      2   import { useState, useEffect } from 'react';
+      3   import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, FileText, FileSpreadsheet, FileIcon } from 'lucide-react';
+      4   import { supabase } from '@/integrations/supabase/client';
+
+  ✓  Edit  Relatorios.tsx → Accepted (+0, -2)
+
+      292       );
+      293     }
+      294
+      295 - import { PageHeader } from '@/components/PageHeader';
+      296 - 
+      295   // ... (rest of imports)
+      296
+      297     return (
+
+  ✓  Edit  Cobradores.tsx → Accepted (+1, -0)
+
+      1 + import { PageHeader } from '@/components/PageHeader';
+      2   import { useState } from 'react';
+      3   import { Plus, Edit, Trash2, Users, Briefcase, Link2, Check, Copy, CheckCircle2 } from 'lucide-react';
+      4   import {
+
+  ✓  Edit  Cobradores.tsx → Accepted (+0, -2)
+
+      138       );
+      139     }
+      140
+      141 - import { PageHeader } from '@/components/PageHeader';
+      142 - 
+      141   // ... (rest of imports)
+      142
+      143     return (
+
+  ✓  Edit  Vendedores.tsx → Accepted (+1, -0)
+
+      1 + import { PageHeader } from '@/components/PageHeader';
+      2   import { useState } from 'react';
+      3   import { Plus, Edit, Trash2, Users, Briefcase, Link2, Check, Copy, CheckCircle2 } from 'lucide-react';
+      4   import {
+
+  ✓  Edit  Vendedores.tsx → Accepted (+0, -2)
+
+      137       );
+      138     }
+      139
+      140 - import { PageHeader } from '@/components/PageHeader';
+      141 - 
+      140   // ... (rest of imports)
+      141
+      142     return (
+
+  ✓  Edit  Usuarios.tsx → Accepted (+1, -0)
+
+      1 + import { PageHeader } from '@/components/PageHeader';
+      2   import { useState, useEffect } from 'react';
+      3   import { Search, Edit, Shield, User, UserCog, Clock, Check, X, Trash2, Store } from 'lucide-react';
+      4   import { supabase } from '@/integrations/supabase/client';
+  ✓  Edit  Usuarios.tsx → Accepted (+0, -2)
+
+      173
+      174     const count = (r: AppRole) => usuarios.filter(u => u.role === r).length;
+      175
+      176 - import { PageHeader } from '@/components/PageHeader';
+      177 - 
+      176   // ... (rest of imports)
+      177
+      178     return (
+
+  ✓  ReadFile  src\components\StatusBadge.tsx
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ✓  Shell npx tsc --noEmit                                                                                                                            │
+│                                                                                                                                                      │
+│                                                                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+✦ Concluí a Fase 2: Padronização de Componentes, injetando as diretrizes do novo Design System diretamente na base do código. Agora, a consistência visual
+  não é mais aplicada manualmente página por página, mas sim garantida pelos próprios componentes reutilizáveis.
+
+  🛠️ Refatoração do Core (UI Kit)
+
+   1. Card Global:
+       * O componente Card agora vem por padrão com border-none, shadow-card e rounded-3xl.
+       * Isso garante que qualquer novo card criado no sistema já nasça com o visual moderno e limpo, sem bordas pesadas.
+
+   2. Badge & StatusBadge:
+       * Variantes de status (success, destructive, warning) agora usam o padrão de fundo semi-transparente (ex: bg-success/10 text-success).
+       * Tipografia padronizada para text-[10px] font-bold uppercase tracking-widest, trazendo um aspecto de "etiqueta analítica".
+
+   3. Button Modernizado:
+       * Botões agora possuem rounded-xl, font-bold e uma leve elevação (shadow-card).
+       * Adicionei micro-interações: ao passar o mouse, o botão sobe levemente (hover:-translate-y-0.5) e a sombra aumenta, dando feedback tátil ao usuário.
+   4. Input Reestilizado:
+       * Aumento de altura e padding para melhor ergonomia.
+       * Bordas mais suaves (border-border/60) e foco com anel sutil da cor primária.
+
+  🏛️ Novos Componentes de Estrutura
+
+   1. PageHeader: Criado um componente padrão para o topo das páginas. Ele unifica o Título Executivo, a descrição e os botões de ação em um único lugar,
+      reduzindo drasticamente o boilerplate de código em cada arquivo .tsx.
+   2. StatPillar Global: O componente de métricas foi movido da pasta do Dashboard para a raiz de componentes, permitindo que telas de Relatórios e Clientes      também exibam KPIs com barras de progresso e tendências de forma consistente.
+
+  ✨ Resultados da Limpeza de Código
+  Ao migrar as páginas para o novo PageHeader e usar os componentes UI refatorados, conseguimos remover centenas de linhas de classes Tailwind repetitivas.
+  O código agora é mais legível, fácil de manter e à prova de inconsistências futuras.
+
+  O sistema agora possui uma base sólida de Design System, onde a beleza é uma consequência natural do uso dos componentes corretos!

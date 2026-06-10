@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { PageHeader } from '@/components/PageHeader';
 import { Plus, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -162,73 +163,79 @@ export default function Campanhas() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Campanhas</h1>
-          <p className="text-muted-foreground">Gerencie suas campanhas de cobrança</p>
-        </div>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader
+        title="Campanhas"
+        description="Gestão de réguas de cobrança e comunicações automáticas."
+      >
         {isOperador && (
           <Button onClick={handleNewCampanha}>
             <Plus className="h-4 w-4 mr-2" />
             Nova Campanha
           </Button>
         )}
-      </div>
+      </PageHeader>
 
-      <div className="grid gap-4 grid-cols-2 md:grid-cols-4">
-        <Card>
+      <div className="grid gap-6 grid-cols-2 md:grid-cols-4">
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</CardTitle>
+            <MessageSquare className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{campanhas.length}</div>
+            <div className="text-2xl font-black tracking-tighter">{campanhas.length}</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Ativas</CardTitle>
-            <Play className="h-4 w-4 text-green-500" />
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ativas</CardTitle>
+            <Play className="h-4 w-4 text-success group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-500">
+          <CardContent className="relative z-10">
+            <div className="text-2xl font-black tracking-tighter text-success">
               {campanhas.filter(c => c.status === 'ativa').length}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pausadas</CardTitle>
-            <Pause className="h-4 w-4 text-yellow-500" />
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-warning/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pausadas</CardTitle>
+            <Pause className="h-4 w-4 text-warning group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-500">
+          <CardContent className="relative z-10">
+            <div className="text-2xl font-black tracking-tighter text-warning">
               {campanhas.filter(c => c.status === 'pausada').length}
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Rascunhos</CardTitle>
-            <Edit className="h-4 w-4 text-blue-500" />
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Rascunhos</CardTitle>
+            <Edit className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-500">
+          <CardContent className="relative z-10">
+            <div className="text-2xl font-black tracking-tighter text-blue-500">
               {campanhas.filter(c => c.status === 'rascunho').length}
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Lista de Campanhas</CardTitle>
-          <CardDescription>
-            Campanhas de cobrança configuradas
-          </CardDescription>
+      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl font-bold tracking-tight">Lista de Campanhas</CardTitle>
+              <CardDescription className="text-xs font-medium">
+                Campanhas de cobrança configuradas no sistema
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           <GlobalFilter
             configs={campanhasFilterConfig}
             filters={filters}
@@ -246,53 +253,58 @@ export default function Campanhas() {
           />
 
           {filteredCampanhas.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p>Nenhuma campanha encontrada</p>
+            <div className="text-center py-20 bg-muted/5 rounded-xl border border-dashed border-border/60">
+              <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Nenhuma campanha encontrada</p>
               {isOperador && (
-                <Button variant="outline" className="mt-4" onClick={handleNewCampanha}>
+                <Button variant="outline" className="mt-4 rounded-xl font-bold" onClick={handleNewCampanha}>
                   Criar primeira campanha
                 </Button>
               )}
             </div>
           ) : (
-            <div className="rounded-md border overflow-x-auto">
+            <div className="rounded-xl border border-border/50 overflow-hidden">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Canal</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden md:table-cell">Mensagem</TableHead>
-                    <TableHead className="hidden sm:table-cell">Criada em</TableHead>
-                    <TableHead>Ações</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Canal</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
+                    <TableHead className="hidden md:table-cell text-[10px] font-bold uppercase tracking-widest">Mensagem</TableHead>
+                    <TableHead className="hidden sm:table-cell text-[10px] font-bold uppercase tracking-widest">Criada em</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredCampanhas.map((campanha) => (
-                    <TableRow key={campanha.id}>
-                      <TableCell className="font-medium">{campanha.nome}</TableCell>
+                    <TableRow key={campanha.id} className="hover:bg-muted/10 transition-colors">
+                      <TableCell className="font-bold text-sm text-foreground">{campanha.nome}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {getCanalIcon(campanha.canal)}
-                          <span className="capitalize hidden sm:inline">{campanha.canal}</span>
+                          <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center">
+                            {getCanalIcon(campanha.canal)}
+                          </div>
+                          <span className="capitalize text-xs font-medium text-muted-foreground hidden sm:inline">{campanha.canal}</span>
                         </div>
                       </TableCell>
                       <TableCell>
                         <StatusBadge domain="campanha" status={campanha.status} />
                       </TableCell>
-                      <TableCell className="max-w-xs truncate hidden md:table-cell">
+                      <TableCell className="max-w-xs truncate hidden md:table-cell text-xs font-medium text-muted-foreground">
                         {campanha.mensagem}
                       </TableCell>
-                      <TableCell className="hidden sm:table-cell">{formatDate(campanha.created_at)}</TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
+                      <TableCell className="hidden sm:table-cell text-xs font-medium text-muted-foreground">{formatDate(campanha.created_at)}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
                           {isOperador && (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => toggleCampanhaStatus(campanha.id, campanha.status)}
                               title={campanha.status === 'ativa' ? 'Pausar' : 'Ativar'}
+                              className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"
                             >
                               {campanha.status === 'ativa' ?
                                 <Pause className="h-4 w-4" /> :
@@ -305,6 +317,7 @@ export default function Campanhas() {
                             size="sm"
                             onClick={() => handleView(campanha)}
                             title="Visualizar"
+                            className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -315,6 +328,7 @@ export default function Campanhas() {
                                 size="sm"
                                 onClick={() => handleEdit(campanha)}
                                 title="Editar"
+                                className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"
                               >
                                 <Edit className="h-4 w-4" />
                               </Button>
@@ -323,7 +337,7 @@ export default function Campanhas() {
                                 size="sm"
                                 onClick={() => handleDeleteClick(campanha)}
                                 title="Excluir"
-                                className="text-destructive hover:text-destructive"
+                                className="h-8 w-8 p-0 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/5"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

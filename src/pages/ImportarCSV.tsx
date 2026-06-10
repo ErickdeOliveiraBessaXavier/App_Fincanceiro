@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+import { PageHeader } from '@/components/PageHeader';
+import { cn } from '@/lib/utils';
 
 // ===================== Parsing de planilha (CSV ou XLSX) =====================
 // O importador entende tanto um CSV simples quanto a planilha do cliente (GRAN.xlsx),
@@ -376,36 +378,37 @@ export default function ImportarCSV() {
   const errors = parsed?.errors ?? [];
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold">Importar planilha</h1>
-          <p className="text-muted-foreground">Importe títulos e parcelas em lote (.xlsx ou .csv)</p>
-        </div>
-        <Button variant="outline" onClick={downloadTemplate}>
+    <div className="space-y-10 animate-fade-in pb-10">
+      <PageHeader
+        title="Importar Planilha"
+        description="Carga em lote de títulos, parcelas e clientes (.xlsx ou .csv)"
+      >
+        <Button variant="outline" onClick={downloadTemplate} className="rounded-xl font-bold">
           <Download className="h-4 w-4 mr-2" />
           Baixar Template
         </Button>
-      </div>
+      </PageHeader>
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Upload className="h-5 w-5" />
+      <div className="grid gap-10 md:grid-cols-2">
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+          <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+            <CardTitle className="text-lg font-bold flex items-center gap-2">
+              <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                <Upload className="h-4 w-4" />
+              </div>
               Upload do Arquivo
             </CardTitle>
-            <CardDescription>Selecione a planilha (.xlsx) ou um CSV</CardDescription>
+            <CardDescription className="text-xs font-medium">Selecione o arquivo da sua máquina</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="pt-8 space-y-6">
             {isSuperAdmin && (
-              <div className="grid gap-2">
-                <Label htmlFor="imp-company">Empresa de destino</Label>
+              <div className="grid gap-2 p-4 rounded-xl bg-muted/30 border border-border/40">
+                <Label htmlFor="imp-company" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Empresa de destino</Label>
                 <select
                   id="imp-company"
                   value={selectedCompany}
                   onChange={(e) => setSelectedCompany(e.target.value)}
-                  className="px-3 py-2 border border-input rounded-md bg-background"
+                  className="flex h-11 w-full rounded-xl border border-border/60 bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                 >
                   <option value="">Selecione a empresa...</option>
                   {companies.map((c) => (
@@ -414,20 +417,22 @@ export default function ImportarCSV() {
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-muted-foreground">
-                  Como admin mestre, escolha para qual empresa este arquivo será importado.
+                <p className="text-[10px] text-muted-foreground italic px-1">
+                  * Opção visível apenas para super administradores.
                 </p>
               </div>
             )}
             <div
-              className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+              className="border-2 border-dashed border-primary/20 bg-primary/5 rounded-2xl p-12 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/10 transition-all group"
               onClick={() => fileInputRef.current?.click()}
             >
-              <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <p className="text-lg font-medium mb-2">
-                {file ? file.name : 'Clique para selecionar um arquivo .xlsx ou .csv'}
+              <div className="h-16 w-16 bg-background rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
+                <FileText className="h-8 w-8 text-primary/60" />
+              </div>
+              <p className="text-lg font-bold tracking-tight mb-2">
+                {file ? file.name : 'Selecione sua planilha'}
               </p>
-              <p className="text-sm text-muted-foreground">Ou arraste e solte o arquivo aqui</p>
+              <p className="text-sm text-muted-foreground font-medium">Arraste e solte ou clique para navegar</p>
             </div>
 
             <input
@@ -439,23 +444,22 @@ export default function ImportarCSV() {
             />
 
             {parsed && parsed.grupos.length > 0 && (
-              <Alert>
+              <Alert className="bg-success/5 border-success/20 text-success rounded-xl">
                 <CheckCircle className="h-4 w-4" />
-                <AlertDescription>
-                  Detectados <strong>{parsed.grupos.length}</strong> títulos e{' '}
-                  <strong>{parsed.totalParcelas}</strong> parcelas.
+                <AlertDescription className="font-bold text-xs uppercase tracking-wider">
+                  Detectados {parsed.grupos.length} títulos e {parsed.totalParcelas} parcelas.
                 </AlertDescription>
               </Alert>
             )}
 
             {errors.length > 0 && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="max-h-40 overflow-y-auto">
-                    <ul className="list-disc list-inside">
-                      {errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
-                      {errors.length > 10 && <li>... e mais {errors.length - 10} erros</li>}
+                    <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
+                      {errors.slice(0, 5).map((e, i) => <li key={i}>• {e}</li>)}
+                      {errors.length > 5 && <li>... e mais {errors.length - 5} erros</li>}
                     </ul>
                   </div>
                 </AlertDescription>
@@ -463,84 +467,93 @@ export default function ImportarCSV() {
             )}
 
             {uploading && (
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Importando...</span>
-                  <span>{uploadProgress}%</span>
+              <div className="space-y-3 bg-muted/20 p-4 rounded-xl border border-border/40">
+                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-muted-foreground animate-pulse">Importando dados...</span>
+                  <span className="text-primary">{uploadProgress}%</span>
                 </div>
-                <Progress value={uploadProgress} />
+                <Progress value={uploadProgress} className="h-2" />
               </div>
             )}
 
             <Button
               onClick={handleImport}
               disabled={!file || !parsed || parsed.grupos.length === 0 || errors.length > 0 || uploading}
-              className="w-full"
+              className="w-full h-14 text-base rounded-2xl"
             >
-              {uploading ? 'Importando...' : 'Importar Dados'}
+              {uploading ? 'Processando Arquivo...' : 'Iniciar Importação'}
             </Button>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Instruções</CardTitle>
-            <CardDescription>Como preparar seu arquivo</CardDescription>
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden bg-muted/10">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-lg font-bold">Instruções de Preparo</CardTitle>
+            <CardDescription className="text-xs font-medium text-muted-foreground">Siga os padrões para evitar erros</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <h4 className="font-medium mb-2 flex items-center gap-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
+          <CardContent className="space-y-8">
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-success flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-success" />
                 Colunas obrigatórias
               </h4>
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                <li><code>cliente</code> — nome do cliente</li>
-                <li><code>cpf_cnpj</code> — CPF ou CNPJ</li>
-                <li><code>valor</code> — valor da parcela</li>
-                <li><code>vencimento</code> — data (aceita serial do Excel, AAAA-MM-DD ou DD/MM/AAAA)</li>
-              </ul>
+              <div className="grid grid-cols-2 gap-2">
+                {['cliente', 'cpf_cnpj', 'valor', 'vencimento'].map(col => (
+                  <div key={col} className="p-3 bg-background rounded-xl border border-border/50 text-xs font-mono font-bold flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
+                    {col}
+                  </div>
+                ))}
+              </div>
             </div>
-            <div>
-              <h4 className="font-medium mb-2">Colunas opcionais</h4>
-              <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1">
-                <li><code>numero_documento</code> / <code>Nº TITULO</code> — agrupa parcelas num mesmo título</li>
-                <li><code>parcela</code> — número da parcela dentro do título</li>
-                <li><code>vendedor</code> — carteira de vendas (criada se não existir)</li>
-                <li><code>cobrador</code> — carteira de cobrança (criada se não existir)</li>
-                <li><code>municipio</code>/<code>cidade</code> e <code>uf</code>/<code>estado</code>, <code>descricao</code>, <code>contato</code></li>
-              </ul>
+
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
+                Colunas opcionais
+              </h4>
+              <div className="grid grid-cols-2 gap-2">
+                {['numero_documento', 'parcela', 'vendedor', 'cobrador'].map(col => (
+                  <div key={col} className="p-3 bg-background/50 rounded-xl border border-border/30 text-[10px] font-mono font-medium truncate">
+                    {col}
+                  </div>
+                ))}
+              </div>
             </div>
-            <Alert>
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Linhas com o mesmo <strong>Nº TITULO</strong> viram um único título com várias parcelas.
-                Vendedor/cobrador são identificados <strong>pelo nome</strong> — padronize-os antes de importar.
-              </AlertDescription>
-            </Alert>
+
+            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+              <div className="flex gap-3">
+                <AlertCircle className="h-5 w-5 text-primary shrink-0" />
+                <p className="text-xs font-medium text-primary/80 leading-relaxed">
+                  Linhas com o mesmo <strong>Nº TITULO</strong> serão agrupadas automaticamente. 
+                  Certifique-se de que os nomes de vendedores e cobradores estejam padronizados.
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       {parsed && parsed.previewRows.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Prévia dos Dados</CardTitle>
-            <CardDescription>Primeiras linhas reconhecidas do arquivo</CardDescription>
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+          <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+            <CardTitle className="text-xl font-bold tracking-tight">Prévia da Planilha</CardTitle>
+            <CardDescription className="text-xs font-medium">As primeiras 5 linhas identificadas</CardDescription>
           </CardHeader>
-          <CardContent>
-            <div className="rounded-md border overflow-x-auto">
+          <CardContent className="pt-6">
+            <div className="rounded-xl border border-border/50 overflow-hidden">
               <Table>
-                <TableHeader>
+                <TableHeader className="bg-muted/30">
                   <TableRow>
                     {parsed.previewHeaders.map((h) => (
-                      <TableHead key={h} className="capitalize">{h.replace('_', ' ')}</TableHead>
+                      <TableHead key={h} className="text-[10px] font-bold uppercase tracking-widest">{h.replace('_', ' ')}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {parsed.previewRows.map((row, ri) => (
-                    <TableRow key={ri}>
-                      {row.map((cell, ci) => <TableCell key={ci}>{cell}</TableCell>)}
+                    <TableRow key={ri} className="hover:bg-muted/5 transition-colors">
+                      {row.map((cell, ci) => <TableCell key={ci} className="text-xs font-medium text-muted-foreground">{cell}</TableCell>)}
                     </TableRow>
                   ))}
                 </TableBody>
@@ -551,38 +564,33 @@ export default function ImportarCSV() {
       )}
 
       {importResult && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Resultado da Importação</CardTitle>
+        <Card className="border-none shadow-card rounded-2xl overflow-hidden bg-primary/5 border-primary/10">
+          <CardHeader className="pb-4 border-b border-primary/10">
+            <CardTitle className="text-xl font-bold tracking-tight text-primary">Resultado da Importação</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-600">{importResult.titulos}</div>
-                <div className="text-sm text-green-700">Títulos</div>
-              </div>
-              <div className="text-center p-4 bg-emerald-50 rounded-lg">
-                <div className="text-2xl font-bold text-emerald-600">{importResult.parcelas}</div>
-                <div className="text-sm text-emerald-700">Parcelas</div>
-              </div>
-              <div className="text-center p-4 bg-blue-50 rounded-lg">
-                <div className="text-2xl font-bold text-blue-600">{importResult.clientes}</div>
-                <div className="text-sm text-blue-700">Clientes</div>
-              </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <div className="text-2xl font-bold text-red-600">{importResult.errors.length}</div>
-                <div className="text-sm text-red-700">Erros</div>
-              </div>
+          <CardContent className="pt-8 space-y-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {[
+                { label: 'Títulos', val: importResult.titulos, cls: 'bg-background text-primary' },
+                { label: 'Parcelas', val: importResult.parcelas, cls: 'bg-background text-success' },
+                { label: 'Clientes', val: importResult.clientes, cls: 'bg-background text-blue-600' },
+                { label: 'Erros', val: importResult.errors.length, cls: importResult.errors.length > 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-background text-muted-foreground' }
+              ].map((item, i) => (
+                <div key={i} className={cn("p-6 rounded-2xl border border-border/50 text-center shadow-sm", item.cls)}>
+                  <div className="text-3xl font-black tracking-tighter mb-1">{item.val}</div>
+                  <div className="text-[10px] font-black uppercase tracking-widest opacity-70">{item.label}</div>
+                </div>
+              ))}
             </div>
 
             {importResult.errors.length > 0 && (
-              <Alert variant="destructive">
+              <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
                 <AlertCircle className="h-4 w-4" />
                 <AlertDescription>
                   <div className="max-h-40 overflow-y-auto">
-                    <ul className="list-disc list-inside">
-                      {importResult.errors.slice(0, 10).map((e, i) => <li key={i}>{e}</li>)}
-                      {importResult.errors.length > 10 && <li>... e mais {importResult.errors.length - 10} erros</li>}
+                    <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
+                      {importResult.errors.slice(0, 10).map((e, i) => <li key={i}>• {e}</li>)}
+                      {importResult.errors.length > 10 && <li className="pt-2">... e mais {importResult.errors.length - 10} erros</li>}
                     </ul>
                   </div>
                 </AlertDescription>

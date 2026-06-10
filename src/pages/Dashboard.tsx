@@ -7,7 +7,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import AgingReport from '@/components/dashboard/AgingReport';
 import ProximosVencimentos from '@/components/dashboard/ProximosVencimentos';
 import TopDevedores from '@/components/dashboard/TopDevedores';
-import StatPillar from '@/components/dashboard/StatPillar';
+import StatPillar from '@/components/StatPillar';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 
 interface DashboardStats {
