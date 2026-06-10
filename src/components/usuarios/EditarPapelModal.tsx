@@ -26,7 +26,6 @@ interface Props {
 // vem exclusivamente do convite por link (páginas Cobradores/Vendedores), então
 // não atribuímos um papel de carteira a quem não tem carteira — isso evitaria um
 // usuário órfão que, pela RLS, enxergaria todos os dados da empresa.
-const db = supabase as any;
 
 export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props) {
   const [admin, setAdmin] = useState(usuario.role === 'admin');
@@ -44,9 +43,9 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
     enabled: open,
     queryFn: async () => {
       const [{ count: cobCount }, { count: venCount }] = await Promise.all([
-        db.from('cobradores').select('id', { count: 'exact', head: true })
+        supabase.from('cobradores').select('id', { count: 'exact', head: true })
           .eq('user_id', usuario.user_id).is('deleted_at', null),
-        db.from('vendedores').select('id', { count: 'exact', head: true })
+        supabase.from('vendedores').select('id', { count: 'exact', head: true })
           .eq('user_id', usuario.user_id).is('deleted_at', null),
       ]);
       return { cobrador: (cobCount ?? 0) > 0, vendedor: (venCount ?? 0) > 0 };
