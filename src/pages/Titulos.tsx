@@ -40,7 +40,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils } from '@/utils/titulo';
-import { StatusBadge } from '@/components/titulos/StatusBadge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
 import { AplicarEncargoModal } from '@/components/titulos/AplicarEncargoModal';
 import { ConcederDescontoModal } from '@/components/titulos/ConcederDescontoModal';
@@ -500,9 +500,9 @@ export default function Titulos() {
                       </TableCell>
                       <TableCell>
                         {cliente.temInadimplente ? (
-                          <StatusBadge status="inadimplente" />
+                          <StatusBadge domain="cliente" status="inadimplente" />
                         ) : (
-                          <StatusBadge status="ativo" />
+                          <StatusBadge domain="cliente" status="ativo" />
                         )}
                       </TableCell>
                       <TableCell>
@@ -589,7 +589,7 @@ export default function Titulos() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <StatusBadge status={titulo.status || 'ativo'} />
+                            <StatusBadge domain="titulo" status={titulo.status || 'a_vencer'} />
                           </TableCell>
                           <TableCell>
                             <DropdownMenu>
@@ -693,7 +693,7 @@ export default function Titulos() {
                                 )}
                               </TableCell>
                               <TableCell>
-                                <StatusBadge status={parcela.status || 'pendente'} />
+                                <StatusBadge domain="parcela" status={parcela.status || 'a_vencer'} />
                               </TableCell>
                               <TableCell>
                                 {parcela.status !== 'pago' && (
@@ -882,7 +882,7 @@ export default function Titulos() {
                 <div>
                   <Label className="text-muted-foreground">Status</Label>
                   <div className="mt-1">
-                    <StatusBadge status={selectedTitulo.status || 'ativo'} />
+                    <StatusBadge domain="titulo" status={selectedTitulo.status || 'a_vencer'} />
                   </div>
                 </div>
               </div>
@@ -902,7 +902,7 @@ export default function Titulos() {
                         </div>
                         <div className="flex items-center gap-3">
                           <span>{FormatUtils.currency(parcela.saldo_atual || 0)}</span>
-                          <StatusBadge status={parcela.status || 'pendente'} />
+                          <StatusBadge domain="parcela" status={parcela.status || 'a_vencer'} />
                         </div>
                       </div>
                     ))}

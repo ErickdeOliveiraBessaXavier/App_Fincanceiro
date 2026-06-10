@@ -16,11 +16,11 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
+import { StatusBadge } from '@/components/StatusBadge';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { clientesFilterConfig } from '@/constants/filterConfigs';
 import { clientesPresets } from '@/constants/filterPresets';
@@ -343,16 +343,6 @@ export default function Clientes() {
         description: "Não foi possível excluir o cliente.",
         variant: "destructive",
       });
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ativo': return 'bg-green-100 text-green-800';
-      case 'inadimplente': return 'bg-red-100 text-red-800';
-      case 'em_acordo': return 'bg-blue-100 text-blue-800';
-      case 'quitado': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
@@ -965,9 +955,7 @@ export default function Clientes() {
                         <h3 className="font-medium text-base">{cliente.nome}</h3>
                         <p className="text-sm text-muted-foreground">{cliente.cpf_cnpj}</p>
                       </div>
-                      <Badge className={getStatusColor(cliente.status)} variant="secondary">
-                        {cliente.status.replace('_', ' ')}
-                      </Badge>
+                      <StatusBadge domain="cliente" status={cliente.status} />
                     </div>
                     
                     <div className="space-y-2 mb-3">
@@ -1128,9 +1116,7 @@ export default function Clientes() {
                         <TableCell className="text-sm">{cliente.cobrador_nome ?? '—'}</TableCell>
                         <TableCell className="text-sm">{cliente.vendedor_nome ?? '—'}</TableCell>
                         <TableCell>
-                          <Badge className={getStatusColor(cliente.status)}>
-                            {cliente.status.replace('_', ' ')}
-                          </Badge>
+                          <StatusBadge domain="cliente" status={cliente.status} />
                         </TableCell>
                         <TableCell>{cliente.total_titulos}</TableCell>
                         <TableCell>{formatCurrency(cliente.total_valor || 0)}</TableCell>

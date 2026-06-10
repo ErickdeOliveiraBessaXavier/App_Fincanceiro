@@ -7,6 +7,7 @@ import AgingReport from '@/components/dashboard/AgingReport';
 import ProximosVencimentos from '@/components/dashboard/ProximosVencimentos';
 import TopDevedores from '@/components/dashboard/TopDevedores';
 import MetaRecuperacao from '@/components/dashboard/MetaRecuperacao';
+import { getStatusLabel } from '@/constants/statusConfig';
 
 interface DashboardStats {
   totalTitulos: number;
@@ -192,16 +193,9 @@ const Dashboard = () => {
         return acc;
       }, {} as Record<string, number>);
 
-      const statusLabels: Record<string, string> = {
-        'a_vencer': 'Em dia',
-        'pago': 'Quitado',
-        'vencido': 'Inadimplente',
-        'renegociado': 'Renegociado'
-      };
-
       setTitulosPorStatus(
         Object.entries(statusCount).map(([status, count]) => ({
-          name: statusLabels[status] || status,
+          name: getStatusLabel('titulo', status),
           value: count
         }))
       );

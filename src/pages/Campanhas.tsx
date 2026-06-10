@@ -3,7 +3,7 @@ import { Plus, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone } from
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -57,16 +57,6 @@ export default function Campanhas() {
       toast.error('Não foi possível carregar as campanhas');
     } finally {
       setLoading(false);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ativa': return 'bg-green-500 hover:bg-green-600';
-      case 'pausada': return 'bg-yellow-500 hover:bg-yellow-600';
-      case 'finalizada': return 'bg-muted text-muted-foreground';
-      case 'rascunho': return 'bg-blue-500 hover:bg-blue-600';
-      default: return 'bg-muted text-muted-foreground';
     }
   };
 
@@ -289,9 +279,7 @@ export default function Campanhas() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge className={getStatusColor(campanha.status)}>
-                          {campanha.status}
-                        </Badge>
+                        <StatusBadge domain="campanha" status={campanha.status} />
                       </TableCell>
                       <TableCell className="max-w-xs truncate hidden md:table-cell">
                         {campanha.mensagem}

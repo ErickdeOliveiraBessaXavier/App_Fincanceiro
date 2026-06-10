@@ -5,7 +5,7 @@ import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -171,24 +171,6 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
     }
   };
 
-  const getStatusBadge = (status?: string) => {
-    if (!status) return null;
-    
-    const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
-      pendente: { label: 'Pendente', variant: 'secondary' },
-      concluido: { label: 'Concluído', variant: 'default' },
-      cancelado: { label: 'Cancelado', variant: 'destructive' },
-    };
-    
-    const config = statusConfig[status] || { label: status, variant: 'outline' as const };
-    
-    return (
-      <Badge variant={config.variant} className="text-xs">
-        {config.label}
-      </Badge>
-    );
-  };
-
   const filteredEventos = filtroTipo === 'todos' 
     ? eventos 
     : eventos.filter(e => e.tipo === filtroTipo);
@@ -265,7 +247,9 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{tipoInfo.label}</span>
-                          {evento.origem === 'agendamento' && getStatusBadge(evento.status)}
+                          {evento.origem === 'agendamento' && (
+                            <StatusBadge domain="agendamento" status={evento.status} />
+                          )}
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {evento.operador} - {format(new Date(evento.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}

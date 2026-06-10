@@ -4,7 +4,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Phone, FileText, Clock, Handshake } from 'lucide-react';
 import { ClienteResumo } from '@/components/telecobranca/ClienteResumo';
@@ -14,6 +13,7 @@ import { EventoTimeline } from '@/components/telecobranca/EventoTimeline';
 import { MetricasCliente } from '@/components/telecobranca/MetricasCliente';
 import { RegistroEventoModal } from '@/components/telecobranca/RegistroEventoModal';
 import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
+import { StatusBadge } from '@/components/StatusBadge';
 
 interface Cliente {
   id: string;
@@ -73,26 +73,6 @@ export default function Telecobranca() {
 
   const handleEventoSuccess = () => {
     setRefreshTrigger(prev => prev + 1);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ativo': return 'bg-green-100 text-green-800';
-      case 'inadimplente': return 'bg-red-100 text-red-800';
-      case 'em_acordo': return 'bg-blue-100 text-blue-800';
-      case 'quitado': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'ativo': return 'Ativo';
-      case 'inadimplente': return 'Inadimplente';
-      case 'em_acordo': return 'Em Acordo';
-      case 'quitado': return 'Quitado';
-      default: return status;
-    }
   };
 
   const formatCpfCnpj = (value: string) => {
@@ -161,9 +141,7 @@ export default function Telecobranca() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl md:text-2xl font-bold">{cliente.nome}</h1>
-              <Badge className={getStatusColor(cliente.status)}>
-                {getStatusLabel(cliente.status)}
-              </Badge>
+              <StatusBadge domain="cliente" status={cliente.status} />
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <span className="font-mono">{formatCpfCnpj(cliente.cpf_cnpj)}</span>
@@ -283,17 +261,6 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
     }).format(value);
   };
 
-  const getStatusBadge = (status: string) => {
-    const configs: Record<string, { label: string; className: string }> = {
-      ativo: { label: 'Ativo', className: 'bg-green-100 text-green-800' },
-      quitado: { label: 'Quitado', className: 'bg-blue-100 text-blue-800' },
-      cancelado: { label: 'Cancelado', className: 'bg-red-100 text-red-800' },
-      inadimplente: { label: 'Inadimplente', className: 'bg-yellow-100 text-yellow-800' },
-    };
-    const config = configs[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
-    return <Badge className={config.className}>{config.label}</Badge>;
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -331,7 +298,7 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
               <Handshake className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Acordo #{acordo.id.slice(-6)}</span>
             </div>
-            {getStatusBadge(acordo.status)}
+            <StatusBadge domain="acordo" status={acordo.status} />
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
             <div>

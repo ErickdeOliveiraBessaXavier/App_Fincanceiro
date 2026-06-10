@@ -9,6 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
+import { getStatusLabel } from '@/constants/statusConfig';
 
 interface ReportData {
   totalTitulos: number;
@@ -85,15 +86,8 @@ export default function Relatorios() {
         return acc;
       }, {} as Record<string, number>);
 
-      const statusLabels: Record<string, string> = {
-        'ativo': 'Ativo',
-        'quitado': 'Quitado',
-        'inadimplente': 'Inadimplente',
-        'sem_parcelas': 'Sem Parcelas'
-      };
-
       const titulosPorStatus = Object.entries(statusCount).map(([status, count]) => ({
-        name: statusLabels[status] || status,
+        name: getStatusLabel('titulo', status),
         value: count
       }));
 
@@ -220,7 +214,7 @@ export default function Relatorios() {
         cpfCnpj: t.cliente_cpf_cnpj || 'N/A',
         valor: Number(t.valor_original || 0),
         saldoDevedor: Number(t.saldo_devedor || 0),
-        status: t.status || 'ativo',
+        status: getStatusLabel('titulo', t.status),
         createdAt: formatDate(t.created_at || '')
       }));
 
@@ -256,7 +250,7 @@ export default function Relatorios() {
         valorOriginal: Number(a.valor_original),
         valorAcordo: Number(a.valor_acordo),
         parcelas: a.parcelas,
-        status: a.status,
+        status: getStatusLabel('acordo', a.status),
         dataAcordo: formatDate(a.data_acordo)
       }));
 

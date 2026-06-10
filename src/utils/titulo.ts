@@ -65,35 +65,8 @@ export interface Parcela {
   total_eventos: number;
 }
 
-export const StatusUtils = {
-  getColor: (status: TituloStatus | ParcelaStatus | string): string => {
-    switch (status) {
-      case 'pago': return 'bg-success/10 text-success';
-      case 'pendente': return 'bg-secondary text-secondary-foreground';
-      case 'a_vencer': return 'bg-warning/10 text-warning';
-      case 'vencido': return 'bg-destructive/10 text-destructive';
-      case 'renegociado': return 'bg-accent/10 text-accent';
-      default: return 'bg-secondary text-secondary-foreground';
-    }
-  },
-
-  getLabel: (status: TituloStatus | ParcelaStatus | string): string => {
-    const labels: Record<string, string> = {
-      'pago': 'Pago',
-      'paga': 'Paga',
-      'a_vencer': 'A Vencer',
-      'vencido': 'Vencido',
-      'vencida': 'Vencida',
-      'renegociado': 'Renegociado',
-      'inadimplente': 'Inadimplente',
-      'ativo': 'Ativo',
-      'quitado': 'Quitado',
-      'sem_parcelas': 'Sem Parcelas',
-      'pendente': 'A Vencer' // Fallback para dados antigos
-    };
-    return labels[status] || status;
-  }
-};
+// Rótulos/cores de status agora vivem em src/constants/statusConfig.ts
+// (fonte única) e são renderizados via <StatusBadge domain status />.
 
 export const FormatUtils = {
   currency: (value: number): string => {

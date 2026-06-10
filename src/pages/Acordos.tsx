@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { acordosFilterConfig } from '@/constants/filterConfigs';
@@ -318,16 +318,6 @@ export default function Acordos() {
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'ativo': return 'bg-blue-100 text-blue-800';
-      case 'cumprido': return 'bg-green-100 text-green-800';
-      case 'quebrado': return 'bg-red-100 text-red-800';
-      case 'cancelado': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -480,9 +470,7 @@ export default function Acordos() {
                       {acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}
                     </TableCell>
                     <TableCell>
-                      <Badge className={getStatusColor(acordo.status)}>
-                        {acordo.status}
-                      </Badge>
+                      <StatusBadge domain="acordo" status={acordo.status} />
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -658,9 +646,7 @@ export default function Acordos() {
                 <div>
                   <Label className="text-muted-foreground">Status</Label>
                   <div className="mt-1">
-                    <Badge className={getStatusColor(selectedAcordo.status)}>
-                      {selectedAcordo.status}
-                    </Badge>
+                    <StatusBadge domain="acordo" status={selectedAcordo.status} />
                   </div>
                 </div>
                 <div>

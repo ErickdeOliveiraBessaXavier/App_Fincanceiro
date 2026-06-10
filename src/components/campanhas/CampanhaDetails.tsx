@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Mail, MessageSquare, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
@@ -77,19 +77,6 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'ativa':
-        return <Badge className="bg-green-500">Ativa</Badge>;
-      case 'pausada':
-        return <Badge variant="secondary">Pausada</Badge>;
-      case 'rascunho':
-        return <Badge variant="outline">Rascunho</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
   const getLogStatusIcon = (status: string) => {
     switch (status) {
       case 'enviado':
@@ -114,7 +101,7 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
           <DialogTitle className="flex items-center gap-2">
             {getCanalIcon(campanha.canal)}
             {campanha.nome}
-            {getStatusBadge(campanha.status)}
+            <StatusBadge domain="campanha" status={campanha.status} />
           </DialogTitle>
         </DialogHeader>
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Handshake, AlertTriangle, FileText } from 'lucide-react';
@@ -80,16 +80,6 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
     const dataVencimento = new Date(vencimento);
     const dias = differenceInDays(hoje, dataVencimento);
     return dias > 0 ? dias : 0;
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig: Record<string, { label: string; className: string }> = {
-      a_vencer: { label: 'A Vencer', className: 'bg-yellow-100 text-yellow-800' },
-      vencido: { label: 'Vencida', className: 'bg-red-100 text-red-800' },
-      pago: { label: 'Paga', className: 'bg-green-100 text-green-800' },
-    };
-    const config = statusConfig[status] || { label: status, className: 'bg-gray-100 text-gray-800' };
-    return <Badge className={config.className}>{config.label}</Badge>;
   };
 
   const totalEmAberto = parcelas
@@ -177,7 +167,7 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
                         )}
                       </TableCell>
                       <TableCell>
-                        {getStatusBadge(parcela.status)}
+                        <StatusBadge domain="parcela" status={parcela.status} />
                       </TableCell>
                       <TableCell className="text-right">
                         {(parcela.status === 'a_vencer' || parcela.status === 'vencido') && (
