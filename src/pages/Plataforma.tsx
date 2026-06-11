@@ -30,6 +30,132 @@ const statusBadge: Record<string, string> = {
   cancelada: 'bg-gray-200 text-gray-700',
 };
 
+const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
+
+// ===================== Subcomponentes =====================
+interface EmpresasTableCardProps {
+  companies: CompanyRow[];
+  isLoading: boolean;
+  statusPending: boolean;
+  onSetStatus: (id: string, status: string) => void;
+  onLimpar: (c: CompanyRow) => void;
+}
+function EmpresasTableCard({ companies, isLoading, statusPending, onSetStatus, onLimpar }: EmpresasTableCardProps) {
+  return (
+    <Card>
+      <CardHeader><CardTitle>Empresas cadastradas</CardTitle></CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+          </div>
+        ) : companies.length === 0 ? (
+          <p className="py-8 text-center text-muted-foreground">Nenhuma empresa cadastrada ainda.</p>
+        ) : (
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Empresa</TableHead>
+                  <TableHead>CNPJ</TableHead>
+                  <TableHead>Plano</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Cadastro</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {companies.map((c) => (
+                  <TableRow key={c.id}>
+                    <TableCell className="font-medium">{c.nome}</TableCell>
+                    <TableCell>{c.cnpj ?? '—'}</TableCell>
+                    <TableCell className="capitalize">{c.plano}</TableCell>
+                    <TableCell>
+                      <Badge className={statusBadge[c.status] ?? ''}>
+                        <span className="capitalize">{c.status}</span>
+                      </Badge>
+                    </TableCell>
+                    <TableCell>{fmtDate(c.created_at)}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {c.status === 'pendente' && (
+                          <Button size="sm" disabled={statusPending}
+                            onClick={() => onSetStatus(c.id, 'ativa')}>
+                            <Check className="mr-1 h-4 w-4" /> Aprovar
+                          </Button>
+                        )}
+                        {c.status === 'ativa' && (
+                          <Button size="sm" variant="outline" disabled={statusPending}
+                            onClick={() => onSetStatus(c.id, 'suspensa')}>
+                            <Pause className="mr-1 h-4 w-4" /> Suspender
+                          </Button>
+                        )}
+                        {(c.status === 'suspensa' || c.status === 'cancelada') && (
+                          <Button size="sm" variant="outline" disabled={statusPending}
+                            onClick={() => onSetStatus(c.id, 'ativa')}>
+                            <Play className="mr-1 h-4 w-4" /> Reativar
+                          </Button>
+                        )}
+                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+                          title="Limpar todos os títulos desta empresa"
+                          onClick={() => onLimpar(c)}>
+                          <Trash2 className="mr-1 h-4 w-4" /> Limpar títulos
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface LimparTitulosDialogProps {
+  alvo: CompanyRow | null;
+  confirmacao: string;
+  setConfirmacao: (v: string) => void;
+  isPending: boolean;
+  onClose: () => void;
+  onConfirm: (id: string) => void;
+}
+function LimparTitulosDialog({ alvo, confirmacao, setConfirmacao, isPending, onClose, onConfirm }: LimparTitulosDialogProps) {
+  const nome = alvo?.nome ?? '';
+  return (
+    <Dialog open={!!alvo} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Limpar títulos da empresa</DialogTitle>
+          <DialogDescription>
+            Isto <strong>apaga do banco TODOS os títulos</strong> de{' '}
+            <strong>{nome}</strong> (com parcelas, pagamentos, acordos e anexos).
+            Os clientes, cobradores e vendedores são mantidos. <strong>Não dá para desfazer.</strong>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2 py-2">
+          <p className="text-sm text-muted-foreground">
+            Para confirmar, digite o nome da empresa: <strong>{nome}</strong>
+          </p>
+          <Input value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} placeholder={nome} />
+        </div>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
+          <Button
+            variant="destructive"
+            disabled={isPending || confirmacao.trim() !== nome.trim()}
+            onClick={() => alvo && onConfirm(alvo.id)}
+          >
+            {isPending ? 'Limpando...' : 'Apagar todos os títulos'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Plataforma() {
   const { user, isSuperAdmin, loading, signOut } = useAuth();
   const { toast } = useToast();
@@ -87,7 +213,6 @@ export default function Plataforma() {
 
   const companies = companiesQuery.data ?? [];
   const count = (s: string) => companies.filter((c) => c.status === s).length;
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
   return (
     <div className="min-h-screen bg-background">
@@ -134,105 +259,23 @@ export default function Plataforma() {
           </Card>
         </div>
 
-        <Card>
-          <CardHeader><CardTitle>Empresas cadastradas</CardTitle></CardHeader>
-          <CardContent>
-            {companiesQuery.isLoading ? (
-              <div className="flex h-32 items-center justify-center">
-                <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-              </div>
-            ) : companies.length === 0 ? (
-              <p className="py-8 text-center text-muted-foreground">Nenhuma empresa cadastrada ainda.</p>
-            ) : (
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Empresa</TableHead>
-                      <TableHead>CNPJ</TableHead>
-                      <TableHead>Plano</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Cadastro</TableHead>
-                      <TableHead className="text-right">Ações</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {companies.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell className="font-medium">{c.nome}</TableCell>
-                        <TableCell>{c.cnpj ?? '—'}</TableCell>
-                        <TableCell className="capitalize">{c.plano}</TableCell>
-                        <TableCell>
-                          <Badge className={statusBadge[c.status] ?? ''}>
-                            <span className="capitalize">{c.status}</span>
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{fmtDate(c.created_at)}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-2">
-                            {c.status === 'pendente' && (
-                              <Button size="sm" disabled={setStatus.isPending}
-                                onClick={() => setStatus.mutate({ id: c.id, status: 'ativa' })}>
-                                <Check className="mr-1 h-4 w-4" /> Aprovar
-                              </Button>
-                            )}
-                            {c.status === 'ativa' && (
-                              <Button size="sm" variant="outline" disabled={setStatus.isPending}
-                                onClick={() => setStatus.mutate({ id: c.id, status: 'suspensa' })}>
-                                <Pause className="mr-1 h-4 w-4" /> Suspender
-                              </Button>
-                            )}
-                            {(c.status === 'suspensa' || c.status === 'cancelada') && (
-                              <Button size="sm" variant="outline" disabled={setStatus.isPending}
-                                onClick={() => setStatus.mutate({ id: c.id, status: 'ativa' })}>
-                                <Play className="mr-1 h-4 w-4" /> Reativar
-                              </Button>
-                            )}
-                            <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-                              title="Limpar todos os títulos desta empresa"
-                              onClick={() => { setConfirmacao(''); setLimparAlvo(c); }}>
-                              <Trash2 className="mr-1 h-4 w-4" /> Limpar títulos
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <EmpresasTableCard
+          companies={companies}
+          isLoading={companiesQuery.isLoading}
+          statusPending={setStatus.isPending}
+          onSetStatus={(id, status) => setStatus.mutate({ id, status })}
+          onLimpar={(c) => { setConfirmacao(''); setLimparAlvo(c); }}
+        />
       </main>
 
-      <Dialog open={!!limparAlvo} onOpenChange={(o) => { if (!o) { setLimparAlvo(null); setConfirmacao(''); } }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Limpar títulos da empresa</DialogTitle>
-            <DialogDescription>
-              Isto <strong>apaga do banco TODOS os títulos</strong> de{' '}
-              <strong>{limparAlvo?.nome}</strong> (com parcelas, pagamentos, acordos e anexos).
-              Os clientes, cobradores e vendedores são mantidos. <strong>Não dá para desfazer.</strong>
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-2 py-2">
-            <p className="text-sm text-muted-foreground">
-              Para confirmar, digite o nome da empresa: <strong>{limparAlvo?.nome}</strong>
-            </p>
-            <Input value={confirmacao} onChange={(e) => setConfirmacao(e.target.value)} placeholder={limparAlvo?.nome ?? ''} />
-          </div>
-          <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => { setLimparAlvo(null); setConfirmacao(''); }}>Cancelar</Button>
-            <Button
-              variant="destructive"
-              disabled={limparTitulos.isPending || confirmacao.trim() !== (limparAlvo?.nome ?? '').trim()}
-              onClick={() => limparAlvo && limparTitulos.mutate(limparAlvo.id)}
-            >
-              {limparTitulos.isPending ? 'Limpando...' : 'Apagar todos os títulos'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LimparTitulosDialog
+        alvo={limparAlvo}
+        confirmacao={confirmacao}
+        setConfirmacao={setConfirmacao}
+        isPending={limparTitulos.isPending}
+        onClose={() => { setLimparAlvo(null); setConfirmacao(''); }}
+        onConfirm={(id) => limparTitulos.mutate(id)}
+      />
     </div>
   );
 }

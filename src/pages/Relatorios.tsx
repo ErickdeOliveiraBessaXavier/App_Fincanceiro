@@ -12,6 +12,15 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
 import { getStatusLabel } from '@/constants/statusConfig';
 
+type ExportOptions = Parameters<typeof exportToCSV>[0];
+
+// Despacha a exportação para o utilitário do formato escolhido.
+function exportarComFormato(format: 'csv' | 'excel' | 'pdf', options: ExportOptions) {
+  if (format === 'csv') exportToCSV(options);
+  else if (format === 'excel') exportToExcel(options);
+  else exportToPDF(options);
+}
+
 interface ReportData {
   totalTitulos: number;
   totalValor: number;
@@ -199,6 +208,9 @@ export default function Relatorios() {
 
     const today = new Date().toISOString().split('T')[0];
     const filename = `relatorio_${reportType}_${today}`;
+    const subtitle = dateRange
+      ? `Período: ${formatDate(dateRange.from.toISOString())} a ${formatDate(dateRange.to.toISOString())}`
+      : 'Todos os registros';
 
     if (reportType === 'titulos' || reportType === 'geral') {
       const columns = [
@@ -222,7 +234,7 @@ export default function Relatorios() {
       const options = {
         filename,
         title: `Relatório de Títulos`,
-        subtitle: dateRange ? `Período: ${formatDate(dateRange.from.toISOString())} a ${formatDate(dateRange.to.toISOString())}` : 'Todos os registros',
+        subtitle,
         columns,
         data,
         totals: {
@@ -231,9 +243,7 @@ export default function Relatorios() {
         }
       };
 
-      if (format === 'csv') exportToCSV(options);
-      else if (format === 'excel') exportToExcel(options);
-      else exportToPDF(options);
+      exportarComFormato(format, options);
     }
 
     if (reportType === 'acordos') {
@@ -258,7 +268,7 @@ export default function Relatorios() {
       const options = {
         filename,
         title: `Relatório de Acordos`,
-        subtitle: dateRange ? `Período: ${formatDate(dateRange.from.toISOString())} a ${formatDate(dateRange.to.toISOString())}` : 'Todos os registros',
+        subtitle,
         columns,
         data,
         totals: {
@@ -267,9 +277,7 @@ export default function Relatorios() {
         }
       };
 
-      if (format === 'csv') exportToCSV(options);
-      else if (format === 'excel') exportToExcel(options);
-      else exportToPDF(options);
+      exportarComFormato(format, options);
     }
 
     toast.success(`Relatório exportado em ${format.toUpperCase()}`);

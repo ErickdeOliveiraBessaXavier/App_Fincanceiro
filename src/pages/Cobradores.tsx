@@ -25,6 +25,182 @@ import { useToast } from '@/hooks/use-toast';
 
 const empty = { id: '', nome: '', email: '', telefone: '', ativo: true };
 
+// ===================== Subcomponentes =====================
+interface CobradoresTableCardProps {
+  cobradores: CobradorRow[];
+  isLoading: boolean;
+  isAdmin: boolean;
+  gerando: boolean;
+  onGerarLink: (r: CobradorRow) => void;
+  onEdit: (r: CobradorRow) => void;
+  onDelete: (r: CobradorRow) => void;
+  onToggle: (r: CobradorRow) => void;
+}
+function CobradoresTableCard({
+  cobradores, isLoading, isAdmin, gerando, onGerarLink, onEdit, onDelete, onToggle,
+}: CobradoresTableCardProps) {
+  return (
+    <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle className="text-xl font-bold tracking-tight">Lista de Cobradores</CardTitle>
+            <CardDescription className="text-xs font-medium">Cada cobrador administra a sua carteira de clientes</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-6">
+        {isLoading ? (
+          <div className="flex h-32 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+          </div>
+        ) : cobradores.length === 0 ? (
+          <div className="text-center py-10 bg-muted/5 rounded-xl border border-dashed border-border/60">
+            <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Nenhum cobrador registrado</p>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Eles são criados automaticamente na importação de CSV.</p>
+          </div>
+        ) : (
+          <div className="rounded-xl border border-border/50 overflow-hidden">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Carteira</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ativo</TableHead>
+                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {cobradores.map((r) => (
+                  <TableRow key={r.id} className="hover:bg-muted/10 transition-colors">
+                    <TableCell className="font-bold text-sm text-foreground">{r.nome}</TableCell>
+                    <TableCell>
+                      <div className="text-xs space-y-1">
+                        {r.email && <div className="font-bold text-foreground">{r.email}</div>}
+                        {r.telefone && <div className="text-muted-foreground font-medium">{r.telefone}</div>}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="rounded-lg font-bold text-[10px] uppercase tracking-wider">{r.carteira} clientes</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Switch checked={r.ativo} onCheckedChange={() => onToggle(r)} />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {isAdmin && (
+                          r.user_id ? (
+                            <Badge variant="outline" className="mr-1 gap-1 text-green-600 border-green-200 bg-green-50/50">
+                              <CheckCircle2 className="h-3 w-3" /> com acesso
+                            </Badge>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => onGerarLink(r)}
+                              disabled={gerando}
+                              className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"
+                              title="Gerar link de acesso"
+                            >
+                              <Link2 className="h-4 w-4" />
+                            </Button>
+                          )
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => onEdit(r)} className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5">
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 w-8 p-0 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/5"
+                            onClick={() => onDelete(r)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+interface DeleteCobradorDialogProps {
+  toDelete: CobradorRow | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+  isPending: boolean;
+}
+function DeleteCobradorDialog({ toDelete, onCancel, onConfirm, isPending }: DeleteCobradorDialogProps) {
+  const carteira = toDelete?.carteira ?? 0;
+  return (
+    <Dialog open={!!toDelete} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirmar exclusão</DialogTitle>
+          <DialogDescription>
+            Tem certeza que deseja excluir o cobrador <strong>{toDelete?.nome}</strong>?
+            {toDelete?.user_id && (
+              <> O <strong>login de acesso</strong> vinculado a este cobrador também será excluído.</>
+            )}
+            {carteira > 0 && (
+              <> Os {carteira} cliente{carteira === 1 ? '' : 's'} da carteira
+                não serão apagados, apenas ficarão sem cobrador.</>
+            )}
+            {' '}Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={onCancel}>Cancelar</Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+            Excluir
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface LinkConviteDialogProps {
+  linkRep: { nome: string; url: string } | null;
+  copiado: boolean;
+  onCopy: () => void;
+  onClose: () => void;
+}
+function LinkConviteDialog({ linkRep, copiado, onCopy, onClose }: LinkConviteDialogProps) {
+  return (
+    <Dialog open={!!linkRep} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Link de acesso gerado</DialogTitle>
+          <DialogDescription>
+            Envie este link para <strong>{linkRep?.nome}</strong> (WhatsApp, e-mail, etc.). Ele vai
+            criar a própria senha. Depois disso, você autoriza o acesso na tela de Usuários.
+            O link expira em 7 dias.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex items-center gap-2">
+          <Input readOnly value={linkRep?.url ?? ''} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
+          <Button variant="outline" size="icon" onClick={onCopy} title="Copiar link">
+            {copiado ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
+          </Button>
+        </div>
+        <DialogFooter>
+          <Button onClick={onClose}>Fechar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Cobradores() {
   const { data: cobradores = [], isLoading } = useCobradores();
   const createMut = useCreateCobrador();
@@ -184,96 +360,16 @@ export default function Cobradores() {
         </Card>
       </div>
 
-      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
-        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-bold tracking-tight">Lista de Cobradores</CardTitle>
-              <CardDescription className="text-xs font-medium">Cada cobrador administra a sua carteira de clientes</CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="pt-6">
-          {isLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-            </div>
-          ) : cobradores.length === 0 ? (
-            <div className="text-center py-10 bg-muted/5 rounded-xl border border-dashed border-border/60">
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Nenhum cobrador registrado</p>
-              <p className="text-xs text-muted-foreground mt-1 font-medium">Eles são criados automaticamente na importação de CSV.</p>
-            </div>
-          ) : (
-            <div className="rounded-xl border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Carteira</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ativo</TableHead>
-                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {cobradores.map((r) => (
-                    <TableRow key={r.id} className="hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-bold text-sm text-foreground">{r.nome}</TableCell>
-                      <TableCell>
-                        <div className="text-xs space-y-1">
-                          {r.email && <div className="font-bold text-foreground">{r.email}</div>}
-                          {r.telefone && <div className="text-muted-foreground font-medium">{r.telefone}</div>}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="rounded-lg font-bold text-[10px] uppercase tracking-wider">{r.carteira} clientes</Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Switch checked={r.ativo} onCheckedChange={() => toggleAtivo(r)} />
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          {isAdmin && (
-                            r.user_id ? (
-                              <Badge variant="outline" className="mr-1 gap-1 text-green-600 border-green-200 bg-green-50/50">
-                                <CheckCircle2 className="h-3 w-3" /> com acesso
-                              </Badge>
-                            ) : (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => handleGerarLink(r)}
-                                disabled={gerarConvite.isPending}
-                                className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"
-                                title="Gerar link de acesso"
-                              >
-                                <Link2 className="h-4 w-4" />
-                              </Button>
-                            )
-                          )}
-                          <Button variant="ghost" size="sm" onClick={() => openEdit(r)} className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          {isAdmin && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/5"
-                              onClick={() => setToDelete(r)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <CobradoresTableCard
+        cobradores={cobradores}
+        isLoading={isLoading}
+        isAdmin={isAdmin}
+        gerando={gerarConvite.isPending}
+        onGerarLink={handleGerarLink}
+        onEdit={openEdit}
+        onDelete={setToDelete}
+        onToggle={toggleAtivo}
+      />
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -310,52 +406,19 @@ export default function Cobradores() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!toDelete} onOpenChange={(o) => !o && setToDelete(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir o cobrador <strong>{toDelete?.nome}</strong>?
-              {toDelete?.user_id && (
-                <> O <strong>login de acesso</strong> vinculado a este cobrador também será excluído.</>
-              )}
-              {(toDelete?.carteira ?? 0) > 0 && (
-                <> Os {toDelete?.carteira} cliente{toDelete?.carteira === 1 ? '' : 's'} da carteira
-                  não serão apagados, apenas ficarão sem cobrador.</>
-              )}
-              {' '}Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setToDelete(null)}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteMut.isPending}>
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteCobradorDialog
+        toDelete={toDelete}
+        onCancel={() => setToDelete(null)}
+        onConfirm={handleDelete}
+        isPending={deleteMut.isPending}
+      />
 
-      <Dialog open={!!linkRep} onOpenChange={(o) => !o && setLinkRep(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Link de acesso gerado</DialogTitle>
-            <DialogDescription>
-              Envie este link para <strong>{linkRep?.nome}</strong> (WhatsApp, e-mail, etc.). Ele vai
-              criar a própria senha. Depois disso, você autoriza o acesso na tela de Usuários.
-              O link expira em 7 dias.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center gap-2">
-            <Input readOnly value={linkRep?.url ?? ''} className="font-mono text-xs" onFocus={(e) => e.target.select()} />
-            <Button variant="outline" size="icon" onClick={copiarLink} title="Copiar link">
-              {copiado ? <Check className="h-4 w-4 text-green-600" /> : <Copy className="h-4 w-4" />}
-            </Button>
-          </div>
-          <DialogFooter>
-            <Button onClick={() => setLinkRep(null)}>Fechar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <LinkConviteDialog
+        linkRep={linkRep}
+        copiado={copiado}
+        onCopy={copiarLink}
+        onClose={() => setLinkRep(null)}
+      />
     </div>
   );
 }

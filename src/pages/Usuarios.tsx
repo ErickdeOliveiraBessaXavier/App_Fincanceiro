@@ -29,6 +29,153 @@ interface Usuario {
   role: AppRole | null;
 }
 
+// ===================== Subcomponentes =====================
+interface PendingConvitesCardProps {
+  isAdmin: boolean;
+  pendentes: ConvitePendente[];
+  busy: boolean;
+  onAutorizar: (c: ConvitePendente) => void;
+  onRecusar: (c: ConvitePendente) => void;
+}
+function PendingConvitesCard({ isAdmin, pendentes, busy, onAutorizar, onRecusar }: PendingConvitesCardProps) {
+  if (!isAdmin || pendentes.length === 0) return null;
+  return (
+    <Card className="border-2 border-amber-500/20 bg-amber-500/5 shadow-card rounded-2xl overflow-hidden">
+      <CardHeader className="pb-4 border-b border-amber-500/10 bg-amber-500/10">
+        <CardTitle className="flex items-center gap-3 text-amber-700">
+          <Clock className="h-5 w-5" />
+          <span className="font-bold tracking-tight">Aguardando Autorização</span>
+          <Badge className="bg-amber-600 text-white rounded-full px-2.5">{pendentes.length}</Badge>
+        </CardTitle>
+        <CardDescription className="text-amber-600/80 font-medium">
+          Novos membros aguardando liberação de acesso à plataforma.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <div className="rounded-xl border border-amber-500/20 overflow-hidden bg-white/50">
+          <Table>
+            <TableHeader className="bg-amber-500/10">
+              <TableRow>
+                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Nome</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Email</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Tipo</TableHead>
+                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Carteira</TableHead>
+                <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-amber-800">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pendentes.map((c) => (
+                <TableRow key={c.id} className="hover:bg-amber-500/5 transition-colors">
+                  <TableCell className="font-bold text-sm text-amber-900">{c.nome ?? '—'}</TableCell>
+                  <TableCell className="text-xs font-medium text-amber-800/70">{c.email ?? '—'}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary" className="capitalize rounded-lg font-bold text-[10px] bg-amber-200 text-amber-900">{c.tipo}</Badge>
+                  </TableCell>
+                  <TableCell className="text-xs font-medium text-amber-800/70">{c.carteira_nome ?? '—'}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        size="sm"
+                        className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 font-bold h-8"
+                        onClick={() => onAutorizar(c)}
+                        disabled={busy}
+                      >
+                        <Check className="h-4 w-4 mr-2" /> Autorizar
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/5 rounded-lg h-8 px-3 font-bold"
+                        onClick={() => onRecusar(c)}
+                        disabled={busy}
+                      >
+                        <X className="h-4 w-4 mr-2" /> Recusar
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface DeleteUsuarioDialogProps {
+  target: Usuario | null;
+  deleting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+function DeleteUsuarioDialog({ target, deleting, onCancel, onConfirm }: DeleteUsuarioDialogProps) {
+  return (
+    <Dialog open={!!target} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Excluir usuário</DialogTitle>
+          <DialogDescription>
+            Tem certeza que deseja excluir <strong>{target?.nome}</strong> ({target?.email})?
+            A conta de acesso será removida. Se for um cobrador, a carteira de clientes é
+            preservada, apenas fica sem acesso. Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" onClick={onCancel} disabled={deleting}>Cancelar</Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={deleting}>
+            {deleting ? 'Excluindo...' : 'Excluir'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface NovoAdminDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  novoUser: { nome: string; email: string; senha: string };
+  setNovoUser: (u: { nome: string; email: string; senha: string }) => void;
+  creating: boolean;
+  onCreate: () => void;
+}
+function NovoAdminDialog({ open, onOpenChange, novoUser, setNovoUser, creating, onCreate }: NovoAdminDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Novo administrador</DialogTitle>
+          <DialogDescription>
+            Cria um usuário com acesso total à empresa. Para dar acesso a um cobrador,
+            use a página <strong>Cobradores</strong> (botão de link de convite).
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-2">
+          <div className="grid gap-2">
+            <Label htmlFor="nu-nome">Nome <span className="text-red-500">*</span></Label>
+            <Input id="nu-nome" value={novoUser.nome} onChange={(e) => setNovoUser({ ...novoUser, nome: e.target.value })} />
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <div className="grid gap-2">
+              <Label htmlFor="nu-email">E-mail <span className="text-red-500">*</span></Label>
+              <Input id="nu-email" type="email" value={novoUser.email} onChange={(e) => setNovoUser({ ...novoUser, email: e.target.value })} />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="nu-senha">Senha <span className="text-red-500">*</span></Label>
+              <Input id="nu-senha" type="text" value={novoUser.senha} onChange={(e) => setNovoUser({ ...novoUser, senha: e.target.value })} placeholder="mín. 6 caracteres" />
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={creating}>Cancelar</Button>
+          <Button onClick={onCreate} disabled={creating}>{creating ? 'Criando...' : 'Criar administrador'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Usuarios() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
@@ -215,68 +362,13 @@ export default function Usuarios() {
         </Card>
       </div>
 
-      {isAdmin && pendentes.length > 0 && (
-        <Card className="border-2 border-amber-500/20 bg-amber-500/5 shadow-card rounded-2xl overflow-hidden">
-          <CardHeader className="pb-4 border-b border-amber-500/10 bg-amber-500/10">
-            <CardTitle className="flex items-center gap-3 text-amber-700">
-              <Clock className="h-5 w-5" />
-              <span className="font-bold tracking-tight">Aguardando Autorização</span>
-              <Badge className="bg-amber-600 text-white rounded-full px-2.5">{pendentes.length}</Badge>
-            </CardTitle>
-            <CardDescription className="text-amber-600/80 font-medium">
-              Novos membros aguardando liberação de acesso à plataforma.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="rounded-xl border border-amber-500/20 overflow-hidden bg-white/50">
-              <Table>
-                <TableHeader className="bg-amber-500/10">
-                  <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Nome</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Email</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Tipo</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Carteira</TableHead>
-                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-amber-800">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pendentes.map((c) => (
-                    <TableRow key={c.id} className="hover:bg-amber-500/5 transition-colors">
-                      <TableCell className="font-bold text-sm text-amber-900">{c.nome ?? '—'}</TableCell>
-                      <TableCell className="text-xs font-medium text-amber-800/70">{c.email ?? '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="capitalize rounded-lg font-bold text-[10px] bg-amber-200 text-amber-900">{c.tipo}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs font-medium text-amber-800/70">{c.carteira_nome ?? '—'}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            size="sm"
-                            className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 font-bold h-8"
-                            onClick={() => handleAutorizar(c)}
-                            disabled={autorizarMut.isPending || revogarMut.isPending}
-                          >
-                            <Check className="h-4 w-4 mr-2" /> Autorizar
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-destructive hover:text-destructive hover:bg-destructive/5 rounded-lg h-8 px-3 font-bold"
-                            onClick={() => handleRecusar(c)}
-                            disabled={autorizarMut.isPending || revogarMut.isPending}
-                          >
-                            <X className="h-4 w-4 mr-2" /> Recusar
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <PendingConvitesCard
+        isAdmin={isAdmin}
+        pendentes={pendentes}
+        busy={autorizarMut.isPending || revogarMut.isPending}
+        onAutorizar={handleAutorizar}
+        onRecusar={handleRecusar}
+      />
 
       <Card className="border-none shadow-card rounded-2xl overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
@@ -362,56 +454,21 @@ export default function Usuarios() {
         />
       )}
 
-      <Dialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Excluir usuário</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir <strong>{deleteTarget?.nome}</strong> ({deleteTarget?.email})?
-              A conta de acesso será removida. Se for um cobrador, a carteira de clientes é
-              preservada, apenas fica sem acesso. Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <Button variant="ghost" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
-            <Button variant="destructive" onClick={handleExcluir} disabled={deleting}>
-              {deleting ? 'Excluindo...' : 'Excluir'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteUsuarioDialog
+        target={deleteTarget}
+        deleting={deleting}
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={handleExcluir}
+      />
 
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Novo administrador</DialogTitle>
-            <DialogDescription>
-              Cria um usuário com acesso total à empresa. Para dar acesso a um cobrador,
-              use a página <strong>Cobradores</strong> (botão de link de convite).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-2">
-            <div className="grid gap-2">
-              <Label htmlFor="nu-nome">Nome <span className="text-red-500">*</span></Label>
-              <Input id="nu-nome" value={novoUser.nome} onChange={(e) => setNovoUser({ ...novoUser, nome: e.target.value })} />
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="grid gap-2">
-                <Label htmlFor="nu-email">E-mail <span className="text-red-500">*</span></Label>
-                <Input id="nu-email" type="email" value={novoUser.email} onChange={(e) => setNovoUser({ ...novoUser, email: e.target.value })} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="nu-senha">Senha <span className="text-red-500">*</span></Label>
-                <Input id="nu-senha" type="text" value={novoUser.senha} onChange={(e) => setNovoUser({ ...novoUser, senha: e.target.value })} placeholder="mín. 6 caracteres" />
-              </div>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={creating}>Cancelar</Button>
-            <Button onClick={handleCreateUser} disabled={creating}>{creating ? 'Criando...' : 'Criar administrador'}</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NovoAdminDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        novoUser={novoUser}
+        setNovoUser={setNovoUser}
+        creating={creating}
+        onCreate={handleCreateUser}
+      />
     </div>
   );
 }

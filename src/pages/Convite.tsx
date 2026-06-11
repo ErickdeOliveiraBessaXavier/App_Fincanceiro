@@ -23,11 +23,22 @@ const Frame = ({ children }: { children: React.ReactNode }) => (
   </div>
 );
 
+type ConviteForm = { nome: string; email: string; senha: string; confirma: string };
+
+// Valida o formulário; devolve a mensagem de erro ou null se estiver ok.
+function validarConvite(form: ConviteForm): string | null {
+  if (form.nome.trim().length < 2) return 'Informe seu nome.';
+  if (!form.email.includes('@')) return 'Informe um e-mail válido.';
+  if (form.senha.length < 6) return 'A senha deve ter ao menos 6 caracteres.';
+  if (form.senha !== form.confirma) return 'As senhas não conferem.';
+  return null;
+}
+
 export default function Convite() {
   const [params] = useSearchParams();
   const token = params.get('token') ?? '';
 
-  const [form, setForm] = useState({ nome: '', email: '', senha: '', confirma: '' });
+  const [form, setForm] = useState<ConviteForm>({ nome: '', email: '', senha: '', confirma: '' });
   const [loading, setLoading] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [enviado, setEnviado] = useState(false);
@@ -36,10 +47,8 @@ export default function Convite() {
     e.preventDefault();
     setErro(null);
 
-    if (form.nome.trim().length < 2) return setErro('Informe seu nome.');
-    if (!form.email.includes('@')) return setErro('Informe um e-mail válido.');
-    if (form.senha.length < 6) return setErro('A senha deve ter ao menos 6 caracteres.');
-    if (form.senha !== form.confirma) return setErro('As senhas não conferem.');
+    const msgErro = validarConvite(form);
+    if (msgErro) return setErro(msgErro);
 
     setLoading(true);
     try {

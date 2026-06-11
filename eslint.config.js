@@ -21,6 +21,16 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      complexity: ["error", 10],
+    },
+  },
+  {
+    // Componentes shadcn/ui são código vendorizado (gerado pela CLI do shadcn).
+    // Mantemos idênticos ao upstream para não dificultar updates — a regra de
+    // complexidade não se aplica a eles.
+    files: ["src/components/ui/**"],
+    rules: {
+      complexity: "off",
     },
   },
 );

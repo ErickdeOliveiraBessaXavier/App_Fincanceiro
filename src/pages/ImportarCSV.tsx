@@ -45,6 +45,7 @@ const ALIASES: Record<string, string[]> = {
 };
 
 type ColMap = Partial<Record<keyof typeof ALIASES, number>>;
+type Getter = (row: any[], f: keyof typeof ALIASES) => unknown;
 
 function buildColMap(headerRow: any[]): ColMap {
   const map: ColMap = {};
@@ -69,20 +70,27 @@ function findHeader(matrix: any[][]): { rowIdx: number; colMap: ColMap } | null 
   return null;
 }
 
-// Excel serial / Date / string -> 'YYYY-MM-DD' (ou null se inválido).
-function toISODate(v: unknown): string | null {
-  if (v === null || v === undefined || v === '') return null;
-  if (v instanceof Date && !isNaN(v.getTime())) return v.toISOString().slice(0, 10);
-  if (typeof v === 'number') {
-    const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
-    return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
-  }
-  const s = String(v).trim();
+// Serial do Excel -> 'YYYY-MM-DD' (ou null se inválido).
+function dateFromExcelSerial(v: number): string | null {
+  const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
+  return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+// Texto ('YYYY-MM-DD', 'DD/MM/AAAA' ou parsável pelo Date) -> 'YYYY-MM-DD' (ou null).
+function dateFromString(s: string): string | null {
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
   const br = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/); // DD/MM/AAAA
   if (br) return `${br[3]}-${br[2].padStart(2, '0')}-${br[1].padStart(2, '0')}`;
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
+}
+
+// Excel serial / Date / string -> 'YYYY-MM-DD' (ou null se inválido).
+function toISODate(v: unknown): string | null {
+  if (v === null || v === undefined || v === '') return null;
+  if (v instanceof Date) return isNaN(v.getTime()) ? null : v.toISOString().slice(0, 10);
+  if (typeof v === 'number') return dateFromExcelSerial(v);
+  return dateFromString(String(v).trim());
 }
 
 // Aceita número ou texto "1.250,50" / "1250,50" / "1250.50".
@@ -133,46 +141,45 @@ async function readMatrix(file: File): Promise<any[][]> {
   return XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, raw: true, defval: '' });
 }
 
-function parseMatrix(matrix: any[][]): ParsedFile {
-  const found = findHeader(matrix);
-  if (!found) {
-    return {
-      grupos: [], totalParcelas: 0, previewHeaders: [], previewRows: [],
-      errors: ['Não encontrei as colunas obrigatórias (cliente, valor, vencimento). Verifique o cabeçalho.'],
-    };
-  }
-  const { rowIdx, colMap } = found;
-  const get = (row: any[], f: keyof typeof ALIASES) =>
-    colMap[f] !== undefined ? row[colMap[f] as number] : '';
+// Acessor de célula a partir do mapa de colunas detectado.
+function cellGetter(colMap: ColMap): Getter {
+  return (row, f) => (colMap[f] !== undefined ? row[colMap[f] as number] : '');
+}
 
-  const dataRows = matrix.slice(rowIdx + 1);
+// Monta um novo grupo (cabeçalho do título) a partir da primeira linha encontrada.
+function buildGrupo(row: any[], str: Getter, base: { doc: string; cliente: string; cpf: string }): Grupo {
+  return {
+    numero_documento: base.doc || null,
+    cliente: base.cliente,
+    cpf_cnpj: base.cpf,
+    vendedor: str(row, 'vendedor'),
+    cobrador: str(row, 'cobrador'),
+    cidade: str(row, 'cidade'),
+    estado: str(row, 'estado'),
+    descricao: str(row, 'descricao'),
+    contato: str(row, 'contato'),
+    parcelas: [],
+  };
+}
+
+// Agrupa as linhas de dados em títulos (mesmo Nº TITULO => mesmo grupo).
+function collectGrupos(dataRows: any[][], rowIdx: number, get: Getter) {
+  const str: Getter = (row, f) => String(get(row, f) ?? '').trim();
   const gruposMap = new Map<string, Grupo>();
-  const errors: string[] = [];
   let totalParcelas = 0;
 
   dataRows.forEach((row, idx) => {
     const linha = rowIdx + 2 + idx; // nº da linha na planilha (1-based)
-    const cliente = String(get(row, 'cliente') ?? '').trim();
+    const cliente = str(row, 'cliente');
     const cpf = onlyDigits(get(row, 'cpf_cnpj'));
     if (!cliente && !cpf) return; // linha vazia
 
-    const doc = String(get(row, 'numero_documento') ?? '').trim();
+    const doc = str(row, 'numero_documento');
     const key = doc ? `doc:${doc.toLowerCase()}` : `row:${linha}`;
 
     let g = gruposMap.get(key);
     if (!g) {
-      g = {
-        numero_documento: doc || null,
-        cliente,
-        cpf_cnpj: cpf,
-        vendedor: String(get(row, 'vendedor') ?? '').trim(),
-        cobrador: String(get(row, 'cobrador') ?? '').trim(),
-        cidade: String(get(row, 'cidade') ?? '').trim(),
-        estado: String(get(row, 'estado') ?? '').trim(),
-        descricao: String(get(row, 'descricao') ?? '').trim(),
-        contato: String(get(row, 'contato') ?? '').trim(),
-        parcelas: [],
-      };
+      g = buildGrupo(row, str, { doc, cliente, cpf });
       gruposMap.set(key, g);
     }
 
@@ -186,37 +193,67 @@ function parseMatrix(matrix: any[][]): ParsedFile {
     totalParcelas++;
   });
 
-  const grupos = Array.from(gruposMap.values());
+  return { gruposMap, totalParcelas };
+}
 
-  // Validação
-  for (const g of grupos) {
-    const ref = g.numero_documento ? `Título ${g.numero_documento}` : `Linha ${g.parcelas[0]?.linha}`;
-    if (g.cpf_cnpj.length !== 11 && g.cpf_cnpj.length !== 14) {
-      errors.push(`${ref}: CPF/CNPJ inválido (${g.cpf_cnpj || 'vazio'})`);
-    }
-    if (!g.cliente) errors.push(`${ref}: nome do cliente vazio`);
-    for (const p of g.parcelas) {
-      if (p.valor === null || p.valor <= 0) errors.push(`Linha ${p.linha}: valor inválido`);
-      if (!p.vencimento) errors.push(`Linha ${p.linha}: vencimento inválido`);
-    }
+function validarParcela(p: Parcela): string[] {
+  const errs: string[] = [];
+  if (p.valor === null || p.valor <= 0) errs.push(`Linha ${p.linha}: valor inválido`);
+  if (!p.vencimento) errs.push(`Linha ${p.linha}: vencimento inválido`);
+  return errs;
+}
+
+function validarGrupo(g: Grupo): string[] {
+  const ref = g.numero_documento ? `Título ${g.numero_documento}` : `Linha ${g.parcelas[0]?.linha}`;
+  const errs: string[] = [];
+  if (g.cpf_cnpj.length !== 11 && g.cpf_cnpj.length !== 14) {
+    errs.push(`${ref}: CPF/CNPJ inválido (${g.cpf_cnpj || 'vazio'})`);
   }
+  if (!g.cliente) errs.push(`${ref}: nome do cliente vazio`);
+  for (const p of g.parcelas) errs.push(...validarParcela(p));
+  return errs;
+}
 
-  // Preview: cabeçalho mapeado + 5 primeiras linhas de dados
+function validarGrupos(grupos: Grupo[]): string[] {
+  return grupos.flatMap(validarGrupo);
+}
+
+// Preview: cabeçalho mapeado + 5 primeiras linhas de dados.
+function buildPreview(dataRows: any[][], colMap: ColMap, get: Getter) {
   const previewHeaders = (Object.keys(ALIASES) as (keyof typeof ALIASES)[]).filter(
     (f) => colMap[f] !== undefined,
   );
+  const hasData = (r: any[]) => String(get(r, 'cliente') ?? '').trim() || onlyDigits(get(r, 'cpf_cnpj'));
+  const cell = (r: any[], f: keyof typeof ALIASES) =>
+    f === 'vencimento' ? toISODate(get(r, f)) ?? String(get(r, f) ?? '') : String(get(r, f) ?? '');
   const previewRows = dataRows
-    .filter((r) => String(get(r, 'cliente') ?? '').trim() || onlyDigits(get(r, 'cpf_cnpj')))
+    .filter(hasData)
     .slice(0, 5)
-    .map((r) => previewHeaders.map((f) => {
-      if (f === 'vencimento') return toISODate(get(r, f)) ?? String(get(r, f) ?? '');
-      return String(get(r, f) ?? '');
-    }));
+    .map((r) => previewHeaders.map((f) => cell(r, f)));
+  return { previewHeaders, previewRows };
+}
+
+function parseMatrix(matrix: any[][]): ParsedFile {
+  const found = findHeader(matrix);
+  if (!found) {
+    return {
+      grupos: [], totalParcelas: 0, previewHeaders: [], previewRows: [],
+      errors: ['Não encontrei as colunas obrigatórias (cliente, valor, vencimento). Verifique o cabeçalho.'],
+    };
+  }
+  const { rowIdx, colMap } = found;
+  const get = cellGetter(colMap);
+  const dataRows = matrix.slice(rowIdx + 1);
+
+  const { gruposMap, totalParcelas } = collectGrupos(dataRows, rowIdx, get);
+  const grupos = Array.from(gruposMap.values());
+  const errors = validarGrupos(grupos);
+  const { previewHeaders, previewRows } = buildPreview(dataRows, colMap, get);
 
   return { grupos, errors, totalParcelas, previewHeaders, previewRows };
 }
 
-// ===================== Componente =====================
+// ===================== Importação (RPC por título) =====================
 interface ImportResult {
   titulos: number;
   parcelas: number;
@@ -224,6 +261,213 @@ interface ImportResult {
   errors: string[];
 }
 
+type RpcResposta = { error?: string; parcelas_inseridas?: number };
+type ImportOutcome = { parcelas: number } | { error: string };
+
+// Parâmetros da RPC importar_titulo_completo para um grupo.
+function rpcParams(g: Grupo, companyId: string | null) {
+  return {
+    p_company_id: companyId,
+    p_cliente_nome: g.cliente,
+    p_cpf_cnpj: g.cpf_cnpj,
+    p_numero_documento: g.numero_documento,
+    p_parcelas: g.parcelas.map((p) => ({ numero: p.numero, valor: p.valor, vencimento: p.vencimento })),
+    p_contato: g.contato || null,
+    p_descricao: g.descricao || null,
+    p_cobrador: g.cobrador || null,
+    p_vendedor: g.vendedor || null,
+    p_cidade: g.cidade || null,
+    p_estado: g.estado || null,
+  };
+}
+
+// Rótulo do título para mensagens (Nº do documento ou linha da planilha).
+function refDoGrupo(g: Grupo): string {
+  return g.numero_documento ? `Título ${g.numero_documento}` : `Linha ${g.parcelas[0]?.linha}`;
+}
+
+// Traduz a resposta da RPC em parcelas inseridas OU uma mensagem de erro.
+function interpretarResposta(
+  g: Grupo,
+  res: RpcResposta | null,
+  error: { message?: string } | null,
+): ImportOutcome {
+  const resErro = res?.error;
+  if (error || resErro) {
+    return { error: `${refDoGrupo(g)}: ${error?.message ?? resErro}` };
+  }
+  return { parcelas: res?.parcelas_inseridas ?? g.parcelas.length };
+}
+
+function erroInesperado(g: Grupo, e: unknown): string {
+  const msg = (e as { message?: string })?.message ?? 'erro inesperado';
+  return `Título ${g.numero_documento ?? '?'}: ${msg}`;
+}
+
+// Importa um único título; devolve as parcelas inseridas ou uma mensagem de erro.
+async function importarUmGrupo(g: Grupo, companyId: string | null): Promise<ImportOutcome> {
+  try {
+    const { data: res, error } = await supabase.rpc('importar_titulo_completo', rpcParams(g, companyId));
+    return interpretarResposta(g, res as RpcResposta | null, error);
+  } catch (e) {
+    return { error: erroInesperado(g, e) };
+  }
+}
+
+function isImportDisabled(file: File | null, parsed: ParsedFile | null, errors: string[], uploading: boolean) {
+  return !file || !parsed || parsed.grupos.length === 0 || errors.length > 0 || uploading;
+}
+
+// ===================== Subcomponentes de UI =====================
+interface EmpresaSelectProps {
+  isSuperAdmin: boolean;
+  companies: { id: string; nome: string; status: string }[];
+  selectedCompany: string;
+  onChange: (v: string) => void;
+}
+function EmpresaSelect({ isSuperAdmin, companies, selectedCompany, onChange }: EmpresaSelectProps) {
+  if (!isSuperAdmin) return null;
+  return (
+    <div className="grid gap-2 p-4 rounded-xl bg-muted/30 border border-border/40">
+      <Label htmlFor="imp-company" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Empresa de destino</Label>
+      <select
+        id="imp-company"
+        value={selectedCompany}
+        onChange={(e) => onChange(e.target.value)}
+        className="flex h-11 w-full rounded-xl border border-border/60 bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+      >
+        <option value="">Selecione a empresa...</option>
+        {companies.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.nome}{c.status !== 'ativa' ? ` (${c.status})` : ''}
+          </option>
+        ))}
+      </select>
+      <p className="text-[10px] text-muted-foreground italic px-1">
+        * Opção visível apenas para super administradores.
+      </p>
+    </div>
+  );
+}
+
+interface ImportStatusProps {
+  parsed: ParsedFile | null;
+  errors: string[];
+  uploading: boolean;
+  uploadProgress: number;
+}
+function ImportStatus({ parsed, errors, uploading, uploadProgress }: ImportStatusProps) {
+  return (
+    <>
+      {parsed && parsed.grupos.length > 0 && (
+        <Alert className="bg-success/5 border-success/20 text-success rounded-xl">
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription className="font-bold text-xs uppercase tracking-wider">
+            Detectados {parsed.grupos.length} títulos e {parsed.totalParcelas} parcelas.
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {errors.length > 0 && (
+        <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <div className="max-h-40 overflow-y-auto">
+              <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
+                {errors.slice(0, 5).map((e, i) => <li key={i}>• {e}</li>)}
+                {errors.length > 5 && <li>... e mais {errors.length - 5} erros</li>}
+              </ul>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
+      {uploading && (
+        <div className="space-y-3 bg-muted/20 p-4 rounded-xl border border-border/40">
+          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+            <span className="text-muted-foreground animate-pulse">Importando dados...</span>
+            <span className="text-primary">{uploadProgress}%</span>
+          </div>
+          <Progress value={uploadProgress} className="h-2" />
+        </div>
+      )}
+    </>
+  );
+}
+
+function PreviewCard({ parsed }: { parsed: ParsedFile | null }) {
+  if (!parsed || parsed.previewRows.length === 0) return null;
+  return (
+    <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <CardTitle className="text-xl font-bold tracking-tight">Prévia da Planilha</CardTitle>
+        <CardDescription className="text-xs font-medium">As primeiras 5 linhas identificadas</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-6">
+        <div className="rounded-xl border border-border/50 overflow-hidden">
+          <Table>
+            <TableHeader className="bg-muted/30">
+              <TableRow>
+                {parsed.previewHeaders.map((h) => (
+                  <TableHead key={h} className="text-[10px] font-bold uppercase tracking-widest">{h.replace('_', ' ')}</TableHead>
+                ))}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {parsed.previewRows.map((row, ri) => (
+                <TableRow key={ri} className="hover:bg-muted/5 transition-colors">
+                  {row.map((cell, ci) => <TableCell key={ci} className="text-xs font-medium text-muted-foreground">{cell}</TableCell>)}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ResultCard({ result }: { result: ImportResult | null }) {
+  if (!result) return null;
+  return (
+    <Card className="border-none shadow-card rounded-2xl overflow-hidden bg-primary/5 border-primary/10">
+      <CardHeader className="pb-4 border-b border-primary/10">
+        <CardTitle className="text-xl font-bold tracking-tight text-primary">Resultado da Importação</CardTitle>
+      </CardHeader>
+      <CardContent className="pt-8 space-y-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {[
+            { label: 'Títulos', val: result.titulos, cls: 'bg-background text-primary' },
+            { label: 'Parcelas', val: result.parcelas, cls: 'bg-background text-success' },
+            { label: 'Clientes', val: result.clientes, cls: 'bg-background text-blue-600' },
+            { label: 'Erros', val: result.errors.length, cls: result.errors.length > 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-background text-muted-foreground' }
+          ].map((item, i) => (
+            <div key={i} className={cn("p-6 rounded-2xl border border-border/50 text-center shadow-sm", item.cls)}>
+              <div className="text-3xl font-black tracking-tighter mb-1">{item.val}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">{item.label}</div>
+            </div>
+          ))}
+        </div>
+
+        {result.errors.length > 0 && (
+          <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <div className="max-h-40 overflow-y-auto">
+                <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
+                  {result.errors.slice(0, 10).map((e, i) => <li key={i}>• {e}</li>)}
+                  {result.errors.length > 10 && <li className="pt-2">... e mais {result.errors.length - 10} erros</li>}
+                </ul>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ===================== Componente =====================
 export default function ImportarCSV() {
   const [file, setFile] = useState<File | null>(null);
   const [parsed, setParsed] = useState<ParsedFile | null>(null);
@@ -269,66 +513,26 @@ export default function ImportarCSV() {
     }
   };
 
-  const handleImport = async () => {
-    if (!file || !parsed || !user) return;
+  // Guardas de pré-importação (mostram toast e bloqueiam se algo estiver errado).
+  const validarImportacao = (): boolean => {
+    if (!file || !parsed || !user) return false;
     if (parsed.errors.length > 0) {
       toast({ title: 'Corrija os erros', description: 'Há linhas inválidas no arquivo.', variant: 'destructive' });
-      return;
+      return false;
     }
     if (parsed.grupos.length === 0) {
       toast({ title: 'Nada a importar', description: 'Nenhuma linha de dados encontrada.', variant: 'destructive' });
-      return;
+      return false;
     }
     if (isSuperAdmin && !selectedCompany) {
       toast({ title: 'Selecione a empresa', description: 'Escolha para qual empresa este arquivo será importado.', variant: 'destructive' });
-      return;
+      return false;
     }
+    return true;
+  };
 
-    setUploading(true);
-    setUploadProgress(0);
-    setImportResult(null);
-
-    const result: ImportResult = { titulos: 0, parcelas: 0, clientes: 0, errors: [] };
-    const clientesVistos = new Set<string>();
-
-    for (let i = 0; i < parsed.grupos.length; i++) {
-      const g = parsed.grupos[i];
-      setUploadProgress(Math.round(((i + 1) / parsed.grupos.length) * 100));
-      try {
-        const { data: res, error } = await supabase.rpc('importar_titulo_completo', {
-          p_company_id: isSuperAdmin ? selectedCompany : null,
-          p_cliente_nome: g.cliente,
-          p_cpf_cnpj: g.cpf_cnpj,
-          p_numero_documento: g.numero_documento,
-          p_parcelas: g.parcelas.map((p) => ({ numero: p.numero, valor: p.valor, vencimento: p.vencimento })),
-          p_contato: g.contato || null,
-          p_descricao: g.descricao || null,
-          p_cobrador: g.cobrador || null,
-          p_vendedor: g.vendedor || null,
-          p_cidade: g.cidade || null,
-          p_estado: g.estado || null,
-        });
-        if (error || (res as any)?.error) {
-          const ref = g.numero_documento ? `Título ${g.numero_documento}` : `Linha ${g.parcelas[0]?.linha}`;
-          result.errors.push(`${ref}: ${error?.message ?? (res as any)?.error}`);
-          continue;
-        }
-        result.titulos++;
-        result.parcelas += (res as any)?.parcelas_inseridas ?? g.parcelas.length;
-        if (!clientesVistos.has(g.cpf_cnpj)) {
-          clientesVistos.add(g.cpf_cnpj);
-          result.clientes++;
-        }
-      } catch (e: any) {
-        result.errors.push(`Título ${g.numero_documento ?? '?'}: ${e?.message ?? 'erro inesperado'}`);
-      }
-    }
-
-    await supabase.rpc('refresh_mv_parcelas');
-    setImportResult(result);
-    setUploading(false);
-    setUploadProgress(0);
-
+  // Avisa o usuário do resultado e limpa o formulário quando não houve erros.
+  const notificarResultado = (result: ImportResult) => {
     if (result.titulos > 0) {
       toast({ title: 'Importação concluída', description: `${result.titulos} títulos e ${result.parcelas} parcelas importados.` });
     }
@@ -339,6 +543,42 @@ export default function ImportarCSV() {
       setParsed(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
+  };
+
+  const handleImport = async () => {
+    if (!validarImportacao()) return;
+
+    setUploading(true);
+    setUploadProgress(0);
+    setImportResult(null);
+
+    const grupos = parsed!.grupos;
+    const companyId = isSuperAdmin ? selectedCompany : null;
+    const result: ImportResult = { titulos: 0, parcelas: 0, clientes: 0, errors: [] };
+    const clientesVistos = new Set<string>();
+
+    for (let i = 0; i < grupos.length; i++) {
+      const g = grupos[i];
+      setUploadProgress(Math.round(((i + 1) / grupos.length) * 100));
+      const r = await importarUmGrupo(g, companyId);
+      if ('error' in r) {
+        result.errors.push(r.error);
+        continue;
+      }
+      result.titulos++;
+      result.parcelas += r.parcelas;
+      if (!clientesVistos.has(g.cpf_cnpj)) {
+        clientesVistos.add(g.cpf_cnpj);
+        result.clientes++;
+      }
+    }
+
+    await supabase.rpc('refresh_mv_parcelas');
+    setImportResult(result);
+    setUploading(false);
+    setUploadProgress(0);
+
+    notificarResultado(result);
   };
 
   const downloadTemplate = () => {
@@ -401,27 +641,12 @@ export default function ImportarCSV() {
             <CardDescription className="text-xs font-medium">Selecione o arquivo da sua máquina</CardDescription>
           </CardHeader>
           <CardContent className="pt-8 space-y-6">
-            {isSuperAdmin && (
-              <div className="grid gap-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-                <Label htmlFor="imp-company" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Empresa de destino</Label>
-                <select
-                  id="imp-company"
-                  value={selectedCompany}
-                  onChange={(e) => setSelectedCompany(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-border/60 bg-background px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-                >
-                  <option value="">Selecione a empresa...</option>
-                  {companies.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}{c.status !== 'ativa' ? ` (${c.status})` : ''}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-muted-foreground italic px-1">
-                  * Opção visível apenas para super administradores.
-                </p>
-              </div>
-            )}
+            <EmpresaSelect
+              isSuperAdmin={isSuperAdmin}
+              companies={companies}
+              selectedCompany={selectedCompany}
+              onChange={setSelectedCompany}
+            />
             <div
               className="border-2 border-dashed border-primary/20 bg-primary/5 rounded-2xl p-12 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/10 transition-all group"
               onClick={() => fileInputRef.current?.click()}
@@ -443,42 +668,11 @@ export default function ImportarCSV() {
               className="hidden"
             />
 
-            {parsed && parsed.grupos.length > 0 && (
-              <Alert className="bg-success/5 border-success/20 text-success rounded-xl">
-                <CheckCircle className="h-4 w-4" />
-                <AlertDescription className="font-bold text-xs uppercase tracking-wider">
-                  Detectados {parsed.grupos.length} títulos e {parsed.totalParcelas} parcelas.
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {errors.length > 0 && (
-              <Alert variant="destructive" className="rounded-xl border-destructive/20 bg-destructive/5">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="max-h-40 overflow-y-auto">
-                    <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
-                      {errors.slice(0, 5).map((e, i) => <li key={i}>• {e}</li>)}
-                      {errors.length > 5 && <li>... e mais {errors.length - 5} erros</li>}
-                    </ul>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-
-            {uploading && (
-              <div className="space-y-3 bg-muted/20 p-4 rounded-xl border border-border/40">
-                <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                  <span className="text-muted-foreground animate-pulse">Importando dados...</span>
-                  <span className="text-primary">{uploadProgress}%</span>
-                </div>
-                <Progress value={uploadProgress} className="h-2" />
-              </div>
-            )}
+            <ImportStatus parsed={parsed} errors={errors} uploading={uploading} uploadProgress={uploadProgress} />
 
             <Button
               onClick={handleImport}
-              disabled={!file || !parsed || parsed.grupos.length === 0 || errors.length > 0 || uploading}
+              disabled={isImportDisabled(file, parsed, errors, uploading)}
               className="w-full h-14 text-base rounded-2xl"
             >
               {uploading ? 'Processando Arquivo...' : 'Iniciar Importação'}
@@ -525,7 +719,7 @@ export default function ImportarCSV() {
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-primary shrink-0" />
                 <p className="text-xs font-medium text-primary/80 leading-relaxed">
-                  Linhas com o mesmo <strong>Nº TITULO</strong> serão agrupadas automaticamente. 
+                  Linhas com o mesmo <strong>Nº TITULO</strong> serão agrupadas automaticamente.
                   Certifique-se de que os nomes de vendedores e cobradores estejam padronizados.
                 </p>
               </div>
@@ -534,71 +728,9 @@ export default function ImportarCSV() {
         </Card>
       </div>
 
-      {parsed && parsed.previewRows.length > 0 && (
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden">
-          <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
-            <CardTitle className="text-xl font-bold tracking-tight">Prévia da Planilha</CardTitle>
-            <CardDescription className="text-xs font-medium">As primeiras 5 linhas identificadas</CardDescription>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <div className="rounded-xl border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    {parsed.previewHeaders.map((h) => (
-                      <TableHead key={h} className="text-[10px] font-bold uppercase tracking-widest">{h.replace('_', ' ')}</TableHead>
-                    ))}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {parsed.previewRows.map((row, ri) => (
-                    <TableRow key={ri} className="hover:bg-muted/5 transition-colors">
-                      {row.map((cell, ci) => <TableCell key={ci} className="text-xs font-medium text-muted-foreground">{cell}</TableCell>)}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <PreviewCard parsed={parsed} />
 
-      {importResult && (
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden bg-primary/5 border-primary/10">
-          <CardHeader className="pb-4 border-b border-primary/10">
-            <CardTitle className="text-xl font-bold tracking-tight text-primary">Resultado da Importação</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-8 space-y-8">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-                { label: 'Títulos', val: importResult.titulos, cls: 'bg-background text-primary' },
-                { label: 'Parcelas', val: importResult.parcelas, cls: 'bg-background text-success' },
-                { label: 'Clientes', val: importResult.clientes, cls: 'bg-background text-blue-600' },
-                { label: 'Erros', val: importResult.errors.length, cls: importResult.errors.length > 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-background text-muted-foreground' }
-              ].map((item, i) => (
-                <div key={i} className={cn("p-6 rounded-2xl border border-border/50 text-center shadow-sm", item.cls)}>
-                  <div className="text-3xl font-black tracking-tighter mb-1">{item.val}</div>
-                  <div className="text-[10px] font-black uppercase tracking-widest opacity-70">{item.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {importResult.errors.length > 0 && (
-              <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
-                <AlertCircle className="h-4 w-4" />
-                <AlertDescription>
-                  <div className="max-h-40 overflow-y-auto">
-                    <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
-                      {importResult.errors.slice(0, 10).map((e, i) => <li key={i}>• {e}</li>)}
-                      {importResult.errors.length > 10 && <li className="pt-2">... e mais {importResult.errors.length - 10} erros</li>}
-                    </ul>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            )}
-          </CardContent>
-        </Card>
-      )}
+      <ResultCard result={importResult} />
     </div>
   );
 }

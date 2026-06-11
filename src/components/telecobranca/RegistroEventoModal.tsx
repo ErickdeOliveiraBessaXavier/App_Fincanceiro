@@ -51,90 +51,86 @@ export function RegistroEventoModal({
   const { toast } = useToast();
   const { companyId } = useAuth();
 
-  const handleSubmit = async () => {
+  const validarEvento = (): boolean => {
     if (!tipoEvento) {
-      toast({
-        title: "Erro",
-        description: "Selecione um tipo de evento",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Erro", description: "Selecione um tipo de evento", variant: "destructive" });
+      return false;
     }
-
     if (isAgendamento && !dataAgendamento) {
-      toast({
-        title: "Erro",
-        description: "Selecione uma data para o agendamento",
-        variant: "destructive",
-      });
-      return;
+      toast({ title: "Erro", description: "Selecione uma data para o agendamento", variant: "destructive" });
+      return false;
     }
+    return true;
+  };
+
+  const inserirAgendamento = async (userId: string) => {
+    const [hora, minuto] = horaAgendamento.split(':');
+    const dataCompleta = new Date(dataAgendamento!);
+    dataCompleta.setHours(parseInt(hora), parseInt(minuto), 0, 0);
+
+    const { error } = await supabase
+      .from('agendamentos')
+      .insert({
+        company_id: companyId,
+        cliente_id: clienteId,
+        titulo_id: tituloId || null,
+        acordo_id: acordoId || null,
+        tipo_evento: tipoEvento,
+        descricao,
+        data_agendamento: dataCompleta.toISOString(),
+        status: 'pendente',
+        created_by: userId
+      });
+    if (error) throw error;
+
+    toast({ title: "Sucesso", description: "Agendamento criado com sucesso" });
+  };
+
+  const inserirComunicacao = async (userId: string) => {
+    const tipoEventoInfo = TIPOS_EVENTO.find(t => t.value === tipoEvento);
+
+    const { error } = await supabase
+      .from('comunicacoes')
+      .insert({
+        company_id: companyId,
+        cliente_id: clienteId,
+        tipo: tipoEvento,
+        canal: 'manual',
+        assunto: tipoEventoInfo?.label || 'Contato',
+        mensagem: descricao,
+        data_contato: new Date().toISOString(),
+        created_by: userId
+      });
+    if (error) throw error;
+
+    toast({ title: "Sucesso", description: "Evento registrado com sucesso" });
+  };
+
+  const resetForm = () => {
+    setTipoEvento('contato_cliente');
+    setDescricao('');
+    setIsAgendamento(false);
+    setDataAgendamento(undefined);
+    setHoraAgendamento('09:00');
+  };
+
+  const handleSubmit = async () => {
+    if (!validarEvento()) return;
 
     try {
       setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
-      
+
       if (!user) throw new Error('Usuário não autenticado');
       if (!companyId) throw new Error('Empresa não identificada');
 
       if (isAgendamento && dataAgendamento) {
-        // Criar agendamento
-        const [hora, minuto] = horaAgendamento.split(':');
-        const dataCompleta = new Date(dataAgendamento);
-        dataCompleta.setHours(parseInt(hora), parseInt(minuto), 0, 0);
-
-        const { error } = await supabase
-          .from('agendamentos')
-          .insert({
-            company_id: companyId,
-            cliente_id: clienteId,
-            titulo_id: tituloId || null,
-            acordo_id: acordoId || null,
-            tipo_evento: tipoEvento,
-            descricao,
-            data_agendamento: dataCompleta.toISOString(),
-            status: 'pendente',
-            created_by: user.id
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Agendamento criado com sucesso",
-        });
+        await inserirAgendamento(user.id);
       } else {
-        // Registrar comunicação imediata
-        const tipoEventoInfo = TIPOS_EVENTO.find(t => t.value === tipoEvento);
-        
-        const { error } = await supabase
-          .from('comunicacoes')
-          .insert({
-            company_id: companyId,
-            cliente_id: clienteId,
-            tipo: tipoEvento,
-            canal: 'manual',
-            assunto: tipoEventoInfo?.label || 'Contato',
-            mensagem: descricao,
-            data_contato: new Date().toISOString(),
-            created_by: user.id
-          });
-
-        if (error) throw error;
-
-        toast({
-          title: "Sucesso",
-          description: "Evento registrado com sucesso",
-        });
+        await inserirComunicacao(user.id);
       }
 
-      // Reset form
-      setTipoEvento('contato_cliente');
-      setDescricao('');
-      setIsAgendamento(false);
-      setDataAgendamento(undefined);
-      setHoraAgendamento('09:00');
-      
+      resetForm();
       onSuccess();
       onClose();
     } catch (error) {

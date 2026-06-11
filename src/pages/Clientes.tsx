@@ -73,6 +73,237 @@ interface FormErrors {
   email?: string;
 }
 
+// ===================== Helpers puros =====================
+function getTipoIcon(tipo: string) {
+  switch (tipo) {
+    case 'ligacao': return <Phone className="h-4 w-4" />;
+    case 'email': return <Mail className="h-4 w-4" />;
+    case 'sms':
+    case 'whatsapp': return <MessageSquare className="h-4 w-4" />;
+    case 'visita': return <User className="h-4 w-4" />;
+    default: return <FileText className="h-4 w-4" />;
+  }
+}
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
+
+const formatDateTime = (date: string) => new Date(date).toLocaleString('pt-BR');
+
+// ===================== Subcomponentes =====================
+interface ClienteItemProps {
+  cliente: ClienteRow;
+  isOperador: boolean;
+  onTelecobranca: (c: ClienteRow) => void;
+  onDetails: (c: ClienteRow) => void;
+  onEdit: (c: ClienteRow) => void;
+  onDelete: (c: ClienteRow) => void;
+}
+
+function ClienteCard({ cliente, isOperador, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
+  return (
+    <div className="p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all shadow-sm group">
+      <div className="flex justify-between items-start mb-4">
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">{cliente.nome}</h3>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{cliente.cpf_cnpj}</p>
+        </div>
+        <StatusBadge domain="cliente" status={cliente.status} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        {cliente.telefone && (
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center"><Phone className="h-3.5 w-3.5" /></div>
+            <span>{cliente.telefone}</span>
+          </div>
+        )}
+        {cliente.email && (
+          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+            <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center"><Mail className="h-3.5 w-3.5" /></div>
+            <span className="truncate">{cliente.email}</span>
+          </div>
+        )}
+      </div>
+      <div className="flex items-center justify-between pt-4 border-t border-dashed border-border/50">
+        <div className="flex gap-4">
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Títulos</p>
+            <p className="text-sm font-black">{cliente.total_titulos}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</p>
+            <p className="text-sm font-black text-primary">{formatCurrency(cliente.total_valor || 0)}</p>
+          </div>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl hover:bg-primary/5"><MoreHorizontal className="h-5 w-5" /></Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
+            <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-3 py-2">Ações</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onTelecobranca(cliente)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
+            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
+            {isOperador && (
+              <>
+                <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onEdit(cliente)}><Edit className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="rounded-lg m-1 font-medium text-destructive focus:text-destructive" onClick={() => onDelete(cliente)}><Trash2 className="h-4 w-4 mr-2" />Excluir</DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
+  );
+}
+
+function ClienteTableRow({ cliente, isOperador, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
+  return (
+    <TableRow className="hover:bg-muted/10 transition-colors">
+      <TableCell className="font-bold text-sm text-foreground">{cliente.nome}</TableCell>
+      <TableCell className="font-medium text-xs text-muted-foreground">{cliente.cpf_cnpj}</TableCell>
+      <TableCell>
+        <div className="text-xs space-y-1">
+          {cliente.telefone && <div className="font-bold text-foreground">{cliente.telefone}</div>}
+          {cliente.email && <div className="text-muted-foreground font-medium">{cliente.email}</div>}
+        </div>
+      </TableCell>
+      <TableCell className="text-xs font-medium">{cliente.cobrador_nome ?? '—'}</TableCell>
+      <TableCell className="text-xs font-medium">{cliente.vendedor_nome ?? '—'}</TableCell>
+      <TableCell><StatusBadge domain="cliente" status={cliente.status} /></TableCell>
+      <TableCell className="font-bold text-sm">{cliente.total_titulos}</TableCell>
+      <TableCell className="font-black text-sm text-primary">{formatCurrency(cliente.total_valor || 0)}</TableCell>
+      <TableCell>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
+            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onTelecobranca(cliente)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
+            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
+            {isOperador && (
+            <>
+            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onEdit(cliente)}><Edit className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem className="rounded-lg m-1 font-medium text-destructive focus:text-destructive" onClick={() => onDelete(cliente)}><Trash2 className="h-4 w-4 mr-2" />Excluir</DropdownMenuItem>
+            </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </TableCell>
+    </TableRow>
+  );
+}
+
+interface ClienteDetailsDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  cliente: ClienteRow | null;
+  comunicacoes: { id: string; tipo: string; assunto: string; created_at: string }[];
+}
+function ClienteDetailsDialog({ open, onOpenChange, cliente, comunicacoes }: ClienteDetailsDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
+        {cliente && (
+          <>
+            <DialogHeader><DialogTitle className="flex items-center gap-2"><User className="h-5 w-5" />{cliente.nome}</DialogTitle><DialogDescription>Detalhes e histórico do cliente.</DialogDescription></DialogHeader>
+            <Tabs defaultValue="detalhes" className="w-full">
+              <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="detalhes">Detalhes</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
+              <TabsContent value="detalhes" className="space-y-4">
+                <div className="space-y-3">
+                  <div><label className="text-sm font-medium">CPF/CNPJ</label><p className="text-sm text-muted-foreground">{cliente.cpf_cnpj}</p></div>
+                  <div className="flex justify-between items-center pt-4 border-t">
+                    <div><label className="text-sm font-medium">Total de Títulos</label><p className="text-2xl font-bold text-primary">{cliente.total_titulos}</p></div>
+                    <div><label className="text-sm font-medium">Valor Total</label><p className="text-2xl font-bold text-primary">{formatCurrency(cliente.total_valor || 0)}</p></div>
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="historico" className="space-y-4">
+                <div className="space-y-3">
+                  {comunicacoes.length > 0 ? comunicacoes.map((comunicacao) => (
+                    <div key={comunicacao.id} className="border rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-2">{getTipoIcon(comunicacao.tipo)}<span className="text-sm font-medium capitalize">{comunicacao.tipo}</span><span className="text-xs text-muted-foreground ml-auto">{formatDateTime(comunicacao.created_at)}</span></div>
+                      <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
+                    </div>
+                  )) : <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comunicação registrada</p>}
+                </div>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+type NovoClienteForm = {
+  nome: string; cpf_cnpj: string; telefone: string; email: string; endereco_completo: string;
+  cep: string; cidade: string; estado: string; observacoes: string; cobrador_id: string; vendedor_id: string;
+};
+interface NovoClienteDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  novoCliente: NovoClienteForm;
+  setNovoCliente: (c: NovoClienteForm) => void;
+  formErrors: FormErrors;
+  onSave: () => void;
+}
+function NovoClienteDialog({ open, onOpenChange, novoCliente, setNovoCliente, formErrors, onSave }: NovoClienteDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Novo Cliente</DialogTitle><DialogDescription>Preencha os dados do novo cliente.</DialogDescription></DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="name">Nome*</Label><Input id="name" value={novoCliente.nome} onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })} className={formErrors.nome ? "border-red-500" : ""} /></div>
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="cpf_cnpj">CPF/CNPJ*</Label><Input id="cpf_cnpj" value={novoCliente.cpf_cnpj} onChange={(e) => setNovoCliente({ ...novoCliente, cpf_cnpj: e.target.value })} className={formErrors.cpf_cnpj ? "border-red-500" : ""} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-2"><Label htmlFor="telefone">Telefone</Label><Input id="telefone" value={novoCliente.telefone} onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })} /></div>
+            <div className="grid grid-cols-1 gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={novoCliente.email} onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="endereco">Endereço</Label><Input id="endereco" value={novoCliente.endereco_completo} onChange={(e) => setNovoCliente({ ...novoCliente, endereco_completo: e.target.value })} /></div>
+        </div>
+        <DialogFooter><Button onClick={onSave}>Salvar</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface EditClienteDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  editingCliente: { nome: string };
+  onNomeChange: (v: string) => void;
+  onSave: () => void;
+}
+function EditClienteDialog({ open, onOpenChange, editingCliente, onNomeChange, onSave }: EditClienteDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+        <DialogHeader><DialogTitle>Editar Cliente</DialogTitle><DialogDescription>Atualize os dados do cliente.</DialogDescription></DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-name">Nome*</Label><Input id="edit-name" value={editingCliente.nome} onChange={(e) => onNomeChange(e.target.value)} /></div>
+        </div>
+        <DialogFooter><Button onClick={onSave}>Salvar</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DeleteClienteDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  cliente: ClienteRow | null;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+function DeleteClienteDialog({ open, onOpenChange, cliente, onCancel, onConfirm }: DeleteClienteDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent><DialogHeader><DialogTitle>Confirmar Exclusão</DialogTitle><DialogDescription>Tem certeza que deseja excluir o cliente {cliente?.nome}? Esta ação não pode ser desfeita.</DialogDescription></DialogHeader><DialogFooter className="gap-2"><Button variant="ghost" onClick={onCancel}>Cancelar</Button><Button variant="destructive" onClick={onConfirm}>Excluir</Button></DialogFooter></DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Clientes() {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -193,22 +424,18 @@ export default function Clientes() {
     }
   };
 
-  const getTipoIcon = (tipo: string) => {
-    switch (tipo) {
-      case 'ligacao': return <Phone className="h-4 w-4" />;
-      case 'email': return <Mail className="h-4 w-4" />;
-      case 'sms': 
-      case 'whatsapp': return <MessageSquare className="h-4 w-4" />;
-      case 'visita': return <User className="h-4 w-4" />;
-      default: return <FileText className="h-4 w-4" />;
-    }
+  const goTelecobranca = (c: ClienteRow) => navigate(`/telecobranca/${c.id}`);
+  const openDetails = (c: ClienteRow) => { setSelectedCliente(c); setIsDetailsModalOpen(true); };
+  const openDelete = (c: ClienteRow) => { setClienteToDelete(c); setIsDeleteModalOpen(true); };
+  const openEdit = (c: ClienteRow) => {
+    setEditingCliente({
+      id: c.id, nome: c.nome, cpf_cnpj: c.cpf_cnpj, telefone: c.telefone || '', email: c.email || '',
+      endereco_completo: c.endereco_completo || '', cep: c.cep || '', cidade: c.cidade || '',
+      estado: c.estado || '', observacoes: c.observacoes || '', status: c.status,
+      cobrador_id: c.cobrador_id || '', vendedor_id: c.vendedor_id || '',
+    });
+    setIsEditModalOpen(true);
   };
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-  };
-
-  const formatDateTime = (date: string) => new Date(date).toLocaleString('pt-BR');
 
   const filterFunctions = useMemo(() => createClientesFilterFunctions(), []);
   const {
@@ -345,59 +572,15 @@ export default function Clientes() {
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-4">
               {filteredClientes.map((cliente) => (
-                <div key={cliente.id} className="p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all shadow-sm group">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">{cliente.nome}</h3>
-                      <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{cliente.cpf_cnpj}</p>
-                    </div>
-                    <StatusBadge domain="cliente" status={cliente.status} />
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                    {cliente.telefone && (
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center"><Phone className="h-3.5 w-3.5" /></div>
-                        <span>{cliente.telefone}</span>
-                      </div>
-                    )}
-                    {cliente.email && (
-                      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                        <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center"><Mail className="h-3.5 w-3.5" /></div>
-                        <span className="truncate">{cliente.email}</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between pt-4 border-t border-dashed border-border/50">
-                    <div className="flex gap-4">
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Títulos</p>
-                        <p className="text-sm font-black">{cliente.total_titulos}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</p>
-                        <p className="text-sm font-black text-primary">{formatCurrency(cliente.total_valor || 0)}</p>
-                      </div>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl hover:bg-primary/5"><MoreHorizontal className="h-5 w-5" /></Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
-                        <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-3 py-2">Ações</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => navigate(`/telecobranca/${cliente.id}`)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
-                        <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => { setSelectedCliente(cliente); setIsDetailsModalOpen(true); }}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
-                        {isOperador && (
-                          <>
-                            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => { setEditingCliente({ id: cliente.id, nome: cliente.nome, cpf_cnpj: cliente.cpf_cnpj, telefone: cliente.telefone || '', email: cliente.email || '', endereco_completo: cliente.endereco_completo || '', cep: cliente.cep || '', cidade: cliente.cidade || '', estado: cliente.estado || '', observacoes: cliente.observacoes || '', status: cliente.status, cobrador_id: cliente.cobrador_id || '', vendedor_id: cliente.vendedor_id || '' }); setIsEditModalOpen(true); }}><Edit className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="rounded-lg m-1 font-medium text-destructive focus:text-destructive" onClick={() => { setClienteToDelete(cliente); setIsDeleteModalOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Excluir</DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
+                <ClienteCard
+                  key={cliente.id}
+                  cliente={cliente}
+                  isOperador={isOperador}
+                  onTelecobranca={goTelecobranca}
+                  onDetails={openDetails}
+                  onEdit={openEdit}
+                  onDelete={openDelete}
+                />
               ))}
             </div>
 
@@ -419,37 +602,15 @@ export default function Clientes() {
                 </TableHeader>
                 <TableBody>
                   {filteredClientes.map((cliente) => (
-                    <TableRow key={cliente.id} className="hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-bold text-sm text-foreground">{cliente.nome}</TableCell>
-                      <TableCell className="font-medium text-xs text-muted-foreground">{cliente.cpf_cnpj}</TableCell>
-                      <TableCell>
-                        <div className="text-xs space-y-1">
-                          {cliente.telefone && <div className="font-bold text-foreground">{cliente.telefone}</div>}
-                          {cliente.email && <div className="text-muted-foreground font-medium">{cliente.email}</div>}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-xs font-medium">{cliente.cobrador_nome ?? '—'}</TableCell>
-                      <TableCell className="text-xs font-medium">{cliente.vendedor_nome ?? '—'}</TableCell>
-                      <TableCell><StatusBadge domain="cliente" status={cliente.status} /></TableCell>
-                      <TableCell className="font-bold text-sm">{cliente.total_titulos}</TableCell>
-                      <TableCell className="font-black text-sm text-primary">{formatCurrency(cliente.total_valor || 0)}</TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
-                            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => navigate(`/telecobranca/${cliente.id}`)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
-                            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => { setSelectedCliente(cliente); setIsDetailsModalOpen(true); }}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
-                            {isOperador && (
-                            <>
-                            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => { setEditingCliente({ id: cliente.id, nome: cliente.nome, cpf_cnpj: cliente.cpf_cnpj, telefone: cliente.telefone || '', email: cliente.email || '', endereco_completo: cliente.endereco_completo || '', cep: cliente.cep || '', cidade: cliente.cidade || '', estado: cliente.estado || '', observacoes: cliente.observacoes || '', status: cliente.status, cobrador_id: cliente.cobrador_id || '', vendedor_id: cliente.vendedor_id || '' }); setIsEditModalOpen(true); }}><Edit className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="rounded-lg m-1 font-medium text-destructive focus:text-destructive" onClick={() => { setClienteToDelete(cliente); setIsDeleteModalOpen(true); }}><Trash2 className="h-4 w-4 mr-2" />Excluir</DropdownMenuItem>
-                            </>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
+                    <ClienteTableRow
+                      key={cliente.id}
+                      cliente={cliente}
+                      isOperador={isOperador}
+                      onTelecobranca={goTelecobranca}
+                      onDetails={openDetails}
+                      onEdit={openEdit}
+                      onDelete={openDelete}
+                    />
                   ))}
                 </TableBody>
               </Table>
@@ -459,67 +620,37 @@ export default function Clientes() {
       </div>
 
       {/* Modais */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Novo Cliente</DialogTitle><DialogDescription>Preencha os dados do novo cliente.</DialogDescription></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="name">Nome*</Label><Input id="name" value={newCliente.nome} onChange={(e) => setNewCliente({ ...newCliente, nome: e.target.value })} className={formErrors.nome ? "border-red-500" : ""} /></div>
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="cpf_cnpj">CPF/CNPJ*</Label><Input id="cpf_cnpj" value={newCliente.cpf_cnpj} onChange={(e) => setNewCliente({ ...newCliente, cpf_cnpj: e.target.value })} className={formErrors.cpf_cnpj ? "border-red-500" : ""} /></div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid grid-cols-1 gap-2"><Label htmlFor="telefone">Telefone</Label><Input id="telefone" value={newCliente.telefone} onChange={(e) => setNewCliente({ ...newCliente, telefone: e.target.value })} /></div>
-              <div className="grid grid-cols-1 gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={newCliente.email} onChange={(e) => setNewCliente({ ...newCliente, email: e.target.value })} /></div>
-            </div>
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="endereco">Endereço</Label><Input id="endereco" value={newCliente.endereco_completo} onChange={(e) => setNewCliente({ ...newCliente, endereco_completo: e.target.value })} /></div>
-          </div>
-          <DialogFooter><Button onClick={handleCreateCliente}>Salvar</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <NovoClienteDialog
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        novoCliente={newCliente}
+        setNovoCliente={setNewCliente}
+        formErrors={formErrors}
+        onSave={handleCreateCliente}
+      />
 
-      <Dialog open={isEditModalOpen} onOpenChange={setIsEditModalOpen}>
-        <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
-          <DialogHeader><DialogTitle>Editar Cliente</DialogTitle><DialogDescription>Atualize os dados do cliente.</DialogDescription></DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-name">Nome*</Label><Input id="edit-name" value={editingCliente.nome} onChange={(e) => setEditingCliente({ ...editingCliente, nome: e.target.value })} /></div>
-          </div>
-          <DialogFooter><Button onClick={handleEditCliente}>Salvar</Button></DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditClienteDialog
+        open={isEditModalOpen}
+        onOpenChange={setIsEditModalOpen}
+        editingCliente={editingCliente}
+        onNomeChange={(v) => setEditingCliente({ ...editingCliente, nome: v })}
+        onSave={handleEditCliente}
+      />
 
-      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto">
-          {selectedCliente && (
-            <>
-              <DialogHeader><DialogTitle className="flex items-center gap-2"><User className="h-5 w-5" />{selectedCliente.nome}</DialogTitle><DialogDescription>Detalhes e histórico do cliente.</DialogDescription></DialogHeader>
-              <Tabs defaultValue="detalhes" className="w-full">
-                <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="detalhes">Detalhes</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
-                <TabsContent value="detalhes" className="space-y-4">
-                  <div className="space-y-3">
-                    <div><label className="text-sm font-medium">CPF/CNPJ</label><p className="text-sm text-muted-foreground">{selectedCliente.cpf_cnpj}</p></div>
-                    <div className="flex justify-between items-center pt-4 border-t">
-                      <div><label className="text-sm font-medium">Total de Títulos</label><p className="text-2xl font-bold text-primary">{selectedCliente.total_titulos}</p></div>
-                      <div><label className="text-sm font-medium">Valor Total</label><p className="text-2xl font-bold text-primary">{formatCurrency(selectedCliente.total_valor || 0)}</p></div>
-                    </div>
-                  </div>
-                </TabsContent>
-                <TabsContent value="historico" className="space-y-4">
-                  <div className="space-y-3">
-                    {comunicacoes.length > 0 ? comunicacoes.map((comunicacao) => (
-                      <div key={comunicacao.id} className="border rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-2">{getTipoIcon(comunicacao.tipo)}<span className="text-sm font-medium capitalize">{comunicacao.tipo}</span><span className="text-xs text-muted-foreground ml-auto">{formatDateTime(comunicacao.created_at)}</span></div>
-                        <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
-                      </div>
-                    )) : <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comunicação registrada</p>}
-                  </div>
-                </TabsContent>
-              </Tabs>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
+      <ClienteDetailsDialog
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+        cliente={selectedCliente}
+        comunicacoes={comunicacoes}
+      />
 
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent><DialogHeader><DialogTitle>Confirmar Exclusão</DialogTitle><DialogDescription>Tem certeza que deseja excluir o cliente {clienteToDelete?.nome}? Esta ação não pode ser desfeita.</DialogDescription></DialogHeader><DialogFooter className="gap-2"><Button variant="ghost" onClick={() => setIsDeleteModalOpen(false)}>Cancelar</Button><Button variant="destructive" onClick={handleDeleteCliente}>Excluir</Button></DialogFooter></DialogContent>
-      </Dialog>
+      <DeleteClienteDialog
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        cliente={clienteToDelete}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteCliente}
+      />
     </div>
   );
 }

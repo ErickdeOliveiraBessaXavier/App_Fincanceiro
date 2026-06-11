@@ -21,6 +21,46 @@ const Spinner = () => (
   </div>
 );
 
+// Tela exibida quando o cadastro por convite ainda aguarda autorização do admin.
+const AguardandoAutorizacao = ({ onSignOut }: { onSignOut: () => void }) => (
+  <div className="flex min-h-screen items-center justify-center bg-background p-6">
+    <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
+      <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+        <Clock className="h-7 w-7 text-primary" />
+      </div>
+      <h1 className="mb-2 text-xl font-bold">Conta aguardando autorização</h1>
+      <p className="mb-6 text-sm text-muted-foreground">
+        Seu cadastro foi recebido e está aguardando a liberação do administrador da empresa.
+        Assim que seu acesso for autorizado, entre novamente.
+      </p>
+      <Button variant="outline" className="w-full" onClick={onSignOut}>Sair</Button>
+    </div>
+  </div>
+);
+
+// Tela exibida quando a empresa não está "ativa" (aguardando aprovação ou suspensa).
+const EmpresaInativa = ({ status, nome, onSignOut }: { status: string; nome: string; onSignOut: () => void }) => {
+  const suspensa = status === 'suspensa' || status === 'cancelada';
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-6">
+      <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+          {suspensa ? <Ban className="h-7 w-7 text-destructive" /> : <Clock className="h-7 w-7 text-primary" />}
+        </div>
+        <h1 className="mb-2 text-xl font-bold">
+          {suspensa ? 'Acesso suspenso' : 'Empresa aguardando aprovação'}
+        </h1>
+        <p className="mb-6 text-sm text-muted-foreground">
+          {suspensa
+            ? 'O acesso da sua empresa está suspenso. Entre em contato com o suporte para regularizar.'
+            : `A empresa "${nome}" foi cadastrada e está aguardando aprovação. Você receberá acesso assim que for ativada.`}
+        </p>
+        <Button variant="outline" className="w-full" onClick={onSignOut}>Sair</Button>
+      </div>
+    </div>
+  );
+};
+
 export const Layout = memo(({ children }: LayoutProps) => {
   const { user, loading, companyId, role, isSuperAdmin, signOut } = useAuth();
   const { company, isLoading: companyLoading } = useCurrentCompany();
@@ -34,48 +74,14 @@ export const Layout = memo(({ children }: LayoutProps) => {
 
   // Gate: cadastro por convite que ainda não foi autorizado pelo admin.
   // Tem empresa (vinculada no convite) mas nenhum papel atribuído => sem acesso.
-  if (!role) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-            <Clock className="h-7 w-7 text-primary" />
-          </div>
-          <h1 className="mb-2 text-xl font-bold">Conta aguardando autorização</h1>
-          <p className="mb-6 text-sm text-muted-foreground">
-            Seu cadastro foi recebido e está aguardando a liberação do administrador da empresa.
-            Assim que seu acesso for autorizado, entre novamente.
-          </p>
-          <Button variant="outline" className="w-full" onClick={signOut}>Sair</Button>
-        </div>
-      </div>
-    );
-  }
+  if (!role) return <AguardandoAutorizacao onSignOut={signOut} />;
 
   // Aguarda os dados da empresa para decidir o gate de acesso.
   if (companyLoading) return <Spinner />;
 
   // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) para acessar.
   if (company && company.status !== 'ativa') {
-    const suspensa = company.status === 'suspensa' || company.status === 'cancelada';
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
-          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-            {suspensa ? <Ban className="h-7 w-7 text-destructive" /> : <Clock className="h-7 w-7 text-primary" />}
-          </div>
-          <h1 className="mb-2 text-xl font-bold">
-            {suspensa ? 'Acesso suspenso' : 'Empresa aguardando aprovação'}
-          </h1>
-          <p className="mb-6 text-sm text-muted-foreground">
-            {suspensa
-              ? 'O acesso da sua empresa está suspenso. Entre em contato com o suporte para regularizar.'
-              : `A empresa "${company.nome}" foi cadastrada e está aguardando aprovação. Você receberá acesso assim que for ativada.`}
-          </p>
-          <Button variant="outline" className="w-full" onClick={signOut}>Sair</Button>
-        </div>
-      </div>
-    );
+    return <EmpresaInativa status={company.status} nome={company.nome} onSignOut={signOut} />;
   }
 
   return (
