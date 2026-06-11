@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { useLocation } from 'react-router-dom';
 import { Plus, Eye, Trash2, FileText, CheckCircle, TrendingUp } from 'lucide-react';
@@ -96,6 +96,247 @@ interface LocationState {
   clienteId?: string;
   tituloIds?: string[];
   valorTotal?: number;
+}
+
+// ===================== Helpers puros =====================
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
+
+// ===================== Subcomponentes =====================
+interface NovoAcordoDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  clientes: Parameters<typeof SelecionarTitulosAcordo>[0]['clientes'];
+  clienteIdPreSelecionado?: string;
+  onSelectionChange: (selection: SelectionData | null) => void;
+  newAcordo: NovoAcordo;
+  setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
+  formErrors: FormErrors;
+  showCronograma: boolean;
+  cronograma: CronogramaParcela[];
+  onVisualizarCronograma: () => void;
+  onCancel: () => void;
+  onCreate: () => void;
+}
+function NovoAcordoDialog({
+  open, onOpenChange, clientes, clienteIdPreSelecionado, onSelectionChange,
+  newAcordo, setNewAcordo, formErrors, showCronograma, cronograma,
+  onVisualizarCronograma, onCancel, onCreate,
+}: NovoAcordoDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Novo Acordo</DialogTitle>
+          <DialogDescription>
+            Selecione os títulos e configure o acordo de pagamento
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <SelecionarTitulosAcordo
+            clientes={clientes}
+            clienteIdPreSelecionado={clienteIdPreSelecionado}
+            onSelectionChange={onSelectionChange}
+          />
+
+          {newAcordo.titulo_ids.length > 0 && (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Valor Original</Label>
+                  <Input
+                    value={formatCurrency(newAcordo.valor_original)}
+                    disabled
+                    className="bg-muted"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Valor do Acordo</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    value={newAcordo.valor_acordo}
+                    onChange={(e) => setNewAcordo(prev => ({ ...prev, valor_acordo: parseFloat(e.target.value) || 0 }))}
+                    className={formErrors.valor_acordo ? "border-red-500" : ""}
+                  />
+                  {formErrors.valor_acordo && (
+                    <span className="text-xs text-red-500">{formErrors.valor_acordo}</span>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-2">
+                  <Label>Parcelas</Label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={newAcordo.parcelas}
+                    onChange={(e) => setNewAcordo(prev => ({ ...prev, parcelas: parseInt(e.target.value) || 1 }))}
+                    className={formErrors.parcelas ? "border-red-500" : ""}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Taxa de Juros (%)</Label>
+                  <Input
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    value={newAcordo.taxa_juros}
+                    onChange={(e) => setNewAcordo(prev => ({ ...prev, taxa_juros: parseFloat(e.target.value) || 0 }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>1ª Parcela</Label>
+                  <Input
+                    type="date"
+                    value={newAcordo.data_vencimento_primeira_parcela}
+                    onChange={(e) => setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: e.target.value }))}
+                    className={formErrors.data_vencimento_primeira_parcela ? "border-red-500" : ""}
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Observações</Label>
+                <Input
+                  value={newAcordo.observacoes}
+                  onChange={(e) => setNewAcordo(prev => ({ ...prev, observacoes: e.target.value }))}
+                />
+              </div>
+
+              <Button variant="outline" onClick={onVisualizarCronograma} className="w-full">
+                Visualizar Cronograma
+              </Button>
+
+              {showCronograma && cronograma.length > 0 && (
+                <div className="p-4 bg-muted rounded-lg">
+                  <h4 className="font-medium mb-2">Cronograma de Parcelas</h4>
+                  <div className="space-y-1 text-sm">
+                    {cronograma.map((p) => (
+                      <div key={p.numero} className="flex justify-between">
+                        <span>Parcela {p.numero} - {formatDate(p.data_vencimento)}</span>
+                        <span>{formatCurrency(p.valor_total)}</span>
+                      </div>
+                    ))}
+                    <div className="border-t pt-2 mt-2 font-medium flex justify-between">
+                      <span>Total</span>
+                      <span>{formatCurrency(cronograma.reduce((sum, p) => sum + p.valor_total, 0))}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button onClick={onCreate} disabled={newAcordo.titulo_ids.length === 0}>
+            Criar Acordo
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface AcordoDetailsDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  acordo: AcordoRow | null;
+}
+function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Detalhes do Acordo</DialogTitle>
+          <DialogDescription>
+            Condições do acordo, parcelas e situação atual.
+          </DialogDescription>
+        </DialogHeader>
+        {acordo && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label className="text-muted-foreground">Cliente</Label>
+                <p className="font-medium">{acordo.cliente?.nome}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Status</Label>
+                <div className="mt-1">
+                  <StatusBadge domain="acordo" status={acordo.status} />
+                </div>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Valor Original</Label>
+                <p>{formatCurrency(acordo.valor_original)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Valor do Acordo</Label>
+                <p className="font-medium">{formatCurrency(acordo.valor_acordo)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Desconto</Label>
+                <p>{acordo.desconto.toFixed(1)}%</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Parcelas</Label>
+                <p>{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">Data do Acordo</Label>
+                <p>{formatDate(acordo.data_acordo)}</p>
+              </div>
+              <div>
+                <Label className="text-muted-foreground">1ª Parcela</Label>
+                <p>{formatDate(acordo.data_vencimento_primeira_parcela)}</p>
+              </div>
+            </div>
+            {acordo.observacoes && (
+              <div>
+                <Label className="text-muted-foreground">Observações</Label>
+                <p>{acordo.observacoes}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface DeleteAcordoDialogProps {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+function DeleteAcordoDialog({ open, onOpenChange, onCancel, onConfirm }: DeleteAcordoDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Confirmar Exclusão</DialogTitle>
+          <DialogDescription>
+            Tem certeza que deseja excluir este acordo? Esta ação não pode ser desfeita.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel}>
+            Cancelar
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Excluir
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 export default function Acordos() {
@@ -319,17 +560,6 @@ export default function Acordos() {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
-
   // Filter functions for acordos
   const filterFunctions = useMemo(() => createAcordosFilterFunctions(), []);
 
@@ -541,200 +771,34 @@ export default function Acordos() {
         </CardContent>
       </Card>
 
-      {/* Modal Criar Acordo */}
-      <Dialog open={isCreateModalOpen} onOpenChange={setIsCreateModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Novo Acordo</DialogTitle>
-            <DialogDescription>
-              Selecione os títulos e configure o acordo de pagamento
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <SelecionarTitulosAcordo
-              clientes={clientesComDividas}
-              clienteIdPreSelecionado={preSelectedData?.clienteId}
-              onSelectionChange={handleSelectionChange}
-            />
+      <NovoAcordoDialog
+        open={isCreateModalOpen}
+        onOpenChange={setIsCreateModalOpen}
+        clientes={clientesComDividas}
+        clienteIdPreSelecionado={preSelectedData?.clienteId}
+        onSelectionChange={handleSelectionChange}
+        newAcordo={newAcordo}
+        setNewAcordo={setNewAcordo}
+        formErrors={formErrors}
+        showCronograma={showCronograma}
+        cronograma={cronograma}
+        onVisualizarCronograma={visualizarCronograma}
+        onCancel={() => setIsCreateModalOpen(false)}
+        onCreate={handleCreateAcordo}
+      />
 
-            {newAcordo.titulo_ids.length > 0 && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Valor Original</Label>
-                    <Input
-                      value={formatCurrency(newAcordo.valor_original)}
-                      disabled
-                      className="bg-muted"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Valor do Acordo</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={newAcordo.valor_acordo}
-                      onChange={(e) => setNewAcordo(prev => ({ ...prev, valor_acordo: parseFloat(e.target.value) || 0 }))}
-                      className={formErrors.valor_acordo ? "border-red-500" : ""}
-                    />
-                    {formErrors.valor_acordo && (
-                      <span className="text-xs text-red-500">{formErrors.valor_acordo}</span>
-                    )}
-                  </div>
-                </div>
+      <AcordoDetailsDialog
+        open={isDetailsModalOpen}
+        onOpenChange={setIsDetailsModalOpen}
+        acordo={selectedAcordo}
+      />
 
-                <div className="grid grid-cols-3 gap-4">
-                  <div className="space-y-2">
-                    <Label>Parcelas</Label>
-                    <Input
-                      type="number"
-                      min="1"
-                      value={newAcordo.parcelas}
-                      onChange={(e) => setNewAcordo(prev => ({ ...prev, parcelas: parseInt(e.target.value) || 1 }))}
-                      className={formErrors.parcelas ? "border-red-500" : ""}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Taxa de Juros (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={newAcordo.taxa_juros}
-                      onChange={(e) => setNewAcordo(prev => ({ ...prev, taxa_juros: parseFloat(e.target.value) || 0 }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>1ª Parcela</Label>
-                    <Input
-                      type="date"
-                      value={newAcordo.data_vencimento_primeira_parcela}
-                      onChange={(e) => setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: e.target.value }))}
-                      className={formErrors.data_vencimento_primeira_parcela ? "border-red-500" : ""}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Observações</Label>
-                  <Input
-                    value={newAcordo.observacoes}
-                    onChange={(e) => setNewAcordo(prev => ({ ...prev, observacoes: e.target.value }))}
-                  />
-                </div>
-
-                <Button variant="outline" onClick={visualizarCronograma} className="w-full">
-                  Visualizar Cronograma
-                </Button>
-
-                {showCronograma && cronograma.length > 0 && (
-                  <div className="p-4 bg-muted rounded-lg">
-                    <h4 className="font-medium mb-2">Cronograma de Parcelas</h4>
-                    <div className="space-y-1 text-sm">
-                      {cronograma.map((p) => (
-                        <div key={p.numero} className="flex justify-between">
-                          <span>Parcela {p.numero} - {formatDate(p.data_vencimento)}</span>
-                          <span>{formatCurrency(p.valor_total)}</span>
-                        </div>
-                      ))}
-                      <div className="border-t pt-2 mt-2 font-medium flex justify-between">
-                        <span>Total</span>
-                        <span>{formatCurrency(cronograma.reduce((sum, p) => sum + p.valor_total, 0))}</span>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsCreateModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleCreateAcordo} disabled={newAcordo.titulo_ids.length === 0}>
-              Criar Acordo
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Detalhes */}
-      <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Detalhes do Acordo</DialogTitle>
-            <DialogDescription>
-              Condições do acordo, parcelas e situação atual.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedAcordo && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label className="text-muted-foreground">Cliente</Label>
-                  <p className="font-medium">{selectedAcordo.cliente?.nome}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Status</Label>
-                  <div className="mt-1">
-                    <StatusBadge domain="acordo" status={selectedAcordo.status} />
-                  </div>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Valor Original</Label>
-                  <p>{formatCurrency(selectedAcordo.valor_original)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Valor do Acordo</Label>
-                  <p className="font-medium">{formatCurrency(selectedAcordo.valor_acordo)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Desconto</Label>
-                  <p>{selectedAcordo.desconto.toFixed(1)}%</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Parcelas</Label>
-                  <p>{selectedAcordo.parcelas}x de {formatCurrency(selectedAcordo.valor_parcela)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">Data do Acordo</Label>
-                  <p>{formatDate(selectedAcordo.data_acordo)}</p>
-                </div>
-                <div>
-                  <Label className="text-muted-foreground">1ª Parcela</Label>
-                  <p>{formatDate(selectedAcordo.data_vencimento_primeira_parcela)}</p>
-                </div>
-              </div>
-              {selectedAcordo.observacoes && (
-                <div>
-                  <Label className="text-muted-foreground">Observações</Label>
-                  <p>{selectedAcordo.observacoes}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal Delete */}
-      <Dialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir este acordo? Esta ação não pode ser desfeita.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteModalOpen(false)}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteAcordo}>
-              Excluir
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteAcordoDialog
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        onCancel={() => setIsDeleteModalOpen(false)}
+        onConfirm={handleDeleteAcordo}
+      />
     </div>
   );
 }

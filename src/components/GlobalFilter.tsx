@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { X, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,103 +24,109 @@ interface GlobalFilterProps {
   defaultOpen?: boolean;
 }
 
-export function GlobalFilter({
-  configs,
-  filters,
+// Campo de filtro conforme o tipo declarado na config.
+function FilterInput({
+  config,
+  value,
   onFilterChange,
-  onClearFilter,
-  onClearAll,
-  hasActiveFilters,
-  activeFiltersCount = 0,
-  resultCount,
-  totalCount,
-  presets,
-  onPresetSelect,
-  collapsible = true,
-  defaultOpen = true
-}: GlobalFilterProps) {
-  const [isOpen, setIsOpen] = useState(defaultOpen);
+}: {
+  config: FilterConfig;
+  value: string;
+  onFilterChange: (key: string, value: any) => void;
+}) {
+  switch (config.type) {
+    case 'select':
+      return (
+        <select
+          value={value}
+          onChange={(e) => onFilterChange(config.id, e.target.value)}
+          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
+        >
+          <option value="">{config.placeholder || 'Todos'}</option>
+          {config.options?.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      );
 
-  const renderFilterInput = (config: FilterConfig) => {
-    const value = filters[config.id] || '';
+    case 'date':
+      return (
+        <Input
+          type="date"
+          value={value}
+          onChange={(e) => onFilterChange(config.id, e.target.value)}
+          placeholder={config.placeholder}
+          className="h-9"
+        />
+      );
 
-    switch (config.type) {
-      case 'select':
-        return (
-          <select
-            value={value}
-            onChange={(e) => onFilterChange(config.id, e.target.value)}
-            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-1"
-          >
-            <option value="">{config.placeholder || 'Todos'}</option>
-            {config.options?.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        );
+    case 'number':
+      return (
+        <Input
+          type="number"
+          step="0.01"
+          value={value}
+          onChange={(e) => onFilterChange(config.id, e.target.value)}
+          placeholder={config.placeholder}
+          className="h-9"
+        />
+      );
 
-      case 'date':
-        return (
-          <Input
-            type="date"
-            value={value}
-            onChange={(e) => onFilterChange(config.id, e.target.value)}
-            placeholder={config.placeholder}
-            className="h-9"
-          />
-        );
+    default:
+      return (
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => onFilterChange(config.id, e.target.value)}
+          placeholder={config.placeholder}
+          className="h-9"
+        />
+      );
+  }
+}
 
-      case 'number':
-        return (
-          <Input
-            type="number"
-            step="0.01"
-            value={value}
-            onChange={(e) => onFilterChange(config.id, e.target.value)}
-            placeholder={config.placeholder}
-            className="h-9"
-          />
-        );
+// Qual preset corresponde exatamente aos filtros ativos (ou null).
+function computeActivePresetId(presets: FilterPreset[] | undefined, filters: FilterValues): string | null {
+  if (!presets) return null;
 
-      default:
-        return (
-          <Input
-            type="text"
-            value={value}
-            onChange={(e) => onFilterChange(config.id, e.target.value)}
-            placeholder={config.placeholder}
-            className="h-9"
-          />
-        );
+  for (const preset of presets) {
+    const presetKeys = Object.keys(preset.filters);
+    const filterKeys = Object.keys(filters).filter(k => filters[k] !== '' && filters[k] !== null && filters[k] !== undefined);
+
+    if (presetKeys.length === 0 && filterKeys.length === 0) {
+      return preset.id;
     }
-  };
 
-  const getActivePresetId = () => {
-    if (!presets) return null;
-    
-    for (const preset of presets) {
-      const presetKeys = Object.keys(preset.filters);
-      const filterKeys = Object.keys(filters).filter(k => filters[k] !== '' && filters[k] !== null && filters[k] !== undefined);
-      
-      if (presetKeys.length === 0 && filterKeys.length === 0) {
-        return preset.id;
-      }
-      
-      if (presetKeys.length !== filterKeys.length) continue;
-      
-      const allMatch = presetKeys.every(key => filters[key] === preset.filters[key]);
-      if (allMatch && filterKeys.every(key => preset.filters[key] !== undefined)) {
-        return preset.id;
-      }
+    if (presetKeys.length !== filterKeys.length) continue;
+
+    const allMatch = presetKeys.every(key => filters[key] === preset.filters[key]);
+    if (allMatch && filterKeys.every(key => preset.filters[key] !== undefined)) {
+      return preset.id;
     }
-    return null;
-  };
+  }
+  return null;
+}
 
-  const activePresetId = getActivePresetId();
-
-  const filterContent = (
+interface FilterContentProps {
+  configs: FilterConfig[];
+  filters: FilterValues;
+  onFilterChange: (key: string, value: any) => void;
+  onClearFilter: (key: string) => void;
+  onClearAll: () => void;
+  hasActiveFilters: boolean;
+  resultCount?: number;
+  totalCount?: number;
+  presets?: FilterPreset[];
+  onPresetSelect?: (preset: FilterPreset) => void;
+}
+function FilterContent({
+  configs, filters, onFilterChange, onClearFilter, onClearAll,
+  hasActiveFilters, resultCount, totalCount, presets, onPresetSelect,
+}: FilterContentProps) {
+  const activePresetId = computeActivePresetId(presets, filters);
+  return (
     <div className="space-y-4">
       {/* Presets */}
       {presets && presets.length > 0 && (
@@ -158,7 +164,7 @@ export function GlobalFilter({
                 </Button>
               )}
             </div>
-            {renderFilterInput(config)}
+            <FilterInput config={config} value={filters[config.id] || ''} onFilterChange={onFilterChange} />
           </div>
         ))}
       </div>
@@ -178,7 +184,7 @@ export function GlobalFilter({
             </Button>
           )}
         </div>
-        
+
         {resultCount !== undefined && totalCount !== undefined && (
           <span className="text-xs text-muted-foreground">
             Mostrando <span className="font-medium text-foreground">{resultCount}</span> de{' '}
@@ -187,6 +193,106 @@ export function GlobalFilter({
         )}
       </div>
     </div>
+  );
+}
+
+// Badge de um filtro ativo (mostrado quando o painel está recolhido).
+function ActiveFilterBadge({
+  filterKey,
+  value,
+  configs,
+  onClearFilter,
+}: {
+  filterKey: string;
+  value: any;
+  configs: FilterConfig[];
+  onClearFilter: (key: string) => void;
+}) {
+  if (!value || value === '') return null;
+
+  const config = configs.find(c => c.id === filterKey);
+  if (!config) return null;
+
+  let displayValue = value;
+  if (config.type === 'select') {
+    const option = config.options?.find(opt => opt.value === value);
+    displayValue = option?.label || value;
+  }
+
+  return (
+    <Badge variant="secondary" className="gap-1 pr-1">
+      <span className="text-xs">
+        {config.label}: {displayValue}
+      </span>
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          onClearFilter(filterKey);
+        }}
+        className="h-4 w-4 p-0 hover:bg-transparent ml-1"
+      >
+        <X className="h-3 w-3" />
+      </Button>
+    </Badge>
+  );
+}
+
+function CollapsedFilterBadges({
+  filters,
+  configs,
+  onClearFilter,
+}: {
+  filters: FilterValues;
+  configs: FilterConfig[];
+  onClearFilter: (key: string) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2 mt-2">
+      {Object.entries(filters).map(([key, value]) => (
+        <ActiveFilterBadge
+          key={key}
+          filterKey={key}
+          value={value}
+          configs={configs}
+          onClearFilter={onClearFilter}
+        />
+      ))}
+    </div>
+  );
+}
+
+export function GlobalFilter({
+  configs,
+  filters,
+  onFilterChange,
+  onClearFilter,
+  onClearAll,
+  hasActiveFilters,
+  activeFiltersCount = 0,
+  resultCount,
+  totalCount,
+  presets,
+  onPresetSelect,
+  collapsible = true,
+  defaultOpen = true
+}: GlobalFilterProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  const filterContent = (
+    <FilterContent
+      configs={configs}
+      filters={filters}
+      onFilterChange={onFilterChange}
+      onClearFilter={onClearFilter}
+      onClearAll={onClearAll}
+      hasActiveFilters={hasActiveFilters}
+      resultCount={resultCount}
+      totalCount={totalCount}
+      presets={presets}
+      onPresetSelect={onPresetSelect}
+    />
   );
 
   if (!collapsible) {
@@ -222,7 +328,7 @@ export function GlobalFilter({
               )}
             </Button>
           </CollapsibleTrigger>
-          
+
           <CollapsibleContent>
             <div className="p-4 border-t">
               {filterContent}
@@ -232,39 +338,7 @@ export function GlobalFilter({
 
         {/* Active Filter Badges (shown when collapsed) */}
         {!isOpen && hasActiveFilters && (
-          <div className="flex flex-wrap gap-2 mt-2">
-            {Object.entries(filters).map(([key, value]) => {
-              if (!value || value === '') return null;
-              
-              const config = configs.find(c => c.id === key);
-              if (!config) return null;
-
-              let displayValue = value;
-              if (config.type === 'select') {
-                const option = config.options?.find(opt => opt.value === value);
-                displayValue = option?.label || value;
-              }
-
-              return (
-                <Badge key={key} variant="secondary" className="gap-1 pr-1">
-                  <span className="text-xs">
-                    {config.label}: {displayValue}
-                  </span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onClearFilter(key);
-                    }}
-                    className="h-4 w-4 p-0 hover:bg-transparent ml-1"
-                  >
-                    <X className="h-3 w-3" />
-                  </Button>
-                </Badge>
-              );
-            })}
-          </div>
+          <CollapsedFilterBadges filters={filters} configs={configs} onClearFilter={onClearFilter} />
         )}
       </Collapsible>
     </div>
