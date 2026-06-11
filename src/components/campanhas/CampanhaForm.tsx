@@ -35,6 +35,13 @@ const TEMPLATE_VARIABLES = [
   { key: '{cpf_cnpj}', label: 'CPF/CNPJ' },
 ];
 
+// Valida os campos obrigatórios; devolve a mensagem de erro ou null se estiver ok.
+function validarCampanhaForm(nome: string, mensagem: string): string | null {
+  if (!nome.trim()) return 'Nome da campanha é obrigatório';
+  if (!mensagem.trim()) return 'Mensagem é obrigatória';
+  return null;
+}
+
 const CampanhaForm = ({ open, onOpenChange, campanha, onSuccess }: CampanhaFormProps) => {
   const { user, companyId } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -115,55 +122,53 @@ const CampanhaForm = ({ open, onOpenChange, campanha, onSuccess }: CampanhaFormP
     }));
   };
 
+  const persistirCampanha = async () => {
+    if (campanha?.id) {
+      const { error } = await supabase
+        .from('campanhas')
+        .update({
+          nome: formData.nome,
+          canal: formData.canal,
+          mensagem: formData.mensagem,
+          status: formData.status,
+          filtros: formData.filtros,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', campanha.id);
+
+      if (error) throw error;
+      toast.success('Campanha atualizada com sucesso!');
+    } else {
+      if (!user || !companyId) throw new Error('Sessão inválida');
+      const { error } = await supabase
+        .from('campanhas')
+        .insert({
+          company_id: companyId,
+          nome: formData.nome,
+          canal: formData.canal,
+          mensagem: formData.mensagem,
+          status: formData.status,
+          filtros: formData.filtros,
+          created_by: user.id,
+        });
+
+      if (error) throw error;
+      toast.success('Campanha criada com sucesso!');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.nome.trim()) {
-      toast.error('Nome da campanha é obrigatório');
-      return;
-    }
-    
-    if (!formData.mensagem.trim()) {
-      toast.error('Mensagem é obrigatória');
+
+    const erro = validarCampanhaForm(formData.nome, formData.mensagem);
+    if (erro) {
+      toast.error(erro);
       return;
     }
 
     setLoading(true);
-    
     try {
-      if (campanha?.id) {
-        const { error } = await supabase
-          .from('campanhas')
-          .update({
-            nome: formData.nome,
-            canal: formData.canal,
-            mensagem: formData.mensagem,
-            status: formData.status,
-            filtros: formData.filtros,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', campanha.id);
-
-        if (error) throw error;
-        toast.success('Campanha atualizada com sucesso!');
-      } else {
-        if (!user || !companyId) throw new Error('Sessão inválida');
-        const { error } = await supabase
-          .from('campanhas')
-          .insert({
-            company_id: companyId,
-            nome: formData.nome,
-            canal: formData.canal,
-            mensagem: formData.mensagem,
-            status: formData.status,
-            filtros: formData.filtros,
-            created_by: user.id,
-          });
-
-        if (error) throw error;
-        toast.success('Campanha criada com sucesso!');
-      }
-
+      await persistirCampanha();
       onSuccess();
       onOpenChange(false);
     } catch (error: any) {

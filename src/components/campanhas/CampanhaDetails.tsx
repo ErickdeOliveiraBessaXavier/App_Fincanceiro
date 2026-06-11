@@ -31,6 +31,14 @@ interface CampanhaDetailsProps {
   campanha: Campanha | null;
 }
 
+function calcularStatsCampanha(logs: CampaignLog[]) {
+  return {
+    enviados: logs.length,
+    sucesso: logs.filter(l => l.status === 'enviado').length,
+    erro: logs.filter(l => l.status === 'erro').length,
+  };
+}
+
 const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps) => {
   const [logs, setLogs] = useState<CampaignLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -44,7 +52,7 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
 
   const fetchLogs = async () => {
     if (!campanha?.id) return;
-    
+
     setLoading(true);
     try {
       const { data, error } = await supabase
@@ -54,13 +62,10 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
         .order('sent_at', { ascending: false });
 
       if (error) throw error;
-      
-      setLogs(data || []);
-      
-      const enviados = data?.length || 0;
-      const sucesso = data?.filter(l => l.status === 'enviado').length || 0;
-      const erro = data?.filter(l => l.status === 'erro').length || 0;
-      setStats({ enviados, sucesso, erro });
+
+      const logsData = data ?? [];
+      setLogs(logsData);
+      setStats(calcularStatsCampanha(logsData));
     } catch (error) {
       console.error('Erro ao buscar logs:', error);
     } finally {

@@ -27,6 +27,118 @@ interface Props {
 // não atribuímos um papel de carteira a quem não tem carteira — isso evitaria um
 // usuário órfão que, pela RLS, enxergaria todos os dados da empresa.
 
+type Carteira = { cobrador: boolean; vendedor: boolean };
+
+// Papel/rótulo de carteira para onde o usuário volta ao perder o admin.
+function carteiraInfo(carteira: Carteira | undefined) {
+  const baseRole: AppRole = carteira?.vendedor ? 'vendedor' : 'operador';
+  const baseLabel = carteira?.vendedor ? 'vendedor' : 'cobrador';
+  const temCarteira = carteira ? carteira.cobrador || carteira.vendedor : undefined;
+  return { baseRole, baseLabel, temCarteira };
+}
+
+interface EditarPapelDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  usuario: Props['usuario'];
+  baseLabel: string;
+  admin: boolean;
+  setAdmin: (v: boolean) => void;
+  saving: boolean;
+  reduzindoSelf: boolean;
+  rebaixandoSemCarteira: boolean;
+  semMudanca: boolean;
+  onSaveClick: () => void;
+}
+function EditarPapelDialog({
+  open, onOpenChange, usuario, baseLabel, admin, setAdmin,
+  saving, reduzindoSelf, rebaixandoSemCarteira, semMudanca, onSaveClick,
+}: EditarPapelDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Permissão de administrador</DialogTitle>
+          <DialogDescription>
+            {usuario.nome} ({usuario.email})
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
+            <div>
+              <Label htmlFor="ep-admin">Administrador da empresa</Label>
+              <p className="text-xs text-muted-foreground">
+                Admin vê e gerencia tudo. Sem isso, atua como {baseLabel} (só a carteira dele).
+              </p>
+            </div>
+            <Switch
+              id="ep-admin"
+              checked={admin}
+              onCheckedChange={setAdmin}
+              disabled={saving || reduzindoSelf}
+            />
+          </div>
+          {reduzindoSelf && (
+            <p className="text-sm text-destructive">
+              Você não pode remover o seu próprio acesso de administrador.
+            </p>
+          )}
+          {rebaixandoSemCarteira && (
+            <p className="text-sm text-destructive">
+              Este usuário não tem carteira de cobrador nem de vendedor, então não pode ser rebaixado aqui.
+              Para remover o acesso dele, exclua o usuário.
+            </p>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button
+            onClick={onSaveClick}
+            disabled={saving || reduzindoSelf || rebaixandoSemCarteira || semMudanca}
+          >
+            Salvar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+interface ConfirmarPapelDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  admin: boolean;
+  usuario: Props['usuario'];
+  baseLabel: string;
+  saving: boolean;
+  onConfirm: () => void;
+}
+function ConfirmarPapelDialog({ open, onOpenChange, admin, usuario, baseLabel, saving, onConfirm }: ConfirmarPapelDialogProps) {
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Confirmar alteração</AlertDialogTitle>
+          <AlertDialogDescription>
+            {admin
+              ? <>Tornar <strong>{usuario.nome}</strong> administrador (acesso total à empresa)?</>
+              : <>Remover o acesso de administrador de <strong>{usuario.nome}</strong>? Ele voltará a atuar como {baseLabel}, vendo apenas a carteira dele.</>}
+            {' '}Esta ação será registrada no log de auditoria.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm} disabled={saving}>
+            {saving ? 'Salvando...' : 'Confirmar'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props) {
   const [admin, setAdmin] = useState(usuario.role === 'admin');
   const [saving, setSaving] = useState(false);
@@ -53,9 +165,7 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
   });
 
   // Papel de carteira para onde o usuário volta ao perder o admin.
-  const baseRole: AppRole = carteira?.vendedor ? 'vendedor' : 'operador';
-  const baseLabel = carteira?.vendedor ? 'vendedor' : 'cobrador';
-  const temCarteira = carteira ? carteira.cobrador || carteira.vendedor : undefined;
+  const { baseRole, baseLabel, temCarteira } = carteiraInfo(carteira);
 
   const isSelf = user?.id === usuario.user_id;
   const novoPapel: AppRole = admin ? 'admin' : baseRole;
@@ -96,74 +206,29 @@ export function EditarPapelModal({ open, onOpenChange, usuario, onSaved }: Props
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Permissão de administrador</DialogTitle>
-            <DialogDescription>
-              {usuario.nome} ({usuario.email})
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 py-2">
-            <div className="flex items-center justify-between gap-4 rounded-lg border p-3">
-              <div>
-                <Label htmlFor="ep-admin">Administrador da empresa</Label>
-                <p className="text-xs text-muted-foreground">
-                  Admin vê e gerencia tudo. Sem isso, atua como {baseLabel} (só a carteira dele).
-                </p>
-              </div>
-              <Switch
-                id="ep-admin"
-                checked={admin}
-                onCheckedChange={setAdmin}
-                disabled={saving || reduzindoSelf}
-              />
-            </div>
-            {reduzindoSelf && (
-              <p className="text-sm text-destructive">
-                Você não pode remover o seu próprio acesso de administrador.
-              </p>
-            )}
-            {rebaixandoSemCarteira && (
-              <p className="text-sm text-destructive">
-                Este usuário não tem carteira de cobrador nem de vendedor, então não pode ser rebaixado aqui.
-                Para remover o acesso dele, exclua o usuário.
-              </p>
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-              Cancelar
-            </Button>
-            <Button
-              onClick={() => setConfirmOpen(true)}
-              disabled={saving || reduzindoSelf || rebaixandoSemCarteira || semMudanca}
-            >
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <EditarPapelDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        usuario={usuario}
+        baseLabel={baseLabel}
+        admin={admin}
+        setAdmin={setAdmin}
+        saving={saving}
+        reduzindoSelf={reduzindoSelf}
+        rebaixandoSemCarteira={rebaixandoSemCarteira}
+        semMudanca={semMudanca}
+        onSaveClick={() => setConfirmOpen(true)}
+      />
 
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar alteração</AlertDialogTitle>
-            <AlertDialogDescription>
-              {admin
-                ? <>Tornar <strong>{usuario.nome}</strong> administrador (acesso total à empresa)?</>
-                : <>Remover o acesso de administrador de <strong>{usuario.nome}</strong>? Ele voltará a atuar como {baseLabel}, vendo apenas a carteira dele.</>}
-              {' '}Esta ação será registrada no log de auditoria.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={saving}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleSave} disabled={saving}>
-              {saving ? 'Salvando...' : 'Confirmar'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <ConfirmarPapelDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        admin={admin}
+        usuario={usuario}
+        baseLabel={baseLabel}
+        saving={saving}
+        onConfirm={handleSave}
+      />
     </>
   );
 }

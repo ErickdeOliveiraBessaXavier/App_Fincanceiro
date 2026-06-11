@@ -27,6 +27,59 @@ interface EventoTimelineProps {
   refreshTrigger?: number;
 }
 
+type ComunicacaoRow = { id: string; tipo: string; mensagem: string | null; data_contato: string | null; created_at: string; created_by: string | null };
+type AgendamentoRow = { id: string; tipo_evento: string; descricao: string | null; data_agendamento: string; status: string | null; created_at: string; created_by: string | null };
+
+// Resolve nomes dos operadores (created_by -> profiles.user_id). O FK aponta para
+// auth.users, então buscamos os nomes à parte e devolvemos um mapa id -> nome.
+async function carregarOperadores(coms: ComunicacaoRow[], ags: AgendamentoRow[]): Promise<Map<string, string>> {
+  const operadorIds = [
+    ...coms.map(c => c.created_by),
+    ...ags.map(a => a.created_by),
+  ].filter((id): id is string => !!id);
+
+  const operadorMap = new Map<string, string>();
+  if (operadorIds.length === 0) return operadorMap;
+
+  const { data: perfis } = await supabase
+    .from('profiles')
+    .select('user_id, nome')
+    .in('user_id', [...new Set(operadorIds)]);
+  perfis?.forEach(p => operadorMap.set(p.user_id, p.nome));
+  return operadorMap;
+}
+
+// Funde comunicações e agendamentos numa linha do tempo única, ordenada por data desc.
+function unificarEventos(coms: ComunicacaoRow[], ags: AgendamentoRow[], operadorMap: Map<string, string>): Evento[] {
+  const eventos: Evento[] = [];
+
+  coms.forEach((com) => {
+    eventos.push({
+      id: com.id,
+      tipo: com.tipo,
+      descricao: com.mensagem,
+      data: com.data_contato || com.created_at,
+      origem: 'comunicacao',
+      operador: operadorMap.get(com.created_by!) || 'Sistema',
+    });
+  });
+
+  ags.forEach((ag) => {
+    eventos.push({
+      id: ag.id,
+      tipo: ag.tipo_evento,
+      descricao: ag.descricao,
+      data: ag.data_agendamento,
+      origem: 'agendamento',
+      status: ag.status ?? undefined,
+      operador: operadorMap.get(ag.created_by!) || 'Sistema',
+    });
+  });
+
+  eventos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
+  return eventos;
+}
+
 export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProps) {
   const [eventos, setEventos] = useState<Evento[]>([]);
   const [loading, setLoading] = useState(true);
@@ -74,55 +127,10 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
 
       if (agError) throw agError;
 
-      // Resolver nomes dos operadores (created_by -> profiles.user_id).
-      // O FK created_by aponta para auth.users, então não dá para embutir
-      // profiles direto na query; buscamos os nomes à parte e mapeamos.
-      const operadorIds = [
-        ...(comunicacoes?.map(c => c.created_by) ?? []),
-        ...(agendamentos?.map(a => a.created_by) ?? []),
-      ].filter((id): id is string => !!id);
-
-      const operadorMap = new Map<string, string>();
-      if (operadorIds.length > 0) {
-        const { data: perfis } = await supabase
-          .from('profiles')
-          .select('user_id, nome')
-          .in('user_id', [...new Set(operadorIds)]);
-        perfis?.forEach(p => operadorMap.set(p.user_id, p.nome));
-      }
-
-      // Unificar eventos
-      const eventosUnificados: Evento[] = [];
-
-      comunicacoes?.forEach((com: any) => {
-        eventosUnificados.push({
-          id: com.id,
-          tipo: com.tipo,
-          descricao: com.mensagem,
-          data: com.data_contato || com.created_at,
-          origem: 'comunicacao',
-          operador: operadorMap.get(com.created_by) || 'Sistema'
-        });
-      });
-
-      agendamentos?.forEach((ag: any) => {
-        eventosUnificados.push({
-          id: ag.id,
-          tipo: ag.tipo_evento,
-          descricao: ag.descricao,
-          data: ag.data_agendamento,
-          origem: 'agendamento',
-          status: ag.status,
-          operador: operadorMap.get(ag.created_by) || 'Sistema'
-        });
-      });
-
-      // Ordenar por data (mais recente primeiro)
-      eventosUnificados.sort((a, b) => 
-        new Date(b.data).getTime() - new Date(a.data).getTime()
-      );
-
-      setEventos(eventosUnificados);
+      const coms = comunicacoes ?? [];
+      const ags = agendamentos ?? [];
+      const operadorMap = await carregarOperadores(coms, ags);
+      setEventos(unificarEventos(coms, ags, operadorMap));
     } catch (error) {
       console.error('Erro ao carregar eventos:', error);
     } finally {

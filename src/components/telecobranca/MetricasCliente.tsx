@@ -17,6 +17,39 @@ interface Metricas {
   ultimoContato: string | null;
 }
 
+type ParcelaMetrica = { status: string | null; saldo_atual: number | null; vencimento: string | null };
+
+// Soma dívida, conta vencidas e calcula o maior atraso a partir das parcelas.
+function calcularMetricasParcelas(parcelas: ParcelaMetrica[]) {
+  const hoje = new Date();
+  let dividaTotal = 0;
+  let parcelasVencidas = 0;
+  let maiorAtraso = 0;
+
+  parcelas.forEach(parcela => {
+    if (parcela.status === 'vencido' || parcela.status === 'a_vencer') {
+      dividaTotal += Number(parcela.saldo_atual || 0);
+    }
+    if (parcela.status === 'vencido') {
+      parcelasVencidas++;
+      const diasAtraso = differenceInDays(hoje, new Date(parcela.vencimento!));
+      if (diasAtraso > maiorAtraso) {
+        maiorAtraso = diasAtraso;
+      }
+    }
+  });
+
+  return { dividaTotal, parcelasVencidas, maiorAtraso };
+}
+
+// Último contato = a data mais recente entre a última comunicação e o último agendamento.
+function determinarUltimoContato(dataComunicacao?: string | null, dataAgendamento?: string | null): string | null {
+  if (dataComunicacao && dataAgendamento) {
+    return new Date(dataComunicacao) > new Date(dataAgendamento) ? dataComunicacao : dataAgendamento;
+  }
+  return dataComunicacao || dataAgendamento || null;
+}
+
 export function MetricasCliente({ clienteId, refreshTrigger }: MetricasClienteProps) {
   const [metricas, setMetricas] = useState<Metricas>({
     dividaTotal: 0,
@@ -68,37 +101,8 @@ export function MetricasCliente({ clienteId, refreshTrigger }: MetricasClientePr
         .limit(1);
 
       // Calcular métricas
-      const hoje = new Date();
-      let dividaTotal = 0;
-      let parcelasVencidas = 0;
-      let maiorAtraso = 0;
-
-      parcelas?.forEach(parcela => {
-        if (parcela.status === 'vencido' || parcela.status === 'a_vencer') {
-          dividaTotal += Number(parcela.saldo_atual || 0);
-        }
-
-        if (parcela.status === 'vencido') {
-          parcelasVencidas++;
-          const diasAtraso = differenceInDays(hoje, new Date(parcela.vencimento!));
-          if (diasAtraso > maiorAtraso) {
-            maiorAtraso = diasAtraso;
-          }
-        }
-      });
-
-      // Determinar último contato
-      let ultimoContato: string | null = null;
-      const dataComunicacao = comunicacoes?.[0]?.created_at;
-      const dataAgendamento = agendamentos?.[0]?.updated_at;
-
-      if (dataComunicacao && dataAgendamento) {
-        ultimoContato = new Date(dataComunicacao) > new Date(dataAgendamento) 
-          ? dataComunicacao 
-          : dataAgendamento;
-      } else {
-        ultimoContato = dataComunicacao || dataAgendamento || null;
-      }
+      const { dividaTotal, parcelasVencidas, maiorAtraso } = calcularMetricasParcelas(parcelas ?? []);
+      const ultimoContato = determinarUltimoContato(comunicacoes?.[0]?.created_at, agendamentos?.[0]?.updated_at);
 
       setMetricas({
         dividaTotal,
