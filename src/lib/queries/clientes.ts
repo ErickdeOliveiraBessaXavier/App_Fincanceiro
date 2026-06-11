@@ -103,14 +103,14 @@ export function useClientes() {
       });
 
       return (clientesRes.data || []).map((c: any) => {
-        const agg = porCliente.get(c.id);
+        const { statuses, total, valor } = porCliente.get(c.id) ?? { total: 0, valor: 0, statuses: [] };
         return {
           ...c,
           cobrador_nome: c.cobradores?.nome ?? null,
           vendedor_nome: c.vendedores?.nome ?? null,
-          status: derivarStatusCliente(agg?.statuses ?? []),
-          total_titulos: agg?.total ?? 0,
-          total_valor: agg?.valor ?? 0,
+          status: derivarStatusCliente(statuses),
+          total_titulos: total,
+          total_valor: valor,
         };
       }) as ClienteRow[];
     },

@@ -28,6 +28,19 @@ export const convitesKeys = {
   pendentes: () => [...convitesKeys.all, 'pendentes'] as const,
 };
 
+type PerfilLite = { nome: string; email: string };
+
+// Nome/e-mail do perfil que se cadastrou (ou nulls se ainda não há cadastro).
+function nomeEmailDoPerfil(usedBy: string | null, profilesById: Record<string, PerfilLite>) {
+  const perfil = usedBy ? profilesById[usedBy] : undefined;
+  return { nome: perfil?.nome ?? null, email: perfil?.email ?? null };
+}
+
+// Nome da carteira (vendedor ou cobrador) vinculada ao convite.
+function carteiraNomeConvite(tipo: ConviteTipo, r: any): string | null {
+  return (tipo === 'vendedor' ? r.vendedores?.nome : r.cobradores?.nome) ?? null;
+}
+
 /**
  * Gera um convite para um cobrador OU um vendedor e devolve o token (link).
  * Passe exatamente um dos dois ids conforme a carteira.
@@ -85,17 +98,18 @@ export function usePendingConvites() {
 
       return rows.map((r) => {
         const tipo: ConviteTipo = r.vendedor_id ? 'vendedor' : 'cobrador';
+        const { nome, email } = nomeEmailDoPerfil(r.used_by, profilesById);
         return {
           id: r.id,
           company_id: r.company_id,
           cobrador_id: r.cobrador_id,
           vendedor_id: r.vendedor_id,
           tipo,
-          carteira_nome: (tipo === 'vendedor' ? r.vendedores?.nome : r.cobradores?.nome) ?? null,
+          carteira_nome: carteiraNomeConvite(tipo, r),
           used_by: r.used_by,
           created_at: r.created_at,
-          nome: r.used_by ? profilesById[r.used_by]?.nome ?? null : null,
-          email: r.used_by ? profilesById[r.used_by]?.email ?? null : null,
+          nome,
+          email,
         };
       });
     },
@@ -107,6 +121,27 @@ export function usePendingConvites() {
  *   - cobrador -> papel 'operador' (pode operar a própria carteira de cobrança).
  *   - vendedor -> papel 'vendedor' (read-only, escopado à carteira de vendas).
  */
+// Concede o papel ao usuário. Ignora conflito se ele já tiver o papel.
+async function concederPapel(convite: ConvitePendente, role: 'vendedor' | 'operador') {
+  const { error } = await supabase.from('user_roles').insert({
+    user_id: convite.used_by,
+    company_id: convite.company_id,
+    role,
+  });
+  if (error && !/duplicate|unique/i.test(error.message ?? '')) throw error;
+}
+
+// Vincula o login à carteira correspondente (tabela explícita p/ tipagem).
+async function vincularCarteira(convite: ConvitePendente, vinculo: { user_id: string; ativo: boolean; email: string | null }) {
+  if (convite.tipo === 'vendedor' && convite.vendedor_id) {
+    const { error } = await supabase.from('vendedores').update(vinculo).eq('id', convite.vendedor_id);
+    if (error) throw error;
+  } else if (convite.cobrador_id) {
+    const { error } = await supabase.from('cobradores').update(vinculo).eq('id', convite.cobrador_id);
+    if (error) throw error;
+  }
+}
+
 export function useAutorizarConvite() {
   const qc = useQueryClient();
   return useMutation({
@@ -115,29 +150,12 @@ export function useAutorizarConvite() {
 
       const role = convite.tipo === 'vendedor' ? 'vendedor' : 'operador';
 
-      // 1) Concede acesso. Ignora conflito se já tiver o papel.
-      const { error: roleErr } = await supabase.from('user_roles').insert({
-        user_id: convite.used_by,
-        company_id: convite.company_id,
-        role,
-      });
-      if (roleErr && !/duplicate|unique/i.test(roleErr.message ?? '')) throw roleErr;
+      // 1) Concede acesso.
+      await concederPapel(convite, role);
 
-      // 2) Vincula o login à carteira correspondente (tabela explícita p/ tipagem).
+      // 2) Vincula o login à carteira.
       const vinculo = { user_id: convite.used_by, ativo: true, email: convite.email };
-      if (convite.tipo === 'vendedor' && convite.vendedor_id) {
-        const { error: repErr } = await supabase
-          .from('vendedores')
-          .update(vinculo)
-          .eq('id', convite.vendedor_id);
-        if (repErr) throw repErr;
-      } else if (convite.cobrador_id) {
-        const { error: repErr } = await supabase
-          .from('cobradores')
-          .update(vinculo)
-          .eq('id', convite.cobrador_id);
-        if (repErr) throw repErr;
-      }
+      await vincularCarteira(convite, vinculo);
 
       // 3) Fecha o convite.
       const { error: cErr } = await supabase.from('convites')
