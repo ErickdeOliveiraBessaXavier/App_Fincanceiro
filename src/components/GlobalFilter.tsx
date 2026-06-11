@@ -32,7 +32,7 @@ function FilterInput({
 }: {
   config: FilterConfig;
   value: string;
-  onFilterChange: (key: string, value: any) => void;
+  onFilterChange: (key: string, value: string) => void;
 }) {
   switch (config.type) {
     case 'select':
@@ -112,7 +112,7 @@ function computeActivePresetId(presets: FilterPreset[] | undefined, filters: Fil
 interface FilterContentProps {
   configs: FilterConfig[];
   filters: FilterValues;
-  onFilterChange: (key: string, value: any) => void;
+  onFilterChange: (key: string, value: string) => void;
   onClearFilter: (key: string) => void;
   onClearAll: () => void;
   hasActiveFilters: boolean;
@@ -204,7 +204,7 @@ function ActiveFilterBadge({
   onClearFilter,
 }: {
   filterKey: string;
-  value: any;
+  value: string;
   configs: FilterConfig[];
   onClearFilter: (key: string) => void;
 }) {

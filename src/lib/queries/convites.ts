@@ -37,7 +37,8 @@ function nomeEmailDoPerfil(usedBy: string | null, profilesById: Record<string, P
 }
 
 // Nome da carteira (vendedor ou cobrador) vinculada ao convite.
-function carteiraNomeConvite(tipo: ConviteTipo, r: any): string | null {
+type CarteiraJoin = { vendedores?: { nome: string } | null; cobradores?: { nome: string } | null };
+function carteiraNomeConvite(tipo: ConviteTipo, r: CarteiraJoin): string | null {
   return (tipo === 'vendedor' ? r.vendedores?.nome : r.cobradores?.nome) ?? null;
 }
 
