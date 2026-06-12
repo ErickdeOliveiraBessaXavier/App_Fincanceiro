@@ -29,7 +29,7 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
-            Aging Report
+            Tempo de Atraso
           </CardTitle>
           <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Títulos Vencidos</span>
         </div>
