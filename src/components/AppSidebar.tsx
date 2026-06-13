@@ -47,6 +47,10 @@ const menuItems = [
 
 const adminOnly = ["/usuarios", "/importar", "/cobradores", "/vendedores"];
 
+// Vendedor (read-only) só precisa da própria carteira de clientes —
+// o restante do menu de cobrança não se aplica a ele.
+const vendedorItems = ["/clientes"];
+
 type MenuItem = (typeof menuItems)[number];
 
 // ===================== Subcomponentes =====================
@@ -177,10 +181,12 @@ export const AppSidebar = memo(() => {
   const { state } = useSidebar();
   const location = useLocation();
   const { signOut } = useAuth();
-  const { isAdmin, isLoading: roleLoading } = useUserRole();
+  const { isAdmin, isVendedor, isLoading: roleLoading } = useUserRole();
   const currentPath = location.pathname;
   const isCollapsed = state === "collapsed";
-  const visibleMenuItems = menuItems.filter(i => !adminOnly.includes(i.url) || isAdmin);
+  const visibleMenuItems = isVendedor
+    ? menuItems.filter(i => vendedorItems.includes(i.url))
+    : menuItems.filter(i => !adminOnly.includes(i.url) || isAdmin);
 
   const isActive = (path: string) => {
     if (path === '/') return currentPath === path;
@@ -197,7 +203,7 @@ export const AppSidebar = memo(() => {
       */}
       <SidebarContent className={cn("px-3", isCollapsed && "px-0")}>
         <SidebarNav isCollapsed={isCollapsed} roleLoading={roleLoading} items={visibleMenuItems} isActive={isActive} />
-        <SidebarProCard isCollapsed={isCollapsed} />
+        {!isVendedor && <SidebarProCard isCollapsed={isCollapsed} />}
       </SidebarContent>
 
       <SidebarSignOut isCollapsed={isCollapsed} onSignOut={signOut} />

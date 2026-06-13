@@ -3,10 +3,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { AdminRoute } from "@/components/AdminRoute";
+import { BlockVendedorRoute } from "@/components/BlockVendedorRoute";
+import { useUserRole } from "@/hooks/useUserRole";
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Clientes = React.lazy(() => import("./pages/Clientes"));
@@ -28,6 +30,21 @@ const NotFound = React.lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
+// Página inicial: o Dashboard é de cobrança e não se aplica ao vendedor
+// (read-only, escopo só da carteira), então ele cai direto nos clientes.
+function HomeRoute() {
+  const { isVendedor, isLoading } = useUserRole();
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
+  if (isVendedor) return <Navigate to="/clientes" replace />;
+  return <Dashboard />;
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -42,17 +59,17 @@ const App = () => (
               <Route path="/setup-empresa" element={<SetupEmpresa />} />
               <Route path="/plataforma" element={<Plataforma />} />
               <Route path="/plataforma/importar" element={<PlataformaImportar />} />
-              <Route path="/" element={<Layout><Dashboard /></Layout>} />
+              <Route path="/" element={<Layout><HomeRoute /></Layout>} />
               <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
-              <Route path="/cobradores" element={<Layout><Cobradores /></Layout>} />
-              <Route path="/vendedores" element={<Layout><Vendedores /></Layout>} />
-              <Route path="/titulos" element={<Layout><Titulos /></Layout>} />
-              <Route path="/acordos" element={<Layout><Acordos /></Layout>} />
-              <Route path="/campanhas" element={<Layout><Campanhas /></Layout>} />
-              <Route path="/importar" element={<Layout><ImportarCSV /></Layout>} />
-              <Route path="/relatorios" element={<Layout><Relatorios /></Layout>} />
+              <Route path="/cobradores" element={<Layout><BlockVendedorRoute><Cobradores /></BlockVendedorRoute></Layout>} />
+              <Route path="/vendedores" element={<Layout><BlockVendedorRoute><Vendedores /></BlockVendedorRoute></Layout>} />
+              <Route path="/titulos" element={<Layout><BlockVendedorRoute><Titulos /></BlockVendedorRoute></Layout>} />
+              <Route path="/acordos" element={<Layout><BlockVendedorRoute><Acordos /></BlockVendedorRoute></Layout>} />
+              <Route path="/campanhas" element={<Layout><BlockVendedorRoute><Campanhas /></BlockVendedorRoute></Layout>} />
+              <Route path="/importar" element={<Layout><BlockVendedorRoute><ImportarCSV /></BlockVendedorRoute></Layout>} />
+              <Route path="/relatorios" element={<Layout><BlockVendedorRoute><Relatorios /></BlockVendedorRoute></Layout>} />
               <Route path="/usuarios" element={<Layout><AdminRoute><Usuarios /></AdminRoute></Layout>} />
-              <Route path="/telecobranca/:clienteId" element={<Layout><Telecobranca /></Layout>} />
+              <Route path="/telecobranca/:clienteId" element={<Layout><BlockVendedorRoute><Telecobranca /></BlockVendedorRoute></Layout>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

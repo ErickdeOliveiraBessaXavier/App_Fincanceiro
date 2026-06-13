@@ -94,13 +94,14 @@ const formatDateTime = (date: string) => new Date(date).toLocaleString('pt-BR');
 interface ClienteItemProps {
   cliente: ClienteRow;
   isOperador: boolean;
+  isVendedor: boolean;
   onTelecobranca: (c: ClienteRow) => void;
   onDetails: (c: ClienteRow) => void;
   onEdit: (c: ClienteRow) => void;
   onDelete: (c: ClienteRow) => void;
 }
 
-function ClienteCard({ cliente, isOperador, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
+function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
   return (
     <div className="p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all shadow-sm group">
       <div className="flex justify-between items-start mb-4">
@@ -142,7 +143,9 @@ function ClienteCard({ cliente, isOperador, onTelecobranca, onDetails, onEdit, o
           <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
             <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-3 py-2">Ações</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onTelecobranca(cliente)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
+            {!isVendedor && (
+              <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onTelecobranca(cliente)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
+            )}
             <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
             {isOperador && (
               <>
@@ -158,7 +161,7 @@ function ClienteCard({ cliente, isOperador, onTelecobranca, onDetails, onEdit, o
   );
 }
 
-function ClienteTableRow({ cliente, isOperador, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
+function ClienteTableRow({ cliente, isOperador, isVendedor, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
   return (
     <TableRow className="hover:bg-muted/10 transition-colors">
       <TableCell className="font-bold text-sm text-foreground">{cliente.nome}</TableCell>
@@ -178,7 +181,9 @@ function ClienteTableRow({ cliente, isOperador, onTelecobranca, onDetails, onEdi
         <DropdownMenu>
           <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
+            {!isVendedor && (
             <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onTelecobranca(cliente)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
+            )}
             <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
             {isOperador && (
             <>
@@ -313,7 +318,7 @@ export default function Clientes() {
   const { data: clientes = [], isLoading: loading } = useClientes();
   const { data: cobradores = [] } = useCobradores();
   const { data: vendedores = [] } = useVendedores();
-  const { isOperador } = useUserRole();
+  const { isOperador, isVendedor } = useUserRole();
   const createClienteMutation = useCreateCliente();
   const updateClienteMutation = useUpdateCliente();
   const deleteClienteMutation = useDeleteCliente();
@@ -597,6 +602,7 @@ export default function Clientes() {
                   key={cliente.id}
                   cliente={cliente}
                   isOperador={isOperador}
+                  isVendedor={isVendedor}
                   onTelecobranca={goTelecobranca}
                   onDetails={openDetails}
                   onEdit={openEdit}
@@ -627,6 +633,7 @@ export default function Clientes() {
                       key={cliente.id}
                       cliente={cliente}
                       isOperador={isOperador}
+                      isVendedor={isVendedor}
                       onTelecobranca={goTelecobranca}
                       onDetails={openDetails}
                       onEdit={openEdit}
