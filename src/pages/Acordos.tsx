@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { useLocation } from 'react-router-dom';
-import { Plus, Eye, Trash2, FileText, CheckCircle, TrendingUp } from 'lucide-react';
+import { Plus, Eye, Trash2, FileText, CheckCircle, TrendingUp, Loader2 } from 'lucide-react';
 import { useAcordos, useCreateAcordo, useDeleteAcordo, type AcordoRow } from '@/lib/queries/acordos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -105,11 +105,115 @@ const formatCurrency = (value: number) =>
 const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
 
 // ===================== Subcomponentes =====================
+interface ConfiguracaoAcordoProps {
+  newAcordo: NovoAcordo;
+  setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
+  formErrors: FormErrors;
+  showCronograma: boolean;
+  cronograma: CronogramaParcela[];
+  onVisualizarCronograma: () => void;
+}
+function ConfiguracaoAcordo({
+  newAcordo, setNewAcordo, formErrors, showCronograma, cronograma, onVisualizarCronograma,
+}: ConfiguracaoAcordoProps) {
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Label>Valor Original</Label>
+          <Input
+            value={formatCurrency(newAcordo.valor_original)}
+            disabled
+            className="bg-muted"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Valor do Acordo</Label>
+          <Input
+            type="number"
+            step="0.01"
+            value={newAcordo.valor_acordo}
+            onChange={(e) => setNewAcordo(prev => ({ ...prev, valor_acordo: parseFloat(e.target.value) || 0 }))}
+            className={formErrors.valor_acordo ? "border-red-500" : ""}
+          />
+          {formErrors.valor_acordo && (
+            <span className="text-xs text-red-500">{formErrors.valor_acordo}</span>
+          )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div className="space-y-2">
+          <Label>Parcelas</Label>
+          <Input
+            type="number"
+            min="1"
+            value={newAcordo.parcelas}
+            onChange={(e) => setNewAcordo(prev => ({ ...prev, parcelas: parseInt(e.target.value) || 1 }))}
+            className={formErrors.parcelas ? "border-red-500" : ""}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Taxa de Juros (%)</Label>
+          <Input
+            type="number"
+            step="0.01"
+            min="0"
+            value={newAcordo.taxa_juros}
+            onChange={(e) => setNewAcordo(prev => ({ ...prev, taxa_juros: parseFloat(e.target.value) || 0 }))}
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>1ª Parcela</Label>
+          <Input
+            type="date"
+            value={newAcordo.data_vencimento_primeira_parcela}
+            onChange={(e) => setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: e.target.value }))}
+            className={formErrors.data_vencimento_primeira_parcela ? "border-red-500" : ""}
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label>Observações</Label>
+        <Input
+          value={newAcordo.observacoes}
+          onChange={(e) => setNewAcordo(prev => ({ ...prev, observacoes: e.target.value }))}
+        />
+      </div>
+
+      <Button variant="outline" onClick={onVisualizarCronograma} className="w-full">
+        Visualizar Cronograma
+      </Button>
+
+      {showCronograma && cronograma.length > 0 && (
+        <div className="p-4 bg-muted rounded-lg">
+          <h4 className="font-medium mb-2">Cronograma de Parcelas</h4>
+          <div className="space-y-1 text-sm">
+            {cronograma.map((p) => (
+              <div key={p.numero} className="flex justify-between">
+                <span>Parcela {p.numero} - {formatDate(p.data_vencimento)}</span>
+                <span>{formatCurrency(p.valor_total)}</span>
+              </div>
+            ))}
+            <div className="border-t pt-2 mt-2 font-medium flex justify-between">
+              <span>Total</span>
+              <span>{formatCurrency(cronograma.reduce((sum, p) => sum + p.valor_total, 0))}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
 interface NovoAcordoDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   clientes: Parameters<typeof SelecionarTitulosAcordo>[0]['clientes'];
   clienteIdPreSelecionado?: string;
+  loadingTitulos: boolean;
+  isCreating: boolean;
   onSelectionChange: (selection: SelectionData | null) => void;
   newAcordo: NovoAcordo;
   setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
@@ -121,7 +225,7 @@ interface NovoAcordoDialogProps {
   onCreate: () => void;
 }
 function NovoAcordoDialog({
-  open, onOpenChange, clientes, clienteIdPreSelecionado, onSelectionChange,
+  open, onOpenChange, clientes, clienteIdPreSelecionado, loadingTitulos, isCreating, onSelectionChange,
   newAcordo, setNewAcordo, formErrors, showCronograma, cronograma,
   onVisualizarCronograma, onCancel, onCreate,
 }: NovoAcordoDialogProps) {
@@ -138,104 +242,27 @@ function NovoAcordoDialog({
           <SelecionarTitulosAcordo
             clientes={clientes}
             clienteIdPreSelecionado={clienteIdPreSelecionado}
+            loading={loadingTitulos}
             onSelectionChange={onSelectionChange}
           />
 
-          {newAcordo.titulo_ids.length > 0 && (
-            <>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Valor Original</Label>
-                  <Input
-                    value={formatCurrency(newAcordo.valor_original)}
-                    disabled
-                    className="bg-muted"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Valor do Acordo</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={newAcordo.valor_acordo}
-                    onChange={(e) => setNewAcordo(prev => ({ ...prev, valor_acordo: parseFloat(e.target.value) || 0 }))}
-                    className={formErrors.valor_acordo ? "border-red-500" : ""}
-                  />
-                  {formErrors.valor_acordo && (
-                    <span className="text-xs text-red-500">{formErrors.valor_acordo}</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>Parcelas</Label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={newAcordo.parcelas}
-                    onChange={(e) => setNewAcordo(prev => ({ ...prev, parcelas: parseInt(e.target.value) || 1 }))}
-                    className={formErrors.parcelas ? "border-red-500" : ""}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Taxa de Juros (%)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={newAcordo.taxa_juros}
-                    onChange={(e) => setNewAcordo(prev => ({ ...prev, taxa_juros: parseFloat(e.target.value) || 0 }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>1ª Parcela</Label>
-                  <Input
-                    type="date"
-                    value={newAcordo.data_vencimento_primeira_parcela}
-                    onChange={(e) => setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: e.target.value }))}
-                    className={formErrors.data_vencimento_primeira_parcela ? "border-red-500" : ""}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>Observações</Label>
-                <Input
-                  value={newAcordo.observacoes}
-                  onChange={(e) => setNewAcordo(prev => ({ ...prev, observacoes: e.target.value }))}
-                />
-              </div>
-
-              <Button variant="outline" onClick={onVisualizarCronograma} className="w-full">
-                Visualizar Cronograma
-              </Button>
-
-              {showCronograma && cronograma.length > 0 && (
-                <div className="p-4 bg-muted rounded-lg">
-                  <h4 className="font-medium mb-2">Cronograma de Parcelas</h4>
-                  <div className="space-y-1 text-sm">
-                    {cronograma.map((p) => (
-                      <div key={p.numero} className="flex justify-between">
-                        <span>Parcela {p.numero} - {formatDate(p.data_vencimento)}</span>
-                        <span>{formatCurrency(p.valor_total)}</span>
-                      </div>
-                    ))}
-                    <div className="border-t pt-2 mt-2 font-medium flex justify-between">
-                      <span>Total</span>
-                      <span>{formatCurrency(cronograma.reduce((sum, p) => sum + p.valor_total, 0))}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </>
+          {!loadingTitulos && newAcordo.titulo_ids.length > 0 && (
+            <ConfiguracaoAcordo
+              newAcordo={newAcordo}
+              setNewAcordo={setNewAcordo}
+              formErrors={formErrors}
+              showCronograma={showCronograma}
+              cronograma={cronograma}
+              onVisualizarCronograma={onVisualizarCronograma}
+            />
           )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel}>
             Cancelar
           </Button>
-          <Button onClick={onCreate} disabled={newAcordo.titulo_ids.length === 0}>
+          <Button onClick={onCreate} disabled={newAcordo.titulo_ids.length === 0 || isCreating}>
+            {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Criar Acordo
           </Button>
         </DialogFooter>
@@ -776,6 +803,8 @@ export default function Acordos() {
         onOpenChange={setIsCreateModalOpen}
         clientes={clientesComDividas}
         clienteIdPreSelecionado={preSelectedData?.clienteId}
+        loadingTitulos={loadingTitulos}
+        isCreating={createAcordoMutation.isPending}
         onSelectionChange={handleSelectionChange}
         newAcordo={newAcordo}
         setNewAcordo={setNewAcordo}

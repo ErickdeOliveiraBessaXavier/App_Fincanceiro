@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { PageHeader } from '@/components/PageHeader';
 import { Plus, Edit, Trash2, Users, Briefcase, Link2, Check, Copy, CheckCircle2 } from 'lucide-react';
 import {
@@ -35,9 +36,10 @@ interface VendedoresTableCardProps {
   onEdit: (r: VendedorRow) => void;
   onDelete: (r: VendedorRow) => void;
   onToggle: (r: VendedorRow) => void;
+  onVerCarteira: (r: VendedorRow) => void;
 }
 function VendedoresTableCard({
-  vendedores, isLoading, isAdmin, gerando, onGerarLink, onEdit, onDelete, onToggle,
+  vendedores, isLoading, isAdmin, gerando, onGerarLink, onEdit, onDelete, onToggle, onVerCarteira,
 }: VendedoresTableCardProps) {
   return (
     <Card className="border-none shadow-card rounded-2xl overflow-hidden">
@@ -82,7 +84,21 @@ function VendedoresTableCard({
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant="secondary" className="rounded-lg font-bold text-[10px] uppercase tracking-wider">{r.carteira} clientes</Badge>
+                      {r.carteira > 0 ? (
+                        <button
+                          type="button"
+                          onClick={() => onVerCarteira(r)}
+                          title="Ver clientes desta carteira"
+                        >
+                          <Badge variant="secondary" className="rounded-lg font-bold text-[10px] uppercase tracking-wider cursor-pointer hover:bg-primary/10 transition-colors">
+                            {r.carteira} clientes
+                          </Badge>
+                        </button>
+                      ) : (
+                        <Badge variant="outline" className="rounded-lg font-bold text-[10px] uppercase tracking-wider text-muted-foreground">
+                          0 clientes
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Switch checked={r.ativo} onCheckedChange={() => onToggle(r)} />
@@ -209,6 +225,10 @@ export default function Vendedores() {
   const gerarConvite = useGerarConvite();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // Drill-down: abre a tela de Clientes já filtrada pela carteira do vendedor.
+  const verCarteira = (r: VendedorRow) => navigate(`/clientes?vendedor=${r.id}`);
 
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(empty);
@@ -368,6 +388,7 @@ export default function Vendedores() {
         onEdit={openEdit}
         onDelete={setToDelete}
         onToggle={toggleAtivo}
+        onVerCarteira={verCarteira}
       />
 
       <Dialog open={open} onOpenChange={setOpen}>

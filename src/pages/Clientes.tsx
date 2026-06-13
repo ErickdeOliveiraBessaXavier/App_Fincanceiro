@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2, MoreHorizontal, CheckCircle, AlertTriangle } from 'lucide-react';
 import {
   useClientes,
@@ -306,6 +306,7 @@ function DeleteClienteDialog({ open, onOpenChange, cliente, onCancel, onConfirm 
 
 export default function Clientes() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   // === Data via React Query ===
@@ -438,6 +439,26 @@ export default function Clientes() {
   };
 
   const filterFunctions = useMemo(() => createClientesFilterFunctions(), []);
+
+  // Filtro "Vendedor" com opções dinâmicas (lista de vendedores da empresa).
+  const filterConfigs = useMemo(() => [
+    ...clientesFilterConfig,
+    {
+      id: 'vendedor',
+      label: 'Vendedor',
+      type: 'select' as const,
+      placeholder: 'Todos',
+      options: vendedores.map((v) => ({ value: v.id, label: v.nome })),
+    },
+  ], [vendedores]);
+
+  // Carteira pré-filtrada via ?vendedor=<id> (link vindo da tela de Vendedores).
+  const vendedorParam = searchParams.get('vendedor');
+  const initialFilters = useMemo(
+    () => (vendedorParam ? { vendedor: vendedorParam } : undefined),
+    [vendedorParam]
+  );
+
   const {
     filteredData: filteredClientes,
     filters,
@@ -449,7 +470,7 @@ export default function Clientes() {
     activeFiltersCount,
     resultCount,
     totalCount
-  } = useGlobalFilter(clientes, filterFunctions);
+  } = useGlobalFilter(clientes, filterFunctions, { initialFilters });
 
   const statusCounts = {
     total: clientes.length,
@@ -554,7 +575,7 @@ export default function Clientes() {
           </CardHeader>
           <CardContent className="pt-6">
             <GlobalFilter
-              configs={clientesFilterConfig}
+              configs={filterConfigs}
               filters={filters}
               onFilterChange={setFilter}
               onClearFilter={clearFilter}
@@ -566,7 +587,7 @@ export default function Clientes() {
               presets={clientesPresets}
               onPresetSelect={(preset) => setFilters(preset.filters)}
               collapsible={true}
-              defaultOpen={false}
+              defaultOpen={!!initialFilters}
             />
 
             {/* Mobile Card View */}

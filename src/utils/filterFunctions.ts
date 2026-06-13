@@ -174,8 +174,10 @@ export const createClientesFilterFunctions = () => ({
     commonFilterFunctions.exactMatch(item, value, 'status'),
   cidade: (item: any, value: string) => 
     commonFilterFunctions.contains(item, value, 'cidade'),
-  estado: (item: any, value: string) => 
+  estado: (item: any, value: string) =>
     commonFilterFunctions.contains(item, value, 'estado'),
+  vendedor: (item: any, value: string) =>
+    commonFilterFunctions.exactMatch(item, value, 'vendedor_id'),
 });
 
 export const createAcordosFilterFunctions = () => ({
