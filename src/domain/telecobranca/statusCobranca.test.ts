@@ -9,6 +9,10 @@ import {
   calcularProximoContato,
   validarStatusCobranca,
   paraTimestampNegocio,
+  isContatoEfetivo,
+  contarNaoAtendeConsecutivos,
+  naoAtendeExigePesquisa,
+  exigePesquisa,
 } from './statusCobranca';
 
 // Datas civis ancoradas ao meio-dia, como a camada de negócio trabalha.
@@ -86,12 +90,72 @@ describe('calcularProximoContato', () => {
   });
 });
 
+describe('isContatoEfetivo', () => {
+  it('marca contato efetivo apenas onde houve diálogo', () => {
+    expect(isContatoEfetivo('agendamento_pagamento')).toBe(true);
+    expect(isContatoEfetivo('sem_previsao_pagamento')).toBe(true);
+    expect(isContatoEfetivo('devolucao')).toBe(true);
+    expect(isContatoEfetivo('nao_atende')).toBe(false);
+    expect(isContatoEfetivo('recado')).toBe(false);
+    expect(isContatoEfetivo('sem_contato_incorreto')).toBe(false);
+  });
+});
+
+describe('contarNaoAtendeConsecutivos', () => {
+  it('conta sequência sem contato efetivo', () => {
+    expect(contarNaoAtendeConsecutivos([])).toBe(0);
+    expect(contarNaoAtendeConsecutivos(['nao_atende', 'nao_atende'])).toBe(2);
+  });
+  it('recado não conta nem zera a sequência', () => {
+    expect(contarNaoAtendeConsecutivos(['nao_atende', 'recado', 'nao_atende'])).toBe(2);
+  });
+  it('contato efetivo zera a sequência (para a contagem)', () => {
+    expect(contarNaoAtendeConsecutivos(['nao_atende', 'agendamento_pagamento', 'nao_atende'])).toBe(1);
+    expect(contarNaoAtendeConsecutivos(['agendamento_pagamento', 'nao_atende'])).toBe(0);
+  });
+});
+
+describe('naoAtendeExigePesquisa', () => {
+  it('exige pesquisa a partir da 3ª tentativa (2 anteriores)', () => {
+    expect(naoAtendeExigePesquisa(0)).toBe(false);
+    expect(naoAtendeExigePesquisa(1)).toBe(false);
+    expect(naoAtendeExigePesquisa(2)).toBe(true);
+    expect(naoAtendeExigePesquisa(3)).toBe(true);
+  });
+});
+
+describe('exigePesquisa', () => {
+  it('sem contato sempre exige', () => {
+    expect(exigePesquisa('sem_contato_incorreto')).toBe(true);
+  });
+  it('não atende exige só a partir da 3ª tentativa', () => {
+    expect(exigePesquisa('nao_atende', { tentativasAnteriores: 1 })).toBe(false);
+    expect(exigePesquisa('nao_atende', { tentativasAnteriores: 2 })).toBe(true);
+  });
+  it('status com contato efetivo não exige', () => {
+    expect(exigePesquisa('sem_previsao_pagamento')).toBe(false);
+  });
+});
+
 describe('validarStatusCobranca', () => {
   it('exige data prevista no agendamento de pagamento', () => {
     expect(validarStatusCobranca('agendamento_pagamento', {})).not.toBeNull();
     expect(validarStatusCobranca('agendamento_pagamento', { dataPrevista: QUARTA })).toBeNull();
   });
-  it('não exige nada nos demais status', () => {
+  it('sem contato exige confirmação de pesquisa', () => {
+    expect(validarStatusCobranca('sem_contato_incorreto', {})).not.toBeNull();
+    expect(validarStatusCobranca('sem_contato_incorreto', { pesquisaConfirmada: true })).toBeNull();
+  });
+  it('devolução exige confirmação interna', () => {
+    expect(validarStatusCobranca('devolucao', {})).not.toBeNull();
+    expect(validarStatusCobranca('devolucao', { confirmacaoInterna: true })).toBeNull();
+  });
+  it('não atende na 3ª tentativa exige pesquisa', () => {
+    expect(validarStatusCobranca('nao_atende', { tentativasAnteriores: 2 })).not.toBeNull();
+    expect(validarStatusCobranca('nao_atende', { tentativasAnteriores: 2, pesquisaConfirmada: true })).toBeNull();
+    expect(validarStatusCobranca('nao_atende', { tentativasAnteriores: 1 })).toBeNull();
+  });
+  it('não exige nada nos status simples', () => {
     expect(validarStatusCobranca('sem_previsao_pagamento', {})).toBeNull();
     expect(validarStatusCobranca('suspeita_fraude', {})).toBeNull();
   });

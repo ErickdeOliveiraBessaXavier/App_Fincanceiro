@@ -42,6 +42,15 @@ export interface StatusCobrancaConfig {
   exigeDataPrevista: boolean;
   /** Prioridade visual/operacional do status. */
   prioridade: 'normal' | 'alta';
+  /**
+   * Indica contato efetivo com o cliente/terceiro. Zera a sequência de
+   * "Não Atende" ao calcular as tentativas consecutivas.
+   */
+  contatoEfetivo: boolean;
+  /** Exige confirmação de que a pesquisa de contato foi realizada (RCA + sistema). */
+  exigePesquisaConfirmada: boolean;
+  /** Exige confirmação interna (ex.: devolução validada pela equipe). */
+  exigeConfirmacaoInterna: boolean;
   /** Orientação contextual exibida ao operador ao selecionar o status. */
   orientacao: string;
 }
@@ -59,6 +68,9 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     tetoDias: null,
     exigeDataPrevista: false,
     prioridade: 'alta',
+    contatoEfetivo: true,
+    exigePesquisaConfirmada: false,
+    exigeConfirmacaoInterna: false,
     orientacao:
       'Cliente não reconhece o débito mesmo após cobrança e envio dos comprovantes de entrega. ' +
       'Encaminhe imediatamente para Gestão de Crédito, Cobrança e Diretoria.',
@@ -71,6 +83,9 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     tetoDias: 7,
     exigeDataPrevista: true,
     prioridade: 'normal',
+    contatoEfetivo: true,
+    exigePesquisaConfirmada: false,
+    exigeConfirmacaoInterna: false,
     orientacao:
       'Há contato efetivo e previsão de pagamento/acordo. Informe a data prevista de pagamento; ' +
       'o próximo contato será 1 dia após a data informada (limite de 7 dias).',
@@ -83,6 +98,9 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     tetoDias: null,
     exigeDataPrevista: false,
     prioridade: 'normal',
+    contatoEfetivo: true,
+    exigePesquisaConfirmada: false,
+    exigeConfirmacaoInterna: false,
     orientacao: 'Há contato efetivo, porém sem previsão de pagamento.',
   },
   recado: {
@@ -93,6 +111,9 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     tetoDias: null,
     exigeDataPrevista: false,
     prioridade: 'normal',
+    contatoEfetivo: false,
+    exigePesquisaConfirmada: false,
+    exigeConfirmacaoInterna: false,
     orientacao: 'Contato não efetivo com o cliente; recado deixado com terceiros.',
   },
   nao_atende: {
@@ -103,6 +124,9 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     tetoDias: null,
     exigeDataPrevista: false,
     prioridade: 'normal',
+    contatoEfetivo: false,
+    exigePesquisaConfirmada: false,
+    exigeConfirmacaoInterna: false,
     orientacao:
       'Contato não efetivo (ocupado, desligado, caixa postal ou não atende). ' +
       'A partir da 3ª tentativa será exigida pesquisa de contato.',
@@ -115,6 +139,9 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     tetoDias: null,
     exigeDataPrevista: false,
     prioridade: 'normal',
+    contatoEfetivo: false,
+    exigePesquisaConfirmada: true,
+    exigeConfirmacaoInterna: false,
     orientacao:
       'Contato inexistente/incorreto, cliente desconhecido, mudança de endereço ou pesquisas concluídas. ' +
       'O coordenador de Crédito e Cobrança deve comunicar o supervisor de vendas para solicitar visita ao local.',
@@ -127,6 +154,9 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     tetoDias: null,
     exigeDataPrevista: false,
     prioridade: 'normal',
+    contatoEfetivo: true,
+    exigePesquisaConfirmada: false,
+    exigeConfirmacaoInterna: true,
     orientacao:
       'Cliente informou devolução total da mercadoria, confirmada pela equipe interna. ' +
       'Inicie o tratamento da devolução.',
@@ -141,6 +171,37 @@ export function getStatusCobranca(slug: StatusCobrancaSlug): StatusCobrancaConfi
   const cfg = STATUS_COBRANCA[slug];
   if (!cfg) throw new Error(`Status de cobrança desconhecido: ${slug}`);
   return cfg;
+}
+
+/** Houve contato efetivo neste status? (zera a sequência de "Não Atende"). */
+export function isContatoEfetivo(slug: StatusCobrancaSlug): boolean {
+  return getStatusCobranca(slug).contatoEfetivo;
+}
+
+/**
+ * A partir de quantas tentativas ANTERIORES de "Não Atende" a pesquisa passa a
+ * ser exigida. Regra do cliente: até a 2ª tentativa agenda normal; a 3ª (ou
+ * seja, com 2 anteriores) exige pesquisa.
+ */
+export const TENTATIVAS_ANTES_PESQUISA = 2;
+
+/**
+ * Conta "Não Atende" consecutivos desde o último contato efetivo.
+ * `historico` deve vir do mais recente para o mais antigo. Um contato efetivo
+ * interrompe a contagem (zera a sequência).
+ */
+export function contarNaoAtendeConsecutivos(historico: StatusCobrancaSlug[]): number {
+  let count = 0;
+  for (const slug of historico) {
+    if (isContatoEfetivo(slug)) break;
+    if (slug === 'nao_atende') count += 1;
+  }
+  return count;
+}
+
+/** Esta nova tentativa de "Não Atende" já exige pesquisa de contato? */
+export function naoAtendeExigePesquisa(tentativasAnteriores: number): boolean {
+  return tentativasAnteriores >= TENTATIVAS_ANTES_PESQUISA;
 }
 
 /**
@@ -210,6 +271,12 @@ export interface CalculoContexto {
   referencia?: Date;
   /** Data prevista de pagamento (obrigatória para agendamento_pagamento). */
   dataPrevista?: Date;
+  /** Tentativas anteriores de "Não Atende" consecutivas (para exigir pesquisa). */
+  tentativasAnteriores?: number;
+  /** Operador confirmou que a pesquisa de contato foi realizada. */
+  pesquisaConfirmada?: boolean;
+  /** Operador confirmou a validação interna (ex.: devolução). */
+  confirmacaoInterna?: boolean;
 }
 
 /** Limita `proximo` a no máximo `tetoDias` corridos após a referência. */
@@ -237,6 +304,17 @@ export function calcularProximoContato(slug: StatusCobrancaSlug, ctx: CalculoCon
 }
 
 /**
+ * Pesquisa de contato é exigida para este status/contexto? Vale para o status
+ * "Sem Contato" (sempre) e para o "Não Atende" a partir da 3ª tentativa.
+ */
+export function exigePesquisa(slug: StatusCobrancaSlug, ctx: CalculoContexto = {}): boolean {
+  const cfg = getStatusCobranca(slug);
+  if (cfg.exigePesquisaConfirmada) return true;
+  if (slug === 'nao_atende') return naoAtendeExigePesquisa(ctx.tentativasAnteriores ?? 0);
+  return false;
+}
+
+/**
  * Valida os campos obrigatórios conforme o status escolhido.
  * Retorna a mensagem de erro, ou null quando válido.
  */
@@ -244,6 +322,12 @@ export function validarStatusCobranca(slug: StatusCobrancaSlug, ctx: CalculoCont
   const cfg = getStatusCobranca(slug);
   if (cfg.exigeDataPrevista && !ctx.dataPrevista) {
     return 'Informe a data prevista de pagamento.';
+  }
+  if (exigePesquisa(slug, ctx) && !ctx.pesquisaConfirmada) {
+    return 'Confirme que a pesquisa de contato foi realizada (RCA e sistema de pesquisa).';
+  }
+  if (cfg.exigeConfirmacaoInterna && !ctx.confirmacaoInterna) {
+    return 'Confirme a validação interna da devolução.';
   }
   return null;
 }
