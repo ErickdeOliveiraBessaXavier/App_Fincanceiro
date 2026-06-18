@@ -1,27 +1,30 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Plus, 
-  Calendar, 
-  Mail, 
-  MessageSquare, 
+import {
+  Plus,
+  Calendar,
+  Mail,
+  MessageSquare,
   Phone,
-  Zap
+  Zap,
+  ClipboardCheck
 } from 'lucide-react';
 
 interface AcoesRapidasProps {
   onNovoEvento: () => void;
   onAgendarRetorno: () => void;
+  onRegistrarResultado: () => void;
   telefone?: string | null;
   email?: string | null;
 }
 
-export function AcoesRapidas({ 
-  onNovoEvento, 
+export function AcoesRapidas({
+  onNovoEvento,
   onAgendarRetorno,
+  onRegistrarResultado,
   telefone,
-  email 
+  email
 }: AcoesRapidasProps) {
   const handleWhatsApp = () => {
     if (telefone) {
@@ -90,16 +93,25 @@ export function AcoesRapidas({
         <Separator />
         
         {/* Ações principais */}
-        <Button 
-          className="w-full" 
+        <Button
+          className="w-full"
+          onClick={onRegistrarResultado}
+        >
+          <ClipboardCheck className="h-4 w-4 mr-2" />
+          Registrar Resultado
+        </Button>
+
+        <Button
+          variant="secondary"
+          className="w-full"
           onClick={onNovoEvento}
         >
           <Plus className="h-4 w-4 mr-2" />
           Registrar Evento
         </Button>
-        
-        <Button 
-          variant="secondary" 
+
+        <Button
+          variant="secondary"
           className="w-full"
           onClick={onAgendarRetorno}
         >

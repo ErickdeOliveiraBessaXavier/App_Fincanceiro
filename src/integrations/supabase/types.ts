@@ -188,6 +188,7 @@ export type Database = {
           id: string
           resultado: string | null
           status: string
+          status_cobranca: string | null
           tipo_evento: string
           titulo_id: string | null
           updated_at: string | null
@@ -204,6 +205,7 @@ export type Database = {
           id?: string
           resultado?: string | null
           status?: string
+          status_cobranca?: string | null
           tipo_evento: string
           titulo_id?: string | null
           updated_at?: string | null
@@ -220,6 +222,7 @@ export type Database = {
           id?: string
           resultado?: string | null
           status?: string
+          status_cobranca?: string | null
           tipo_evento?: string
           titulo_id?: string | null
           updated_at?: string | null
@@ -714,6 +717,7 @@ export type Database = {
           id: string
           mensagem: string | null
           resultado: string | null
+          status_cobranca: string | null
           tipo: string
         }
         Insert: {
@@ -728,6 +732,7 @@ export type Database = {
           id?: string
           mensagem?: string | null
           resultado?: string | null
+          status_cobranca?: string | null
           tipo: string
         }
         Update: {
@@ -742,6 +747,7 @@ export type Database = {
           id?: string
           mensagem?: string | null
           resultado?: string | null
+          status_cobranca?: string | null
           tipo?: string
         }
         Relationships: [
@@ -1452,6 +1458,17 @@ export type Database = {
       }
       find_or_create_cobrador: { Args: { p_nome: string }; Returns: string }
       find_or_create_vendedor: { Args: { p_nome: string }; Returns: string }
+      registrar_resultado_cobranca: {
+        Args: {
+          p_acordo_id?: string
+          p_cliente_id: string
+          p_data_proximo_contato: string
+          p_descricao?: string
+          p_status_cobranca: string
+          p_titulo_id?: string
+        }
+        Returns: Json
+      }
       has_min_role: {
         Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
         Returns: boolean
