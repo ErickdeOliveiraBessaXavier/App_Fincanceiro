@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { useUserRole } from '@/hooks/useUserRole';
+import { paraTimestampNegocio } from '@/domain/telecobranca/statusCobranca';
 import { TIPOS_EVENTO } from '@/constants/tiposEvento';
 import {
   Dialog,
@@ -47,28 +49,28 @@ export function AgendamentoModal({
   const [horaAgendamento, setHoraAgendamento] = useState('09:00');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { companyId } = useAuth();
+  const { user, companyId } = useAuth();
+  const { isOperador } = useUserRole();
+
+  const resetForm = () => {
+    setTipoEvento('agendamento');
+    setDescricao('');
+    setDataAgendamento(undefined);
+    setHoraAgendamento('09:00');
+  };
 
   const handleSubmit = async () => {
-    if (!dataAgendamento) {
-      toast({
-        title: "Erro",
-        description: "Selecione uma data para o agendamento",
-        variant: "destructive",
-      });
+    if (!isOperador) {
+      toast({ title: 'Permissão negada', description: 'Apenas operadores podem criar agendamentos.', variant: 'destructive' });
       return;
     }
-
+    if (!dataAgendamento) {
+      toast({ title: 'Erro', description: 'Selecione uma data para o agendamento.', variant: 'destructive' });
+      return;
+    }
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) throw new Error('Usuário não autenticado');
-      if (!companyId) throw new Error('Empresa não identificada');
-
-      const [hora, minuto] = horaAgendamento.split(':');
-      const dataCompleta = new Date(dataAgendamento);
-      dataCompleta.setHours(parseInt(hora), parseInt(minuto), 0, 0);
+      if (!user || !companyId) throw new Error('Sessão inválida');
 
       const { error } = await supabase
         .from('agendamentos')
@@ -79,33 +81,20 @@ export function AgendamentoModal({
           acordo_id: acordoId || null,
           tipo_evento: tipoEvento,
           descricao,
-          data_agendamento: dataCompleta.toISOString(),
+          data_agendamento: paraTimestampNegocio(dataAgendamento, horaAgendamento),
           status: 'pendente',
-          created_by: user.id
+          created_by: user.id,
         });
 
       if (error) throw error;
 
-      toast({
-        title: "Sucesso",
-        description: "Agendamento criado com sucesso",
-      });
-
-      // Reset form
-      setTipoEvento('agendamento');
-      setDescricao('');
-      setDataAgendamento(undefined);
-      setHoraAgendamento('09:00');
-      
+      toast({ title: 'Sucesso', description: 'Agendamento criado com sucesso.' });
+      resetForm();
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Erro ao criar agendamento:', error);
-      toast({
-        title: "Erro",
-        description: "Não foi possível criar o agendamento",
-        variant: "destructive",
-      });
+      toast({ title: 'Erro', description: 'Não foi possível criar o agendamento.', variant: 'destructive' });
     } finally {
       setLoading(false);
     }
@@ -217,8 +206,8 @@ export function AgendamentoModal({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Salvando..." : "Agendar"}
+          <Button onClick={handleSubmit} disabled={loading || !isOperador}>
+            {loading ? 'Salvando...' : 'Agendar'}
           </Button>
         </DialogFooter>
       </DialogContent>

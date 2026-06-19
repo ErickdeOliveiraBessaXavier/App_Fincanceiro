@@ -27,6 +27,7 @@ export type StatusDomain =
   | 'cliente'
   | 'acordo'
   | 'agendamento'
+  | 'status_cobranca'
   | 'campanha';
 
 export interface StatusMeta {
@@ -70,6 +71,17 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     pendente: { label: 'Pendente', variant: 'warning', icon: Clock },
     concluido: { label: 'Concluído', variant: 'success', icon: CheckCircle },
     cancelado: { label: 'Cancelado', variant: 'destructive', icon: XCircle },
+  },
+  // Status de cobrança da telecobrança (agendamentos.status_cobranca).
+  // Rótulos espelham STATUS_COBRANCA em src/domain/telecobranca/statusCobranca.ts.
+  status_cobranca: {
+    suspeita_fraude: { label: 'Suspeita de Fraude', variant: 'destructive' },
+    agendamento_pagamento: { label: 'Agendamento de Pagamento', variant: 'success' },
+    sem_previsao_pagamento: { label: 'Sem Previsão de Pagamento', variant: 'warning' },
+    recado: { label: 'Recado', variant: 'secondary' },
+    nao_atende: { label: 'Não Atende', variant: 'secondary' },
+    sem_contato_incorreto: { label: 'Sem Contato ou Incorreto', variant: 'destructive' },
+    devolucao: { label: 'Devolução', variant: 'accent' },
   },
   // Status da campanha (campanhas.status)
   campanha: {

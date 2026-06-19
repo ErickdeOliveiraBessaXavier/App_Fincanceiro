@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { TIPOS_EVENTO } from '@/constants/tiposEvento';
+import { useUserRole } from '@/hooks/useUserRole';
+import { agoraTimestampNegocio } from '@/domain/telecobranca/statusCobranca';
+import { TIPOS_EVENTO, TIPOS_EVENTO_ADMINISTRATIVO } from '@/constants/tiposEvento';
 import {
   Dialog,
   DialogContent,
@@ -35,11 +37,12 @@ export function RegistroEventoModal({
   clienteNome,
   onSuccess
 }: RegistroEventoModalProps) {
-  const [tipoEvento, setTipoEvento] = useState('contato_cliente');
+  const [tipoEvento, setTipoEvento] = useState('contato_receptivo');
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
-  const { companyId } = useAuth();
+  const { user, companyId } = useAuth();
+  const { isOperador } = useUserRole();
 
   const inserirComunicacao = async (userId: string) => {
     const tipoEventoInfo = TIPOS_EVENTO.find(t => t.value === tipoEvento);
@@ -53,7 +56,7 @@ export function RegistroEventoModal({
         canal: 'manual',
         assunto: tipoEventoInfo?.label || 'Contato',
         mensagem: descricao,
-        data_contato: new Date().toISOString(),
+        data_contato: agoraTimestampNegocio(),
         created_by: userId
       });
     if (error) throw error;
@@ -62,35 +65,37 @@ export function RegistroEventoModal({
   };
 
   const resetForm = () => {
-    setTipoEvento('contato_cliente');
+    setTipoEvento('contato_receptivo');
     setDescricao('');
   };
 
   const handleSubmit = async () => {
-    if (!tipoEvento) {
-      toast({ title: "Erro", description: "Selecione um tipo de evento", variant: "destructive" });
+    if (!isOperador) {
+      toast({ title: 'Permissão negada', description: 'Apenas operadores podem registrar eventos.', variant: 'destructive' });
       return;
     }
-
+    if (!tipoEvento) {
+      toast({ title: 'Erro', description: 'Selecione um tipo de evento.', variant: 'destructive' });
+      return;
+    }
+    const tipoValido = TIPOS_EVENTO_ADMINISTRATIVO.some(t => t.value === tipoEvento);
+    if (!tipoValido) {
+      toast({ title: 'Tipo inválido', description: 'Este evento exige Registrar Resultado para aplicar as regras de cobrança.', variant: 'destructive' });
+      return;
+    }
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) throw new Error('Usuário não autenticado');
-      if (!companyId) throw new Error('Empresa não identificada');
-
+      if (!user || !companyId) throw new Error('Sessão inválida');
       await inserirComunicacao(user.id);
-
       resetForm();
       onSuccess();
       onClose();
     } catch (error) {
       console.error('Erro ao registrar evento:', error);
       toast({
-        title: "Erro",
-        description:
-          error instanceof Error ? error.message : "Não foi possível registrar o evento",
-        variant: "destructive",
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Não foi possível registrar o evento',
+        variant: 'destructive',
       });
     } finally {
       setLoading(false);
@@ -103,7 +108,9 @@ export function RegistroEventoModal({
         <DialogHeader>
           <DialogTitle>Registrar Evento</DialogTitle>
           <DialogDescription>
-            Registre um contato ou evento já ocorrido com {clienteNome}.
+            Registre um evento administrativo ou informativo de {clienteNome}.
+            Para resultados de cobrança (não atende, recado, agendamento de pagamento etc.),
+            use <strong>Registrar Resultado</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -115,7 +122,7 @@ export function RegistroEventoModal({
                 <SelectValue placeholder="Selecione o tipo de evento" />
               </SelectTrigger>
               <SelectContent>
-                {TIPOS_EVENTO.map((tipo) => {
+                {TIPOS_EVENTO_ADMINISTRATIVO.map((tipo) => {
                   const Icon = tipo.icon;
                   return (
                     <SelectItem key={tipo.value} value={tipo.value}>
@@ -145,8 +152,8 @@ export function RegistroEventoModal({
           <Button variant="outline" onClick={onClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Salvando..." : "Registrar"}
+          <Button onClick={handleSubmit} disabled={loading || !isOperador}>
+            {loading ? 'Salvando...' : 'Registrar'}
           </Button>
         </DialogFooter>
       </DialogContent>

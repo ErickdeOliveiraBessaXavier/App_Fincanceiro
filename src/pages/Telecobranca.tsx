@@ -13,6 +13,7 @@ import { EventoTimeline } from '@/components/telecobranca/EventoTimeline';
 import { MetricasCliente } from '@/components/telecobranca/MetricasCliente';
 import { RegistroEventoModal } from '@/components/telecobranca/RegistroEventoModal';
 import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
+import { RegistrarResultadoModal } from '@/components/telecobranca/RegistrarResultadoModal';
 import { StatusBadge } from '@/components/StatusBadge';
 
 interface Cliente {
@@ -39,6 +40,7 @@ export default function Telecobranca() {
   const [loading, setLoading] = useState(true);
   const [isEventoModalOpen, setIsEventoModalOpen] = useState(false);
   const [isAgendamentoModalOpen, setIsAgendamentoModalOpen] = useState(false);
+  const [isResultadoModalOpen, setIsResultadoModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -165,6 +167,7 @@ export default function Telecobranca() {
         <div className="lg:sticky lg:top-6 space-y-4 lg:self-start order-2 lg:order-1">
           {isOperador && (
             <AcoesRapidas
+              onRegistrarResultado={() => setIsResultadoModalOpen(true)}
               onNovoEvento={() => setIsEventoModalOpen(true)}
               onAgendarRetorno={() => setIsAgendamentoModalOpen(true)}
               telefone={cliente.telefone}
@@ -219,6 +222,14 @@ export default function Telecobranca() {
       <AgendamentoModal
         isOpen={isAgendamentoModalOpen}
         onClose={() => setIsAgendamentoModalOpen(false)}
+        clienteId={cliente.id}
+        clienteNome={cliente.nome}
+        onSuccess={handleEventoSuccess}
+      />
+
+      <RegistrarResultadoModal
+        isOpen={isResultadoModalOpen}
+        onClose={() => setIsResultadoModalOpen(false)}
         clienteId={cliente.id}
         clienteNome={cliente.nome}
         onSuccess={handleEventoSuccess}

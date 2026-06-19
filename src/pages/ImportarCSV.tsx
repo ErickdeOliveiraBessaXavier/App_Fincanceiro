@@ -42,6 +42,7 @@ const ALIASES: Record<string, string[]> = {
   estado: ['uf', 'estado'],
   descricao: ['descricao', 'safra', 'observacao', 'observacoes', 'obs'],
   contato: ['contato', 'telefone', 'fone', 'celular', 'email'],
+  pago: ['pago', 'paga', 'status', 'situacao', 'liquidado', 'quitado'],
 };
 
 type ColMap = Partial<Record<keyof typeof ALIASES, number>>;
@@ -110,6 +111,7 @@ interface Parcela {
   numero: number;
   valor: number | null;
   vencimento: string | null;
+  pago: boolean;
   linha: number;
 }
 interface Grupo {
@@ -184,10 +186,14 @@ function collectGrupos(dataRows: any[][], rowIdx: number, get: Getter) {
     }
 
     const numRaw = toNumber(get(row, 'numero_parcela'));
+    const statusRaw = str(row, 'pago').toLowerCase();
+    const isPago = ['pago', 'paga', 'sim', 'yes', 'true', '1', 'liquidado', 'quitado'].includes(statusRaw);
+
     g.parcelas.push({
       numero: numRaw && numRaw > 0 ? Math.round(numRaw) : g.parcelas.length + 1,
       valor: toNumber(get(row, 'valor')),
       vencimento: toISODate(get(row, 'vencimento')),
+      pago: isPago,
       linha,
     });
     totalParcelas++;
@@ -271,7 +277,12 @@ function rpcParams(g: Grupo, companyId: string | null) {
     p_cliente_nome: g.cliente,
     p_cpf_cnpj: g.cpf_cnpj,
     p_numero_documento: g.numero_documento,
-    p_parcelas: g.parcelas.map((p) => ({ numero: p.numero, valor: p.valor, vencimento: p.vencimento })),
+    p_parcelas: g.parcelas.map((p) => ({ 
+      numero: p.numero, 
+      valor: p.valor, 
+      vencimento: p.vencimento,
+      pago: p.pago 
+    })),
     p_contato: g.contato || null,
     p_descricao: g.descricao || null,
     p_cobrador: g.cobrador || null,
@@ -583,10 +594,10 @@ export default function ImportarCSV() {
 
   const downloadTemplate = () => {
     const csvContent = [
-      'cliente,cpf_cnpj,valor,vencimento,numero_documento,parcela,vendedor,cobrador,cidade,estado,descricao,contato',
-      'INVICTA RACOES LTDA,00000000000191,8562.61,2025-12-21,12461,1,AIRTON,,OEIRAS,PI,Safra 2025,',
-      'F PEREIRA DE LIMA CIA LTDA,00000000000272,1250.00,2026-03-07,12711,2,HELDER,,IGUATU,CE,Safra 2025,',
-      'F PEREIRA DE LIMA CIA LTDA,00000000000272,1250.00,2026-04-07,12711,3,HELDER,,IGUATU,CE,Safra 2025,',
+      'cliente,cpf_cnpj,valor,vencimento,numero_documento,parcela,vendedor,cobrador,cidade,estado,descricao,contato,pago',
+      'INVICTA RACOES LTDA,00000000000191,8562.61,2025-12-21,12461,1,AIRTON,,OEIRAS,PI,Safra 2025,,Nao',
+      'F PEREIRA DE LIMA CIA LTDA,00000000000272,1250.00,2026-03-07,12711,2,HELDER,,IGUATU,CE,Safra 2025,,Sim',
+      'F PEREIRA DE LIMA CIA LTDA,00000000000272,1250.00,2026-04-07,12711,3,HELDER,,IGUATU,CE,Safra 2025,,Nao',
     ].join('\n');
 
     const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -707,7 +718,7 @@ export default function ImportarCSV() {
                 Colunas opcionais
               </h4>
               <div className="grid grid-cols-2 gap-2">
-                {['numero_documento', 'parcela', 'vendedor', 'cobrador'].map(col => (
+                {['numero_documento', 'parcela', 'vendedor', 'cobrador', 'cidade', 'estado', 'pago'].map(col => (
                   <div key={col} className="p-3 bg-background/50 rounded-xl border border-border/30 text-[10px] font-mono font-medium truncate">
                     {col}
                   </div>

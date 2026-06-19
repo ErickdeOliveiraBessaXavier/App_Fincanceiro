@@ -19,6 +19,7 @@ interface Evento {
   data: string;
   origem: 'comunicacao' | 'agendamento';
   status?: string;
+  statusCobranca?: string;
   operador?: string;
 }
 
@@ -27,8 +28,8 @@ interface EventoTimelineProps {
   refreshTrigger?: number;
 }
 
-type ComunicacaoRow = { id: string; tipo: string; mensagem: string | null; data_contato: string | null; created_at: string; created_by: string | null };
-type AgendamentoRow = { id: string; tipo_evento: string; descricao: string | null; data_agendamento: string; status: string | null; created_at: string; created_by: string | null };
+type ComunicacaoRow = { id: string; tipo: string; mensagem: string | null; status_cobranca: string | null; data_contato: string | null; created_at: string; created_by: string | null };
+type AgendamentoRow = { id: string; tipo_evento: string; descricao: string | null; data_agendamento: string; status: string | null; status_cobranca: string | null; created_at: string; created_by: string | null };
 
 // Resolve nomes dos operadores (created_by -> profiles.user_id). O FK aponta para
 // auth.users, então buscamos os nomes à parte e devolvemos um mapa id -> nome.
@@ -60,6 +61,7 @@ function unificarEventos(coms: ComunicacaoRow[], ags: AgendamentoRow[], operador
       descricao: com.mensagem,
       data: com.data_contato || com.created_at,
       origem: 'comunicacao',
+      statusCobranca: com.status_cobranca ?? undefined,
       operador: operadorMap.get(com.created_by!) || 'Sistema',
     });
   });
@@ -72,6 +74,7 @@ function unificarEventos(coms: ComunicacaoRow[], ags: AgendamentoRow[], operador
       data: ag.data_agendamento,
       origem: 'agendamento',
       status: ag.status ?? undefined,
+      statusCobranca: ag.status_cobranca ?? undefined,
       operador: operadorMap.get(ag.created_by!) || 'Sistema',
     });
   });
@@ -101,6 +104,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           id,
           tipo,
           mensagem,
+          status_cobranca,
           data_contato,
           created_at,
           created_by
@@ -119,6 +123,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           descricao,
           data_agendamento,
           status,
+          status_cobranca,
           created_at,
           created_by
         `)
@@ -257,6 +262,9 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
                           <span className="font-medium">{tipoInfo.label}</span>
                           {evento.origem === 'agendamento' && (
                             <StatusBadge domain="agendamento" status={evento.status} />
+                          )}
+                          {evento.statusCobranca && (
+                            <StatusBadge domain="status_cobranca" status={evento.statusCobranca} />
                           )}
                         </div>
                         <p className="text-xs text-muted-foreground">
