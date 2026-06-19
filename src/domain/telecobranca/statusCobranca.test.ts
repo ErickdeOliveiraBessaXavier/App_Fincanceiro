@@ -9,6 +9,7 @@ import {
   calcularProximoContato,
   validarStatusCobranca,
   paraTimestampNegocio,
+  agoraTimestampNegocio,
   isContatoEfetivo,
   contarNaoAtendeConsecutivos,
   naoAtendeExigePesquisa,
@@ -164,6 +165,12 @@ describe('validarStatusCobranca', () => {
 describe('paraTimestampNegocio', () => {
   it('monta o timestamp no fuso de São Paulo às 9h por padrão', () => {
     expect(paraTimestampNegocio(d(2026, 6, 19))).toBe('2026-06-19T09:00:00-03:00');
+  });
+});
+
+describe('agoraTimestampNegocio', () => {
+  it('retorna string ISO com offset fixo -03:00', () => {
+    expect(agoraTimestampNegocio()).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:00-03:00$/);
   });
 });
 

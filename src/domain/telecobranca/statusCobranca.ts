@@ -266,6 +266,26 @@ export function paraTimestampNegocio(data: Date, hora = '09:00'): string {
   return `${ano}-${mes}-${dia}T${hora}:00${OFFSET_SP}`;
 }
 
+/**
+ * Retorna o instante atual como timestamp no fuso do negócio (SP, UTC-3).
+ * Usar em vez de `new Date().toISOString()` quando o campo representa uma data
+ * de negócio exibida ao operador — evita escorregamento de fuso em servidor UTC.
+ */
+export function agoraTimestampNegocio(): string {
+  const agora = new Date();
+  const partes = new Intl.DateTimeFormat('en-CA', {
+    timeZone: TZ_NEGOCIO,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(agora);
+  const get = (tipo: string) => partes.find(p => p.type === tipo)?.value ?? '00';
+  return `${get('year')}-${get('month')}-${get('day')}T${get('hour')}:${get('minute')}:00${OFFSET_SP}`;
+}
+
 export interface CalculoContexto {
   /** Data do contato atual (default: agora). */
   referencia?: Date;
