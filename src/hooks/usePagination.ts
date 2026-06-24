@@ -5,6 +5,8 @@ export interface PaginationControls {
   page: number;
   totalPages: number;
   totalItems: number;
+  pageSize: number;
+  setPageSize: (size: number) => void;
   firstItem: number; // posição 1-based do primeiro item da página
   lastItem: number;  // posição 1-based do último item da página
   goTo: (p: number) => void;
@@ -16,10 +18,10 @@ export interface PaginationControls {
 
 export interface PaginationState<T> extends PaginationControls {
   pageItems: T[];
-  pageSize: number;
 }
 
 export const DEFAULT_PAGE_SIZE = 25;
+export const PAGE_SIZE_OPTIONS = [10, 25, 50, 100];
 
 /**
  * Paginação client-side reutilizável. Recebe a lista JÁ filtrada e devolve a
@@ -29,15 +31,22 @@ export const DEFAULT_PAGE_SIZE = 25;
  */
 export function usePagination<T>(
   items: T[],
-  pageSize: number = DEFAULT_PAGE_SIZE,
+  initialPageSize: number = DEFAULT_PAGE_SIZE,
   resetSignal?: string
 ): PaginationState<T> {
+  const [pageSize, setPageSizeState] = useState(initialPageSize);
   const [page, setPage] = useState(1);
 
   // Filtro mudou => volta para a primeira página.
   useEffect(() => {
     setPage(1);
   }, [resetSignal]);
+
+  // Trocar a quantidade por página recomeça da primeira página.
+  const setPageSize = (size: number) => {
+    setPageSizeState(size);
+    setPage(1);
+  };
 
   const totalItems = items.length;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
@@ -57,6 +66,7 @@ export function usePagination<T>(
     totalItems,
     pageItems,
     pageSize,
+    setPageSize,
     firstItem: totalItems === 0 ? 0 : (current - 1) * pageSize + 1,
     lastItem: Math.min(current * pageSize, totalItems),
     goTo,

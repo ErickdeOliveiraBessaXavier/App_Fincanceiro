@@ -125,11 +125,13 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
     try {
       setLoading(true);
 
-      // Buscar da view consolidada
+      // Buscar da view consolidada. 'renegociado' (título já com acordo ativo)
+      // fica de fora: não se cria um novo acordo sobre um título já em acordo.
+      // Ao cancelar o acordo, o título deixa de ser 'renegociado' e reaparece.
       let query = supabase
         .from('vw_titulos_completos')
         .select('*')
-        .in('status', ['pendente', 'a_vencer', 'vencido', 'renegociado']);
+        .in('status', ['pendente', 'a_vencer', 'vencido']);
 
       if (clienteIdFiltro) {
         query = query.eq('cliente_id', clienteIdFiltro);

@@ -275,20 +275,35 @@ function NovoClienteDialog({ open, onOpenChange, novoCliente, setNovoCliente, fo
   );
 }
 
+type EditClienteForm = NovoClienteForm & { id: string; status: string };
+
 interface EditClienteDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
-  editingCliente: { nome: string };
-  onNomeChange: (v: string) => void;
+  editingCliente: EditClienteForm;
+  setEditingCliente: (c: EditClienteForm) => void;
+  formErrors: FormErrors;
   onSave: () => void;
 }
-function EditClienteDialog({ open, onOpenChange, editingCliente, onNomeChange, onSave }: EditClienteDialogProps) {
+function EditClienteDialog({ open, onOpenChange, editingCliente, setEditingCliente, formErrors, onSave }: EditClienteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px] max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
         <DialogHeader><DialogTitle>Editar Cliente</DialogTitle><DialogDescription>Atualize os dados do cliente.</DialogDescription></DialogHeader>
         <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-name">Nome*</Label><Input id="edit-name" value={editingCliente.nome} onChange={(e) => onNomeChange(e.target.value)} /></div>
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-name">Nome*</Label><Input id="edit-name" value={editingCliente.nome} onChange={(e) => setEditingCliente({ ...editingCliente, nome: e.target.value })} className={formErrors.nome ? "border-red-500" : ""} /></div>
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-cpf_cnpj">CPF/CNPJ*</Label><Input id="edit-cpf_cnpj" value={editingCliente.cpf_cnpj} onChange={(e) => setEditingCliente({ ...editingCliente, cpf_cnpj: e.target.value })} className={formErrors.cpf_cnpj ? "border-red-500" : ""} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-telefone">Telefone</Label><Input id="edit-telefone" value={editingCliente.telefone} onChange={(e) => setEditingCliente({ ...editingCliente, telefone: e.target.value })} /></div>
+            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-email">Email</Label><Input id="edit-email" type="email" value={editingCliente.email} onChange={(e) => setEditingCliente({ ...editingCliente, email: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-endereco">Endereço</Label><Input id="edit-endereco" value={editingCliente.endereco_completo} onChange={(e) => setEditingCliente({ ...editingCliente, endereco_completo: e.target.value })} /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-cep">CEP</Label><Input id="edit-cep" value={editingCliente.cep} onChange={(e) => setEditingCliente({ ...editingCliente, cep: e.target.value })} /></div>
+            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-cidade">Cidade</Label><Input id="edit-cidade" value={editingCliente.cidade} onChange={(e) => setEditingCliente({ ...editingCliente, cidade: e.target.value })} /></div>
+            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-estado">Estado</Label><Input id="edit-estado" value={editingCliente.estado} onChange={(e) => setEditingCliente({ ...editingCliente, estado: e.target.value })} /></div>
+          </div>
+          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-observacoes">Observações</Label><Input id="edit-observacoes" value={editingCliente.observacoes} onChange={(e) => setEditingCliente({ ...editingCliente, observacoes: e.target.value })} /></div>
         </div>
         <DialogFooter><Button onClick={onSave}>Salvar</Button></DialogFooter>
       </DialogContent>
@@ -667,7 +682,8 @@ export default function Clientes() {
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
         editingCliente={editingCliente}
-        onNomeChange={(v) => setEditingCliente({ ...editingCliente, nome: v })}
+        setEditingCliente={setEditingCliente}
+        formErrors={formErrors}
         onSave={handleEditCliente}
       />
 
