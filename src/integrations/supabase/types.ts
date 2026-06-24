@@ -1452,6 +1452,10 @@ export type Database = {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
       }
+      excluir_acordos_definitivo: {
+        Args: { p_acordo_ids: string[] }
+        Returns: Json
+      }
       excluir_titulos_definitivo: {
         Args: { p_titulo_ids: string[] }
         Returns: Json

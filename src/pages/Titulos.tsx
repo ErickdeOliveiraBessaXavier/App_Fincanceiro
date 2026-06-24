@@ -20,6 +20,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/TablePagination';
 import { titulosFilterConfig } from '@/constants/filterConfigs';
 import { titulosPresets } from '@/constants/filterPresets';
 import { createClienteAgrupadoFilterFunctions } from '@/utils/filterFunctions';
@@ -903,6 +905,8 @@ export default function Titulos() {
     }).filter(cliente => cliente.titulos.length > 0);
   }, [filteredClientes, filters.search]);
 
+  const pagination = usePagination(clientesComTitulosFiltrados, 25, JSON.stringify(filters));
+
   const totalTitulos = titulos.length;
 
   // Helper functions for actions
@@ -1054,7 +1058,7 @@ export default function Titulos() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {clientesComTitulosFiltrados.map((cliente) => (
+                {pagination.pageItems.map((cliente) => (
                   <ClienteRow
                     key={cliente.id}
                     cliente={cliente}
@@ -1076,6 +1080,8 @@ export default function Titulos() {
               </TableBody>
             </Table>
           </div>
+
+          <TablePagination pagination={pagination} />
         </CardContent>
       </Card>
 

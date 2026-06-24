@@ -174,17 +174,29 @@ export function useCreateAcordo() {
   });
 }
 
-export function useDeleteAcordo() {
+/**
+ * Cancelamento (soft delete) de um acordo — financeiro+ (validado pela RLS
+ * acordos_update). Marca status='cancelado'; os títulos vinculados deixam de
+ * ser 'renegociado' e voltam a ficar disponíveis. Mantém o histórico.
+ */
+export function useCancelAcordo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (acordoId: string) => {
-      await supabase.from('parcelas_acordo').delete().eq('acordo_id', acordoId);
-      const { error } = await supabase.from('acordos').delete().eq('id', acordoId);
+      const { error } = await supabase
+        .from('acordos')
+        .update({ status: 'cancelado' })
+        .eq('id', acordoId);
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: acordosKeys.all });
       qc.invalidateQueries({ queryKey: titulosKeys.all });
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
     },
   });
 }
+
+// Hard delete por-acordo não tem entrada na UI: o super admin opera no painel
+// da Plataforma (limpeza por empresa). A RPC excluir_acordos_definitivo existe
+// no banco como ferramenta de plataforma, mas não é exposta na tela de Acordos.

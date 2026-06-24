@@ -89,7 +89,6 @@ export const acordosFilterConfig: FilterConfig[] = [
       { value: 'ativo', label: 'Ativo', color: 'blue' },
       { value: 'cumprido', label: 'Cumprido', color: 'green' },
       { value: 'quebrado', label: 'Quebrado', color: 'red' },
-      { value: 'cancelado', label: 'Cancelado', color: 'gray' },
     ]
   },
   { 
