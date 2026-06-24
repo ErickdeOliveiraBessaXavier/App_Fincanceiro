@@ -10,6 +10,8 @@ import {
 } from '@/lib/queries/cobradores';
 import { useGerarConvite } from '@/lib/queries/convites';
 import { useUserRole } from '@/hooks/useUserRole';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/TablePagination';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -39,6 +41,7 @@ interface CobradoresTableCardProps {
 function CobradoresTableCard({
   cobradores, isLoading, isAdmin, gerando, onGerarLink, onEdit, onDelete, onToggle,
 }: CobradoresTableCardProps) {
+  const pagination = usePagination(cobradores, 25);
   return (
     <Card className="border-none shadow-card rounded-2xl overflow-hidden">
       <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
@@ -72,7 +75,7 @@ function CobradoresTableCard({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {cobradores.map((r) => (
+                {pagination.pageItems.map((r) => (
                   <TableRow key={r.id} className="hover:bg-muted/10 transition-colors">
                     <TableCell className="font-bold text-sm text-foreground">{r.nome}</TableCell>
                     <TableCell>
@@ -126,6 +129,7 @@ function CobradoresTableCard({
                 ))}
               </TableBody>
             </Table>
+            <TablePagination pagination={pagination} />
           </div>
         )}
       </CardContent>

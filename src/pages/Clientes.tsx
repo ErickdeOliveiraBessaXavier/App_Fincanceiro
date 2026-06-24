@@ -23,6 +23,8 @@ import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { StatusBadge } from '@/components/StatusBadge';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/TablePagination';
 import { clientesFilterConfig } from '@/constants/filterConfigs';
 import { clientesPresets } from '@/constants/filterPresets';
 import { createClientesFilterFunctions } from '@/utils/filterFunctions';
@@ -477,6 +479,8 @@ export default function Clientes() {
     totalCount
   } = useGlobalFilter(clientes, filterFunctions, { initialFilters });
 
+  const pagination = usePagination(filteredClientes, 25, JSON.stringify(filters));
+
   const statusCounts = {
     total: clientes.length,
     ativo: clientes.filter(c => c.status === 'ativo').length,
@@ -597,7 +601,7 @@ export default function Clientes() {
 
             {/* Mobile Card View */}
             <div className="lg:hidden space-y-4">
-              {filteredClientes.map((cliente) => (
+              {pagination.pageItems.map((cliente) => (
                 <ClienteCard
                   key={cliente.id}
                   cliente={cliente}
@@ -628,7 +632,7 @@ export default function Clientes() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredClientes.map((cliente) => (
+                  {pagination.pageItems.map((cliente) => (
                     <ClienteTableRow
                       key={cliente.id}
                       cliente={cliente}
@@ -643,6 +647,8 @@ export default function Clientes() {
                 </TableBody>
               </Table>
             </div>
+
+            <TablePagination pagination={pagination} />
           </CardContent>
         </Card>
       </div>

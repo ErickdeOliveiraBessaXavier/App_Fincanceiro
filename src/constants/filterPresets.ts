@@ -27,7 +27,6 @@ export const acordosPresets: FilterPreset[] = [
   { id: 'ativos', label: 'Ativos', filters: { status: 'ativo' } },
   { id: 'cumpridos', label: 'Cumpridos', filters: { status: 'cumprido' } },
   { id: 'quebrados', label: 'Quebrados', filters: { status: 'quebrado' } },
-  { id: 'cancelados', label: 'Cancelados', filters: { status: 'cancelado' } },
 ];
 
 export const campanhasPresets: FilterPreset[] = [

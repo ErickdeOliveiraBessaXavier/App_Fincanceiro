@@ -12,6 +12,8 @@ import CampanhaForm from '@/components/campanhas/CampanhaForm';
 import CampanhaDetails from '@/components/campanhas/CampanhaDetails';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/TablePagination';
 import { campanhasFilterConfig } from '@/constants/filterConfigs';
 import { campanhasPresets } from '@/constants/filterPresets';
 import { createCampanhasFilterFunctions } from '@/utils/filterFunctions';
@@ -89,6 +91,8 @@ export default function Campanhas() {
     resultCount,
     totalCount
   } = useGlobalFilter(campanhas, filterFunctions);
+
+  const pagination = usePagination(filteredCampanhas, 25, JSON.stringify(filters));
 
   const toggleCampanhaStatus = async (id: string, currentStatus: string) => {
     try {
@@ -278,7 +282,7 @@ export default function Campanhas() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCampanhas.map((campanha) => (
+                  {pagination.pageItems.map((campanha) => (
                     <TableRow key={campanha.id} className="hover:bg-muted/10 transition-colors">
                       <TableCell className="font-bold text-sm text-foreground">{campanha.nome}</TableCell>
                       <TableCell>
@@ -351,6 +355,7 @@ export default function Campanhas() {
               </Table>
             </div>
           )}
+          <TablePagination pagination={pagination} />
         </CardContent>
       </Card>
 

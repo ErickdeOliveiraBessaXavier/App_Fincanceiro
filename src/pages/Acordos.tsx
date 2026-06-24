@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { useLocation } from 'react-router-dom';
-import { Plus, Eye, Trash2, FileText, CheckCircle, TrendingUp, Loader2 } from 'lucide-react';
-import { useAcordos, useCreateAcordo, useDeleteAcordo, type AcordoRow } from '@/lib/queries/acordos';
+import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2 } from 'lucide-react';
+import { useAcordos, useCreateAcordo, useCancelAcordo, type AcordoRow } from '@/lib/queries/acordos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +23,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTitulosAgrupados, TituloAgrupado } from '@/hooks/useTitulosAgrupados';
 import { useUserRole } from '@/hooks/useUserRole';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/TablePagination';
 import { SelecionarTitulosAcordo } from '@/components/acordos/SelecionarTitulosAcordo';
 
 interface Acordo {
@@ -337,28 +340,31 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
   );
 }
 
-interface DeleteAcordoDialogProps {
+interface ConfirmAcordoActionDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onCancel: () => void;
   onConfirm: () => void;
+  isPending: boolean;
 }
-function DeleteAcordoDialog({ open, onOpenChange, onCancel, onConfirm }: DeleteAcordoDialogProps) {
+function CancelAcordoDialog({ open, onOpenChange, onCancel, onConfirm, isPending }: ConfirmAcordoActionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Confirmar Exclusão</DialogTitle>
+          <DialogTitle>Cancelar Acordo</DialogTitle>
           <DialogDescription>
-            Tem certeza que deseja excluir este acordo? Esta ação não pode ser desfeita.
+            O acordo será marcado como <strong>cancelado</strong> e os títulos vinculados
+            voltarão a ficar disponíveis. O registro permanece no histórico.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            Cancelar
+          <Button variant="outline" onClick={onCancel} disabled={isPending}>
+            Voltar
           </Button>
-          <Button variant="destructive" onClick={onConfirm}>
-            Excluir
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Cancelar Acordo
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -373,13 +379,14 @@ export default function Acordos() {
   // === Data via React Query ===
   const { data: acordos = [], isLoading: loading } = useAcordos();
   const createAcordoMutation = useCreateAcordo();
-  const deleteAcordoMutation = useDeleteAcordo();
+  const cancelAcordoMutation = useCancelAcordo();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
+  const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const [selectedAcordo, setSelectedAcordo] = useState<AcordoRow | null>(null);
-  const [acordoToDelete, setAcordoToDelete] = useState<AcordoRow | null>(null);
+  const [acordoToCancel, setAcordoToCancel] = useState<AcordoRow | null>(null);
 
   const [newAcordo, setNewAcordo] = useState<NovoAcordo>({
     cliente_id: '',
@@ -398,7 +405,8 @@ export default function Acordos() {
   const [showCronograma, setShowCronograma] = useState(false);
   const { toast } = useToast();
   // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
-  const { isOperador } = useUserRole();
+  // Cancelar exige financeiro+ (RLS acordos_update).
+  const { isOperador, isFinanceiro } = useUserRole();
 
   const { clientes: clientesComDividas, loading: loadingTitulos, refetch: refetchTitulos } = useTitulosAgrupados();
 
@@ -562,26 +570,26 @@ export default function Acordos() {
     setShowCronograma(true);
   };
 
-  const handleDeleteAcordo = async () => {
-    if (!acordoToDelete) return;
+  const handleCancelAcordo = async () => {
+    if (!acordoToCancel) return;
 
     try {
-      await deleteAcordoMutation.mutateAsync(acordoToDelete.id);
+      await cancelAcordoMutation.mutateAsync(acordoToCancel.id);
 
-      setIsDeleteModalOpen(false);
-      setAcordoToDelete(null);
+      setIsCancelModalOpen(false);
+      setAcordoToCancel(null);
 
       toast({
         title: "Sucesso",
-        description: "Acordo excluído com sucesso",
+        description: "Acordo cancelado com sucesso",
       });
 
       refetchTitulos();
     } catch (error) {
-      console.error('Erro ao excluir acordo:', error);
+      console.error('Erro ao cancelar acordo:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível excluir o acordo",
+        description: "Não foi possível cancelar o acordo",
         variant: "destructive",
       });
     }
@@ -589,6 +597,20 @@ export default function Acordos() {
 
   // Filter functions for acordos
   const filterFunctions = useMemo(() => createAcordosFilterFunctions(), []);
+
+  // Cancelados ficam ocultos por padrão para não poluir a operação do dia a dia;
+  // o checkbox "Mostrar cancelados" reexibe o histórico quando necessário.
+  const acordosVisiveis = useMemo(
+    () => (mostrarCancelados ? acordos : acordos.filter((a) => a.status !== 'cancelado')),
+    [acordos, mostrarCancelados]
+  );
+
+  // Cards refletem o estado operacional: cancelados nunca entram nos totais
+  // (independente do checkbox, que afeta apenas a listagem).
+  const acordosNaoCancelados = useMemo(
+    () => acordos.filter((a) => a.status !== 'cancelado'),
+    [acordos]
+  );
 
   const {
     filteredData: filteredAcordos,
@@ -601,7 +623,9 @@ export default function Acordos() {
     activeFiltersCount,
     resultCount,
     totalCount
-  } = useGlobalFilter(acordos, filterFunctions);
+  } = useGlobalFilter(acordosVisiveis, filterFunctions);
+
+  const pagination = usePagination(filteredAcordos, 25, JSON.stringify(filters) + mostrarCancelados);
 
   if (loading) {
     return (
@@ -640,7 +664,7 @@ export default function Acordos() {
             </div>
           </CardHeader>
           <CardContent className="relative z-10">
-            <div className="text-3xl font-black tracking-tighter">{acordos.length}</div>
+            <div className="text-3xl font-black tracking-tighter">{acordosNaoCancelados.length}</div>
             <p className="text-[10px] font-medium text-muted-foreground mt-1">Acordos registrados</p>
           </CardContent>
         </Card>
@@ -655,7 +679,7 @@ export default function Acordos() {
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-black tracking-tighter text-blue-600">
-              {acordos.filter(a => a.status === 'ativo').length}
+              {acordosNaoCancelados.filter(a => a.status === 'ativo').length}
             </div>
             <p className="text-[10px] font-medium text-muted-foreground mt-1">Em andamento</p>
           </CardContent>
@@ -671,7 +695,7 @@ export default function Acordos() {
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-black tracking-tighter text-success">
-              {acordos.filter(a => a.status === 'cumprido').length}
+              {acordosNaoCancelados.filter(a => a.status === 'cumprido').length}
             </div>
             <p className="text-[10px] font-medium text-muted-foreground mt-1">Finalizados com sucesso</p>
           </CardContent>
@@ -687,7 +711,7 @@ export default function Acordos() {
           </CardHeader>
           <CardContent className="relative z-10">
             <div className="text-3xl font-black tracking-tighter">
-              {formatCurrency(acordos.reduce((sum, a) => sum + a.valor_acordo, 0))}
+              {formatCurrency(acordosNaoCancelados.reduce((sum, a) => sum + a.valor_acordo, 0))}
             </div>
             <p className="text-[10px] font-medium text-muted-foreground mt-1">Montante negociado</p>
           </CardContent>
@@ -696,11 +720,18 @@ export default function Acordos() {
 
       <Card className="border-none shadow-card rounded-2xl overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
               <CardTitle className="text-xl font-bold tracking-tight">Lista de Acordos</CardTitle>
               <CardDescription className="text-xs font-medium">Total de {filteredAcordos.length} acordos encontrados</CardDescription>
             </div>
+            <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer">
+              <Checkbox
+                checked={mostrarCancelados}
+                onCheckedChange={(checked) => setMostrarCancelados(checked === true)}
+              />
+              Mostrar cancelados
+            </label>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
@@ -734,7 +765,7 @@ export default function Acordos() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAcordos.map((acordo) => (
+                {pagination.pageItems.map((acordo) => (
                   <TableRow key={acordo.id}>
                     <TableCell>
                       <div>
@@ -769,16 +800,17 @@ export default function Acordos() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {isOperador && (
+                        {isFinanceiro && acordo.status !== 'cancelado' && (
                           <Button
                             variant="ghost"
                             size="sm"
+                            title="Cancelar acordo"
                             onClick={() => {
-                              setAcordoToDelete(acordo);
-                              setIsDeleteModalOpen(true);
+                              setAcordoToCancel(acordo);
+                              setIsCancelModalOpen(true);
                             }}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Ban className="h-4 w-4" />
                           </Button>
                         )}
                       </div>
@@ -795,6 +827,8 @@ export default function Acordos() {
               </TableBody>
             </Table>
           </div>
+
+          <TablePagination pagination={pagination} />
         </CardContent>
       </Card>
 
@@ -822,11 +856,12 @@ export default function Acordos() {
         acordo={selectedAcordo}
       />
 
-      <DeleteAcordoDialog
-        open={isDeleteModalOpen}
-        onOpenChange={setIsDeleteModalOpen}
-        onCancel={() => setIsDeleteModalOpen(false)}
-        onConfirm={handleDeleteAcordo}
+      <CancelAcordoDialog
+        open={isCancelModalOpen}
+        onOpenChange={setIsCancelModalOpen}
+        onCancel={() => setIsCancelModalOpen(false)}
+        onConfirm={handleCancelAcordo}
+        isPending={cancelAcordoMutation.isPending}
       />
     </div>
   );
