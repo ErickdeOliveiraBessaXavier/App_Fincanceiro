@@ -1080,7 +1080,7 @@ export default function Titulos() {
                   <TableHead className="hidden md:table-cell text-[10px] font-bold uppercase tracking-widest">CPF/CNPJ</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase tracking-widest">Saldo</TableHead>
                   <TableHead className="hidden lg:table-cell text-[10px] font-bold uppercase tracking-widest">Títulos</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
+                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Situação</TableHead>
                   <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
                 </TableRow>
               </TableHeader>

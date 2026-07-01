@@ -42,7 +42,9 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     pago: { label: 'Pago', variant: 'success' },
     a_vencer: { label: 'A Vencer', variant: 'warning' },
     vencido: { label: 'Vencido', variant: 'destructive' },
-    renegociado: { label: 'Renegociado', variant: 'accent' },
+    // Unificado com o domínio "cliente" (era "Renegociado"): o mesmo fato —
+    // existe acordo ativo — agora tem um único rótulo em todo o app.
+    renegociado: { label: 'Em Acordo', variant: 'accent' },
     pendente: { label: 'A Vencer', variant: 'warning' }, // legado
   },
   // Status consolidado da parcela (vw_parcelas_consolidadas.status)
@@ -57,7 +59,9 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     ativo: { label: 'Ativo', variant: 'success' },
     inadimplente: { label: 'Inadimplente', variant: 'destructive' },
     em_acordo: { label: 'Em Acordo', variant: 'accent' },
-    quitado: { label: 'Quitado', variant: 'secondary' },
+    // Verde (como o Título "Pago"): "dívida resolvida" tem a mesma cor em todo
+    // o app — antes era cinza (secondary), quebrando a âncora visual.
+    quitado: { label: 'Quitado', variant: 'success' },
   },
   // Status do acordo (acordos.status)
   acordo: {
@@ -76,7 +80,10 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
   // Rótulos espelham STATUS_COBRANCA em src/domain/telecobranca/statusCobranca.ts.
   status_cobranca: {
     suspeita_fraude: { label: 'Suspeita de Fraude', variant: 'destructive' },
-    agendamento_pagamento: { label: 'Agendamento de Pagamento', variant: 'success' },
+    // "Promessa de Pagamento" (era "Agendamento de Pagamento"): evita a colisão
+    // da palavra "Agendamento" (retorno agendado / tipo de evento) e descreve
+    // melhor o que ocorreu — o cliente prometeu pagar.
+    agendamento_pagamento: { label: 'Promessa de Pagamento', variant: 'success' },
     sem_previsao_pagamento: { label: 'Sem Previsão de Pagamento', variant: 'warning' },
     recado: { label: 'Recado', variant: 'secondary' },
     nao_atende: { label: 'Não Atende', variant: 'secondary' },

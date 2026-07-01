@@ -747,7 +747,7 @@ export default function Clientes() {
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cobrador</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Vendedor</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Próximo retorno</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Situação</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Títulos</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Valor Total</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>

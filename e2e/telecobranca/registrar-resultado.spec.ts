@@ -35,7 +35,7 @@ test('modal exibe todos os status de cobrança', async ({ page }) => {
 
   await page.getByRole('combobox').first().click();
 
-  await expect(page.getByRole('option', { name: 'Agendamento de Pagamento' })).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Promessa de Pagamento' })).toBeVisible();
   await expect(page.getByRole('option', { name: 'Não Atende' })).toBeVisible();
   await expect(page.getByRole('option', { name: 'Recado' })).toBeVisible();
   await expect(page.getByRole('option', { name: 'Sem Previsão de Pagamento' })).toBeVisible();
@@ -53,12 +53,12 @@ test('campo Próximo Contato é preenchido automaticamente', async ({ page }) =>
   await expect(btnProximoContato).toBeVisible();
 });
 
-test('Agendamento de Pagamento exige data prevista', async ({ page }) => {
+test('Promessa de Pagamento exige data prevista', async ({ page }) => {
   await abrirTelecobranca(page);
   await abrirModalRegistrarResultado(page);
 
   await page.getByRole('combobox').first().click();
-  await page.getByRole('option', { name: 'Agendamento de Pagamento' }).click();
+  await page.getByRole('option', { name: 'Promessa de Pagamento' }).click();
 
   // Campo de data prevista deve aparecer
   await expect(page.getByText('Data Prevista de Pagamento *', { exact: true })).toBeVisible();

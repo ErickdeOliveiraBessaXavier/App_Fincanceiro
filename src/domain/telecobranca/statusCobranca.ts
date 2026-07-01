@@ -77,7 +77,7 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
   },
   agendamento_pagamento: {
     slug: 'agendamento_pagamento',
-    label: 'Agendamento de Pagamento',
+    label: 'Promessa de Pagamento',
     diasProximoContato: 1,
     baseCalculo: 'data_prevista',
     tetoDias: 7,

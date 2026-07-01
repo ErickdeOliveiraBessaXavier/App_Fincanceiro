@@ -11,7 +11,7 @@ export const titulosPresets: FilterPreset[] = [
   { id: 'vencidos', label: 'Vencidos', filters: { status: 'vencido' } },
   { id: 'a_vencer', label: 'A Vencer', filters: { status: 'a_vencer' } },
   { id: 'pagos', label: 'Pagos', filters: { status: 'pago' } },
-  { id: 'renegociados', label: 'Renegociados', filters: { status: 'renegociado' } },
+  { id: 'renegociados', label: 'Em acordo', filters: { status: 'renegociado' } },
 ];
 
 export const clientesPresets: FilterPreset[] = [

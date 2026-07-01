@@ -52,9 +52,10 @@ const calcularAtraso = (vencimento: string) => {
 
 const isAberta = (status: string) => status === 'a_vencer' || status === 'vencido';
 
-function situacaoTitulo(grupo: TituloGrupo): { label: string; variant: 'destructive' | 'secondary' | 'outline' } {
+function situacaoTitulo(grupo: TituloGrupo): { label: string; variant: 'destructive' | 'secondary' | 'success' } {
   if (grupo.temVencido) return { label: 'Vencido', variant: 'destructive' };
-  if (grupo.parcelasAbertas === 0) return { label: 'Quitado', variant: 'outline' };
+  // Verde para "resolvido", consistente com Título "Pago" e Cliente "Quitado".
+  if (grupo.parcelasAbertas === 0) return { label: 'Quitado', variant: 'success' };
   return { label: 'Em dia', variant: 'secondary' };
 }
 
