@@ -44,7 +44,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import type { CobradorRow } from '@/lib/queries/cobradores';
+import type { VendedorRow } from '@/lib/queries/vendedores';
 
 // Atualize a interface Cliente para incluir todos os campos
 interface Cliente {
@@ -92,6 +97,26 @@ const formatCurrency = (value: number) =>
 
 const formatDateTime = (date: string) => new Date(date).toLocaleString('pt-BR');
 
+const formatDateShort = (date: string) =>
+  new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+// Célula "Próximo retorno": data + status de cobrança; destaca atrasados.
+function RetornoCell({ cliente }: { cliente: ClienteRow }) {
+  if (!cliente.proximo_retorno) {
+    return <span className="text-xs text-muted-foreground">—</span>;
+  }
+  return (
+    <div className="space-y-1">
+      <div className={cliente.retorno_atrasado ? 'text-xs font-bold text-destructive' : 'text-xs font-bold text-foreground'}>
+        {formatDateShort(cliente.proximo_retorno)}
+      </div>
+      {cliente.retorno_status_cobranca && (
+        <StatusBadge domain="status_cobranca" status={cliente.retorno_status_cobranca} />
+      )}
+    </div>
+  );
+}
+
 // ===================== Subcomponentes =====================
 interface ClienteItemProps {
   cliente: ClienteRow;
@@ -137,6 +162,10 @@ function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetail
             <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</p>
             <p className="text-sm font-black text-primary">{formatCurrency(cliente.total_valor || 0)}</p>
           </div>
+          <div>
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Retorno</p>
+            <RetornoCell cliente={cliente} />
+          </div>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -176,6 +205,7 @@ function ClienteTableRow({ cliente, isOperador, isVendedor, onTelecobranca, onDe
       </TableCell>
       <TableCell className="text-xs font-medium">{cliente.cobrador_nome ?? '—'}</TableCell>
       <TableCell className="text-xs font-medium">{cliente.vendedor_nome ?? '—'}</TableCell>
+      <TableCell><RetornoCell cliente={cliente} /></TableCell>
       <TableCell><StatusBadge domain="cliente" status={cliente.status} /></TableCell>
       <TableCell className="font-bold text-sm">{cliente.total_titulos}</TableCell>
       <TableCell className="font-black text-sm text-primary">{formatCurrency(cliente.total_valor || 0)}</TableCell>
@@ -247,6 +277,44 @@ type NovoClienteForm = {
   nome: string; cpf_cnpj: string; telefone: string; email: string; endereco_completo: string;
   cep: string; cidade: string; estado: string; observacoes: string; cobrador_id: string; vendedor_id: string;
 };
+
+// Selects de Cobrador/Vendedor reutilizados nos diálogos de novo/editar cliente.
+// Radix Select não aceita value vazio, então usamos o sentinela 'none'.
+interface CarteiraFieldsProps {
+  cobradorId: string;
+  vendedorId: string;
+  cobradores: CobradorRow[];
+  vendedores: VendedorRow[];
+  onCobrador: (id: string) => void;
+  onVendedor: (id: string) => void;
+}
+function CarteiraFields({ cobradorId, vendedorId, cobradores, vendedores, onCobrador, onVendedor }: CarteiraFieldsProps) {
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-2">
+        <Label>Cobrador</Label>
+        <Select value={cobradorId || 'none'} onValueChange={(v) => onCobrador(v === 'none' ? '' : v)}>
+          <SelectTrigger><SelectValue placeholder="Sem cobrador" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sem cobrador</SelectItem>
+            {cobradores.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        <Label>Vendedor</Label>
+        <Select value={vendedorId || 'none'} onValueChange={(v) => onVendedor(v === 'none' ? '' : v)}>
+          <SelectTrigger><SelectValue placeholder="Sem vendedor" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="none">Sem vendedor</SelectItem>
+            {vendedores.map((v) => <SelectItem key={v.id} value={v.id}>{v.nome}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+    </div>
+  );
+}
+
 interface NovoClienteDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -254,8 +322,10 @@ interface NovoClienteDialogProps {
   setNovoCliente: (c: NovoClienteForm) => void;
   formErrors: FormErrors;
   onSave: () => void;
+  cobradores: CobradorRow[];
+  vendedores: VendedorRow[];
 }
-function NovoClienteDialog({ open, onOpenChange, novoCliente, setNovoCliente, formErrors, onSave }: NovoClienteDialogProps) {
+function NovoClienteDialog({ open, onOpenChange, novoCliente, setNovoCliente, formErrors, onSave, cobradores, vendedores }: NovoClienteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
@@ -268,6 +338,14 @@ function NovoClienteDialog({ open, onOpenChange, novoCliente, setNovoCliente, fo
             <div className="grid grid-cols-1 gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={novoCliente.email} onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-1 gap-2"><Label htmlFor="endereco">Endereço</Label><Input id="endereco" value={novoCliente.endereco_completo} onChange={(e) => setNovoCliente({ ...novoCliente, endereco_completo: e.target.value })} /></div>
+          <CarteiraFields
+            cobradorId={novoCliente.cobrador_id}
+            vendedorId={novoCliente.vendedor_id}
+            cobradores={cobradores}
+            vendedores={vendedores}
+            onCobrador={(id) => setNovoCliente({ ...novoCliente, cobrador_id: id })}
+            onVendedor={(id) => setNovoCliente({ ...novoCliente, vendedor_id: id })}
+          />
         </div>
         <DialogFooter><Button onClick={onSave}>Salvar</Button></DialogFooter>
       </DialogContent>
@@ -284,8 +362,10 @@ interface EditClienteDialogProps {
   setEditingCliente: (c: EditClienteForm) => void;
   formErrors: FormErrors;
   onSave: () => void;
+  cobradores: CobradorRow[];
+  vendedores: VendedorRow[];
 }
-function EditClienteDialog({ open, onOpenChange, editingCliente, setEditingCliente, formErrors, onSave }: EditClienteDialogProps) {
+function EditClienteDialog({ open, onOpenChange, editingCliente, setEditingCliente, formErrors, onSave, cobradores, vendedores }: EditClienteDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
@@ -304,6 +384,14 @@ function EditClienteDialog({ open, onOpenChange, editingCliente, setEditingClien
             <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-estado">Estado</Label><Input id="edit-estado" value={editingCliente.estado} onChange={(e) => setEditingCliente({ ...editingCliente, estado: e.target.value })} /></div>
           </div>
           <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-observacoes">Observações</Label><Input id="edit-observacoes" value={editingCliente.observacoes} onChange={(e) => setEditingCliente({ ...editingCliente, observacoes: e.target.value })} /></div>
+          <CarteiraFields
+            cobradorId={editingCliente.cobrador_id}
+            vendedorId={editingCliente.vendedor_id}
+            cobradores={cobradores}
+            vendedores={vendedores}
+            onCobrador={(id) => setEditingCliente({ ...editingCliente, cobrador_id: id })}
+            onVendedor={(id) => setEditingCliente({ ...editingCliente, vendedor_id: id })}
+          />
         </div>
         <DialogFooter><Button onClick={onSave}>Salvar</Button></DialogFooter>
       </DialogContent>
@@ -462,9 +550,16 @@ export default function Clientes() {
 
   const filterFunctions = useMemo(() => createClientesFilterFunctions(), []);
 
-  // Filtro "Vendedor" com opções dinâmicas (lista de vendedores da empresa).
+  // Filtros "Cobrador" e "Vendedor" com opções dinâmicas (equipe da empresa).
   const filterConfigs = useMemo(() => [
     ...clientesFilterConfig,
+    {
+      id: 'cobrador',
+      label: 'Cobrador',
+      type: 'select' as const,
+      placeholder: 'Todos',
+      options: cobradores.map((c) => ({ value: c.id, label: c.nome })),
+    },
     {
       id: 'vendedor',
       label: 'Vendedor',
@@ -472,7 +567,7 @@ export default function Clientes() {
       placeholder: 'Todos',
       options: vendedores.map((v) => ({ value: v.id, label: v.nome })),
     },
-  ], [vendedores]);
+  ], [cobradores, vendedores]);
 
   // Carteira pré-filtrada via ?vendedor=<id> (link vindo da tela de Vendedores).
   const vendedorParam = searchParams.get('vendedor');
@@ -494,7 +589,18 @@ export default function Clientes() {
     totalCount
   } = useGlobalFilter(clientes, filterFunctions, { initialFilters });
 
-  const pagination = usePagination(filteredClientes, 25, JSON.stringify(filters));
+  // Com filtro de retorno ativo, ordena por data do próximo retorno (mais
+  // urgentes/atrasados primeiro) para o cobrador enxergar o dia organizado.
+  const orderedClientes = useMemo(() => {
+    if (!filters.retorno) return filteredClientes;
+    return [...filteredClientes].sort((a, b) => {
+      if (!a.proximo_retorno) return 1;
+      if (!b.proximo_retorno) return -1;
+      return a.proximo_retorno.localeCompare(b.proximo_retorno);
+    });
+  }, [filteredClientes, filters.retorno]);
+
+  const pagination = usePagination(orderedClientes, 25, JSON.stringify(filters));
 
   const statusCounts = {
     total: clientes.length,
@@ -640,6 +746,7 @@ export default function Clientes() {
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cobrador</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Vendedor</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Próximo retorno</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Títulos</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Valor Total</TableHead>
@@ -676,6 +783,8 @@ export default function Clientes() {
         setNovoCliente={setNewCliente}
         formErrors={formErrors}
         onSave={handleCreateCliente}
+        cobradores={cobradores}
+        vendedores={vendedores}
       />
 
       <EditClienteDialog
@@ -685,6 +794,8 @@ export default function Clientes() {
         setEditingCliente={setEditingCliente}
         formErrors={formErrors}
         onSave={handleEditCliente}
+        cobradores={cobradores}
+        vendedores={vendedores}
       />
 
       <ClienteDetailsDialog

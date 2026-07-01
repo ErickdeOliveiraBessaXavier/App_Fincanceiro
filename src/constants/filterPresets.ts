@@ -20,6 +20,9 @@ export const clientesPresets: FilterPreset[] = [
   { id: 'inadimplentes', label: 'Inadimplentes', filters: { status: 'inadimplente' } },
   { id: 'em_acordo', label: 'Em Acordo', filters: { status: 'em_acordo' } },
   { id: 'quitados', label: 'Quitados', filters: { status: 'quitado' } },
+  { id: 'retornos_hoje', label: 'Retornos hoje', filters: { retorno: 'hoje' } },
+  { id: 'retornos_atrasados', label: 'Retornos atrasados', filters: { retorno: 'atrasados' } },
+  { id: 'retornos_7', label: 'Próximos 7 dias', filters: { retorno: 'proximos_7' } },
 ];
 
 export const acordosPresets: FilterPreset[] = [

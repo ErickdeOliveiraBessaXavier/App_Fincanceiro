@@ -12,6 +12,7 @@ import { useUserRole } from "@/hooks/useUserRole";
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
 const Clientes = React.lazy(() => import("./pages/Clientes"));
+const Atribuicao = React.lazy(() => import("./pages/Atribuicao"));
 const Cobradores = React.lazy(() => import("./pages/Cobradores"));
 const Vendedores = React.lazy(() => import("./pages/Vendedores"));
 const Titulos = React.lazy(() => import("./pages/Titulos"));
@@ -68,6 +69,7 @@ const App = () => (
               <Route path="/campanhas" element={<Layout><BlockVendedorRoute><Campanhas /></BlockVendedorRoute></Layout>} />
               <Route path="/importar" element={<Layout><BlockVendedorRoute><ImportarCSV /></BlockVendedorRoute></Layout>} />
               <Route path="/relatorios" element={<Layout><BlockVendedorRoute><Relatorios /></BlockVendedorRoute></Layout>} />
+              <Route path="/atribuicao" element={<Layout><AdminRoute><Atribuicao /></AdminRoute></Layout>} />
               <Route path="/usuarios" element={<Layout><AdminRoute><Usuarios /></AdminRoute></Layout>} />
               <Route path="/telecobranca/:clienteId" element={<Layout><BlockVendedorRoute><Telecobranca /></BlockVendedorRoute></Layout>} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

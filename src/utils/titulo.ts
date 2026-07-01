@@ -35,6 +35,8 @@ export interface TituloConsolidado {
   cliente_cpf_cnpj: string;
   cliente_telefone: string | null;
   cliente_email: string | null;
+  cobrador_id: string | null;
+  vendedor_id: string | null;
   quantidade_parcelas: number;
   tipo: string;
   saldo_devedor: number;

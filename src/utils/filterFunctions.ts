@@ -1,6 +1,40 @@
+import { hojeNegocio, addDiasCorridos } from '@/domain/telecobranca/statusCobranca';
+
 // Utility function to get nested values from an object
 export const getNestedValue = (obj: any, path: string): any => {
   return path.split('.').reduce((acc, part) => acc?.[part], obj);
+};
+
+// ===== Filtro "próximo retorno" (agenda de cobrança) — data-driven =====
+const ymd = (d: Date) => d.toISOString().slice(0, 10);
+
+/**
+ * Predicados por opção do filtro `retorno`. `data` é o dia (YYYY-MM-DD) do
+ * próximo retorno agendado do cliente, ou null quando não há agendamento.
+ * Data-driven para não estourar a complexidade ciclomática.
+ */
+const retornoPredicates: Record<string, (data: string | null) => boolean> = {
+  sem_agendamento: (data) => !data,
+  com_agendamento: (data) => !!data,
+  atrasados: (data) => !!data && data < ymd(hojeNegocio()),
+  hoje: (data) => !!data && data === ymd(hojeNegocio()),
+  proximos_7: (data) => {
+    if (!data) return false;
+    const hoje = ymd(hojeNegocio());
+    const limite = ymd(addDiasCorridos(hojeNegocio(), 7));
+    return data >= hoje && data <= limite;
+  },
+};
+
+/** Aplica o filtro de retorno a um cliente (usa `proximo_retorno`). */
+export const filtrarPorRetorno = (
+  item: { proximo_retorno?: string | null },
+  value: string,
+): boolean => {
+  const predicate = retornoPredicates[value];
+  if (!predicate) return true;
+  const data = item.proximo_retorno ? String(item.proximo_retorno).slice(0, 10) : null;
+  return predicate(data);
 };
 
 // Common filter functions that can be reused across pages
@@ -172,12 +206,15 @@ export const createClientesFilterFunctions = () => ({
     commonFilterFunctions.search(item, value, ['nome', 'cpf_cnpj', 'email', 'telefone']),
   status: (item: any, value: string) => 
     commonFilterFunctions.exactMatch(item, value, 'status'),
-  cidade: (item: any, value: string) => 
+  cidade: (item: any, value: string) =>
     commonFilterFunctions.contains(item, value, 'cidade'),
   estado: (item: any, value: string) =>
     commonFilterFunctions.contains(item, value, 'estado'),
+  cobrador: (item: any, value: string) =>
+    commonFilterFunctions.exactMatch(item, value, 'cobrador_id'),
   vendedor: (item: any, value: string) =>
     commonFilterFunctions.exactMatch(item, value, 'vendedor_id'),
+  retorno: (item: any, value: string) => filtrarPorRetorno(item, value),
 });
 
 export const createAcordosFilterFunctions = () => ({
@@ -260,8 +297,12 @@ export const createClienteAgrupadoFilterFunctions = () => ({
       commonFilterFunctions.dateBefore(t, value, 'proximo_vencimento')
     ) ?? true;
   },
-  valor_min: (item: any, value: string) => 
+  valor_min: (item: any, value: string) =>
     commonFilterFunctions.numberGreaterThan(item, value, 'totalSaldo'),
-  valor_max: (item: any, value: string) => 
+  valor_max: (item: any, value: string) =>
     commonFilterFunctions.numberLessThan(item, value, 'totalSaldo'),
+  cobrador: (item: any, value: string) =>
+    commonFilterFunctions.exactMatch(item, value, 'cobrador_id'),
+  vendedor: (item: any, value: string) =>
+    commonFilterFunctions.exactMatch(item, value, 'vendedor_id'),
 });

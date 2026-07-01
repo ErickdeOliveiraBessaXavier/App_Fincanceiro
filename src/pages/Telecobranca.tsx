@@ -14,6 +14,7 @@ import { MetricasCliente } from '@/components/telecobranca/MetricasCliente';
 import { RegistroEventoModal } from '@/components/telecobranca/RegistroEventoModal';
 import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
 import { RegistrarResultadoModal } from '@/components/telecobranca/RegistrarResultadoModal';
+import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
 
 interface Cliente {
@@ -144,6 +145,7 @@ export default function Telecobranca() {
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl md:text-2xl font-bold">{cliente.nome}</h1>
               <StatusBadge domain="cliente" status={cliente.status} />
+              <StatusCobrancaAtual clienteId={cliente.id} refreshTrigger={refreshTrigger} />
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
               <span className="font-mono">{formatCpfCnpj(cliente.cpf_cnpj)}</span>

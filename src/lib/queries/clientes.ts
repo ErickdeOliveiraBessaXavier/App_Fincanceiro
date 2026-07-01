@@ -1,7 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
+import { hojeNegocio } from '@/domain/telecobranca/statusCobranca';
 import { titulosKeys } from './titulos';
+
+// Chaves literais das carteiras (evita import circular com cobradores/vendedores,
+// que já importam clientesKeys). A contagem de carteira depende de clientes.
+const cobradoresAllKey = ['cobradores'] as const;
+const vendedoresAllKey = ['vendedores'] as const;
 
 // ============== Types ==============
 export interface ClienteRow {
@@ -26,6 +32,12 @@ export interface ClienteRow {
   total_titulos?: number;
   total_valor?: number;
   ultima_comunicacao?: string;
+  /** Data (ISO) do próximo retorno agendado pendente; null se não houver. */
+  proximo_retorno?: string | null;
+  /** Status de cobrança (slug) do próximo retorno agendado. */
+  retorno_status_cobranca?: string | null;
+  /** true se o próximo retorno já está com data anterior a hoje (fuso do negócio). */
+  retorno_atrasado?: boolean;
 }
 
 export interface ComunicacaoRow {
@@ -60,6 +72,37 @@ function derivarStatusCliente(statuses: string[]): string {
   return 'ativo';
 }
 
+interface ProximoRetorno {
+  data: string | null;
+  status_cobranca: string | null;
+  atrasado: boolean;
+}
+
+interface AgendamentoRetorno {
+  cliente_id: string;
+  data_agendamento: string;
+  status_cobranca: string | null;
+}
+
+/**
+ * Mapeia o retorno agendado pendente mais próximo por cliente. Os agendamentos
+ * chegam ordenados por data ascendente, então o primeiro visto de cada cliente
+ * já é o mais próximo. `atrasado` compara a data (civil) com hoje no fuso do negócio.
+ */
+function mapProximosRetornos(agendamentos: AgendamentoRetorno[]): Map<string, ProximoRetorno> {
+  const hojeStr = hojeNegocio().toISOString().slice(0, 10);
+  const porCliente = new Map<string, ProximoRetorno>();
+  for (const a of agendamentos) {
+    if (!a.cliente_id || porCliente.has(a.cliente_id)) continue;
+    porCliente.set(a.cliente_id, {
+      data: a.data_agendamento,
+      status_cobranca: a.status_cobranca ?? null,
+      atrasado: String(a.data_agendamento).slice(0, 10) < hojeStr,
+    });
+  }
+  return porCliente;
+}
+
 /**
  * Lista clientes com agregados (total_titulos, total_valor) e status derivado
  * dos títulos. O status armazenado em `clientes.status` é ignorado para exibição,
@@ -69,7 +112,7 @@ export function useClientes() {
   return useQuery({
     queryKey: clientesKeys.list(),
     queryFn: async (): Promise<ClienteRow[]> => {
-      const [clientesRes, titulosRes] = await Promise.all([
+      const [clientesRes, titulosRes, agendamentosRes] = await Promise.all([
         supabase
           .from('clientes')
           .select(`
@@ -83,10 +126,20 @@ export function useClientes() {
         supabase
           .from('vw_titulos_completos')
           .select('cliente_id, status, valor_original'),
+        // Próximos retornos pendentes (RLS já limita à carteira do cobrador).
+        supabase
+          .from('agendamentos')
+          .select('cliente_id, data_agendamento, status_cobranca')
+          .eq('status', 'pendente')
+          .is('deleted_at', null)
+          .order('data_agendamento', { ascending: true }),
       ]);
 
       if (clientesRes.error) throw clientesRes.error;
       if (titulosRes.error) throw titulosRes.error;
+      if (agendamentosRes.error) throw agendamentosRes.error;
+
+      const retornos = mapProximosRetornos(agendamentosRes.data ?? []);
 
       // Agrega títulos por cliente.
       const porCliente = new Map<
@@ -102,8 +155,10 @@ export function useClientes() {
         porCliente.set(t.cliente_id, agg);
       });
 
+      const semRetorno: ProximoRetorno = { data: null, status_cobranca: null, atrasado: false };
       return (clientesRes.data || []).map((c: any) => {
         const { statuses, total, valor } = porCliente.get(c.id) ?? { total: 0, valor: 0, statuses: [] };
+        const retorno = retornos.get(c.id) ?? semRetorno;
         return {
           ...c,
           cobrador_nome: c.cobradores?.nome ?? null,
@@ -111,6 +166,9 @@ export function useClientes() {
           status: derivarStatusCliente(statuses),
           total_titulos: total,
           total_valor: valor,
+          proximo_retorno: retorno.data,
+          retorno_status_cobranca: retorno.status_cobranca,
+          retorno_atrasado: retorno.atrasado,
         };
       }) as ClienteRow[];
     },
@@ -237,6 +295,57 @@ export function useDeleteCliente() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: clientesKeys.all });
+      qc.invalidateQueries({ queryKey: titulosKeys.clientes });
+    },
+  });
+}
+
+export interface AssignInput {
+  clienteIds: string[];
+  /** id do cobrador/vendedor alvo; null remove o vínculo. */
+  targetId: string | null;
+}
+
+/**
+ * Atribui (ou remove) o cobrador de um ou vários clientes de uma vez. Usada
+ * tanto na troca individual por linha quanto na ação em massa do painel de
+ * atribuição. A contagem de carteira em `cobradores` depende disso, então
+ * invalidamos as duas listas.
+ */
+export function useAssignCobrador() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clienteIds, targetId }: AssignInput) => {
+      if (clienteIds.length === 0) return;
+      const { error } = await supabase
+        .from('clientes')
+        .update({ cobrador_id: targetId })
+        .in('id', clienteIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
+      qc.invalidateQueries({ queryKey: cobradoresAllKey });
+      qc.invalidateQueries({ queryKey: titulosKeys.clientes });
+    },
+  });
+}
+
+/** Atribui (ou remove) o vendedor de um ou vários clientes de uma vez. */
+export function useAssignVendedor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clienteIds, targetId }: AssignInput) => {
+      if (clienteIds.length === 0) return;
+      const { error } = await supabase
+        .from('clientes')
+        .update({ vendedor_id: targetId })
+        .in('id', clienteIds);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
+      qc.invalidateQueries({ queryKey: vendedoresAllKey });
       qc.invalidateQueries({ queryKey: titulosKeys.clientes });
     },
   });

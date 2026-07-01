@@ -11,6 +11,7 @@ import {
   UserCheck,
   Briefcase,
   Store,
+  Shuffle,
   Sparkles
 } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
@@ -35,6 +36,7 @@ import { cn } from "@/lib/utils";
 const menuItems = [
   { title: "Dashboard", url: "/", icon: Home },
   { title: "Clientes", url: "/clientes", icon: UserCheck },
+  { title: "Atribuição", url: "/atribuicao", icon: Shuffle },
   { title: "Cobradores", url: "/cobradores", icon: Briefcase },
   { title: "Vendedores", url: "/vendedores", icon: Store },
   { title: "Títulos", url: "/titulos", icon: FileText },
@@ -45,7 +47,7 @@ const menuItems = [
   { title: "Usuários", url: "/usuarios", icon: Users },
 ];
 
-const adminOnly = ["/usuarios", "/importar", "/cobradores", "/vendedores"];
+const adminOnly = ["/usuarios", "/importar", "/cobradores", "/vendedores", "/atribuicao"];
 
 // Vendedor (read-only) só precisa da própria carteira de clientes —
 // o restante do menu de cobrança não se aplica a ele.

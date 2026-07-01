@@ -1360,6 +1360,7 @@ export type Database = {
           cliente_id: string | null
           cliente_nome: string | null
           cliente_telefone: string | null
+          cobrador_id: string | null
           company_id: string | null
           created_at: string | null
           created_by: string | null
@@ -1382,6 +1383,7 @@ export type Database = {
           total_pago: number | null
           updated_at: string | null
           valor_original: number | null
+          vendedor_id: string | null
           vencimento_original: string | null
         }
         Relationships: [

@@ -25,6 +25,8 @@ import { TablePagination } from '@/components/TablePagination';
 import { titulosFilterConfig } from '@/constants/filterConfigs';
 import { titulosPresets } from '@/constants/filterPresets';
 import { createClienteAgrupadoFilterFunctions } from '@/utils/filterFunctions';
+import { useCobradores } from '@/lib/queries/cobradores';
+import { useVendedores } from '@/lib/queries/vendedores';
 import {
   Dialog,
   DialogContent,
@@ -56,6 +58,8 @@ interface ClienteAgrupado {
   cpf_cnpj: string;
   telefone: string | null;
   email: string | null;
+  cobrador_id: string | null;
+  vendedor_id: string | null;
   titulos: TituloConsolidado[];
   totalSaldo: number;
   totalOriginal: number;
@@ -71,6 +75,8 @@ function criarClienteAgrupado(titulo: TituloConsolidado, clienteId: string): Cli
     cpf_cnpj: titulo.cliente_cpf_cnpj || '',
     telefone: titulo.cliente_telefone || null,
     email: titulo.cliente_email || null,
+    cobrador_id: titulo.cobrador_id ?? null,
+    vendedor_id: titulo.vendedor_id ?? null,
     titulos: [],
     totalSaldo: 0,
     totalOriginal: 0,
@@ -680,6 +686,8 @@ export default function Titulos() {
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
   const { data: clientes = [] } = useClientesSelect();
+  const { data: cobradores = [] } = useCobradores();
+  const { data: vendedores = [] } = useVendedores();
   const createTituloMutation = useCreateTitulo();
   const hardDeleteMutation = useHardDeleteTitulos();
 
@@ -859,6 +867,25 @@ export default function Titulos() {
   // Filter functions for titulos
   const filterFunctions = useMemo(() => createClienteAgrupadoFilterFunctions(), []);
 
+  // Filtros "Cobrador"/"Vendedor" com opções dinâmicas (equipe da empresa).
+  const filterConfigs = useMemo(() => [
+    ...titulosFilterConfig,
+    {
+      id: 'cobrador',
+      label: 'Cobrador',
+      type: 'select' as const,
+      placeholder: 'Todos',
+      options: cobradores.map((c) => ({ value: c.id, label: c.nome })),
+    },
+    {
+      id: 'vendedor',
+      label: 'Vendedor',
+      type: 'select' as const,
+      placeholder: 'Todos',
+      options: vendedores.map((v) => ({ value: v.id, label: v.nome })),
+    },
+  ], [cobradores, vendedores]);
+
   const {
     filteredData: filteredClientes,
     filters,
@@ -1029,7 +1056,7 @@ export default function Titulos() {
         </CardHeader>
         <CardContent className="pt-6">
           <GlobalFilter
-            configs={titulosFilterConfig}
+            configs={filterConfigs}
             filters={filters}
             onFilterChange={setFilter}
             onClearFilter={clearFilter}

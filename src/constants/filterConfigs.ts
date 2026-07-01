@@ -60,17 +60,30 @@ export const clientesFilterConfig: FilterConfig[] = [
       { value: 'quitado', label: 'Quitado', color: 'gray' },
     ]
   },
-  { 
-    id: 'cidade', 
-    label: 'Cidade', 
-    type: 'text', 
-    placeholder: 'Filtrar por cidade...' 
+  {
+    id: 'cidade',
+    label: 'Cidade',
+    type: 'text',
+    placeholder: 'Filtrar por cidade...'
   },
-  { 
-    id: 'estado', 
-    label: 'Estado', 
-    type: 'text', 
-    placeholder: 'UF' 
+  {
+    id: 'estado',
+    label: 'Estado',
+    type: 'text',
+    placeholder: 'UF'
+  },
+  {
+    id: 'retorno',
+    label: 'Retorno de cobrança',
+    type: 'select',
+    placeholder: 'Todos',
+    options: [
+      { value: 'atrasados', label: 'Atrasados', color: 'red' },
+      { value: 'hoje', label: 'Hoje', color: 'yellow' },
+      { value: 'proximos_7', label: 'Próximos 7 dias', color: 'blue' },
+      { value: 'com_agendamento', label: 'Com agendamento' },
+      { value: 'sem_agendamento', label: 'Sem agendamento' },
+    ],
   },
 ];
 
