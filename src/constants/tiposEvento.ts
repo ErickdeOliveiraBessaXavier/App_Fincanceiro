@@ -30,7 +30,6 @@ import {
  */
 export const TIPOS_EVENTO = [
   { value: 'agendamento',       label: 'Agendamento',          icon: Calendar,     color: 'text-yellow-600',       bg: 'bg-yellow-100' },
-  { value: 'alega_pagamento',   label: 'Alega Pagamento',      icon: DollarSign,   color: 'text-green-600',        bg: 'bg-green-100'  },
   { value: 'anexar_arquivo',    label: 'Anexar Arquivo',       icon: Paperclip,    color: 'text-muted-foreground', bg: 'bg-muted'      },
   { value: 'cobranca_externa',  label: 'Cobrança Externa',     icon: ExternalLink, color: 'text-purple-600',       bg: 'bg-purple-100' },
   { value: 'contato_cliente',   label: 'Contato Com Cliente',  icon: Phone,        color: 'text-blue-600',         bg: 'bg-blue-100'   },
@@ -56,6 +55,7 @@ export const TIPOS_EVENTO_LEGADOS = [
   { value: 'cadastro_insuficiente', label: 'Cadastro Insuficiente', icon: AlertTriangle, color: 'text-orange-600',  bg: 'bg-orange-100' },
   { value: 'cliente_desconhecido',  label: 'Cliente Desconhecido',  icon: UserX,         color: 'text-destructive', bg: 'bg-red-100'    },
   { value: 'devolucao',             label: 'Devolução',             icon: RotateCcw,     color: 'text-destructive', bg: 'bg-red-100'    },
+  { value: 'alega_pagamento',       label: 'Alega Pagamento',       icon: DollarSign,    color: 'text-green-600',   bg: 'bg-green-100'  },
 ] as const;
 
 const FALLBACK_EVENTO = TIPOS_EVENTO[TIPOS_EVENTO.length - 1]; // 'outro'

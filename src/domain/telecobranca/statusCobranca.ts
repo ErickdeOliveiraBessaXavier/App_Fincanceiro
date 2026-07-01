@@ -20,6 +20,7 @@
 export type StatusCobrancaSlug =
   | 'suspeita_fraude'
   | 'agendamento_pagamento'
+  | 'alega_pagamento'
   | 'sem_previsao_pagamento'
   | 'recado'
   | 'nao_atende'
@@ -89,6 +90,21 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
     orientacao:
       'Há contato efetivo e previsão de pagamento/acordo. Informe a data prevista de pagamento; ' +
       'o próximo contato será 1 dia após a data informada (limite de 7 dias).',
+  },
+  alega_pagamento: {
+    slug: 'alega_pagamento',
+    label: 'Alega Pagamento',
+    diasProximoContato: 2,
+    baseCalculo: 'hoje',
+    tetoDias: null,
+    exigeDataPrevista: false,
+    prioridade: 'normal',
+    contatoEfetivo: true,
+    exigePesquisaConfirmada: false,
+    exigeConfirmacaoInterna: false,
+    orientacao:
+      'O cliente afirma que já efetuou o pagamento. Verifique o comprovante/sistema no ' +
+      'próximo contato (sugerido em 2 dias); se o pagamento não for localizado, retome a cobrança.',
   },
   sem_previsao_pagamento: {
     slug: 'sem_previsao_pagamento',
@@ -181,6 +197,7 @@ export const GRUPOS_STATUS_COBRANCA: { grupo: GrupoStatusCobranca; label: string
 
 const GRUPO_POR_STATUS: Record<StatusCobrancaSlug, GrupoStatusCobranca> = {
   agendamento_pagamento: 'contato_efetivo',
+  alega_pagamento: 'contato_efetivo',
   sem_previsao_pagamento: 'contato_efetivo',
   recado: 'sem_contato',
   nao_atende: 'sem_contato',

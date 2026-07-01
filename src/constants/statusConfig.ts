@@ -84,6 +84,9 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     // da palavra "Agendamento" (retorno agendado / tipo de evento) e descreve
     // melhor o que ocorreu — o cliente prometeu pagar.
     agendamento_pagamento: { label: 'Promessa de Pagamento', variant: 'success' },
+    // Cliente afirma que já pagou (pendente de verificação) — accent (info) para
+    // distinguir do verde da "Promessa", que é um compromisso futuro.
+    alega_pagamento: { label: 'Alega Pagamento', variant: 'accent' },
     sem_previsao_pagamento: { label: 'Sem Previsão de Pagamento', variant: 'warning' },
     recado: { label: 'Recado', variant: 'secondary' },
     nao_atende: { label: 'Não Atende', variant: 'secondary' },

@@ -63,6 +63,10 @@ describe('calcularProximoContato', () => {
     expect(ymd(calcularProximoContato('recado', { referencia: QUARTA }))).toBe('2026-06-19');
   });
 
+  it('alega pagamento: +2 dias corridos a partir de hoje (verificação)', () => {
+    expect(ymd(calcularProximoContato('alega_pagamento', { referencia: QUARTA }))).toBe('2026-06-19');
+  });
+
   it('agendamento de pagamento: data prevista + 1 dia', () => {
     const proximo = calcularProximoContato('agendamento_pagamento', {
       referencia: QUARTA,
@@ -94,6 +98,7 @@ describe('calcularProximoContato', () => {
 describe('isContatoEfetivo', () => {
   it('marca contato efetivo apenas onde houve diálogo', () => {
     expect(isContatoEfetivo('agendamento_pagamento')).toBe(true);
+    expect(isContatoEfetivo('alega_pagamento')).toBe(true);
     expect(isContatoEfetivo('sem_previsao_pagamento')).toBe(true);
     expect(isContatoEfetivo('devolucao')).toBe(true);
     expect(isContatoEfetivo('nao_atende')).toBe(false);
