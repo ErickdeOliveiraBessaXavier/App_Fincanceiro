@@ -39,7 +39,7 @@ test('modal exibe todos os status de cobrança', async ({ page }) => {
   await expect(page.getByRole('option', { name: 'Não Atende' })).toBeVisible();
   await expect(page.getByRole('option', { name: 'Recado' })).toBeVisible();
   await expect(page.getByRole('option', { name: 'Sem Previsão de Pagamento' })).toBeVisible();
-  await expect(page.getByRole('option', { name: 'Sem Contato ou Incorreto' })).toBeVisible();
+  await expect(page.getByRole('option', { name: 'Contato inexistente/inválido' })).toBeVisible();
   await expect(page.getByRole('option', { name: 'Devolução' })).toBeVisible();
   await expect(page.getByRole('option', { name: 'Suspeita de Fraude' })).toBeVisible();
 });

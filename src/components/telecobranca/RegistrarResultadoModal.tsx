@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import {
-  STATUS_COBRANCA_LIST,
+  GRUPOS_STATUS_COBRANCA,
+  statusPorGrupo,
   getStatusCobranca,
   calcularProximoContato,
   validarStatusCobranca,
@@ -24,7 +25,9 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
 import { CalendarIcon, AlertTriangle, Info } from 'lucide-react';
@@ -243,10 +246,15 @@ export function RegistrarResultadoModal({
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {STATUS_COBRANCA_LIST.map((s) => (
-                  <SelectItem key={s.slug} value={s.slug}>
-                    {s.label}
-                  </SelectItem>
+                {GRUPOS_STATUS_COBRANCA.map((g) => (
+                  <SelectGroup key={g.grupo}>
+                    <SelectLabel>{g.label}</SelectLabel>
+                    {statusPorGrupo(g.grupo).map((s) => (
+                      <SelectItem key={s.slug} value={s.slug}>
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
                 ))}
               </SelectContent>
             </Select>
@@ -275,9 +283,9 @@ export function RegistrarResultadoModal({
 
           {precisaPesquisa && (
             <ConfirmacaoCheckbox id="pesquisa" checked={pesquisaConfirmada} onChange={setPesquisaConfirmada}>
-              Confirmo que a pesquisa de contato foi realizada (RCA e sistema de pesquisa).
+              Confirmo que a pesquisa de contato foi realizada.
               {status === 'nao_atende' &&
-                ' Esta é a 3ª tentativa ou posterior. Se a pesquisa não localizar o cliente, selecione "Sem Contato ou Incorreto".'}
+                ' Esta é a 3ª tentativa ou posterior. Se a pesquisa não localizar o cliente, selecione "Contato inexistente/inválido".'}
             </ConfirmacaoCheckbox>
           )}
 

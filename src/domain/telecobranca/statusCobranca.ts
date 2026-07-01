@@ -133,7 +133,7 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
   },
   sem_contato_incorreto: {
     slug: 'sem_contato_incorreto',
-    label: 'Sem Contato ou Incorreto',
+    label: 'Contato inexistente/inválido',
     diasProximoContato: 7,
     baseCalculo: 'hoje',
     tetoDias: null,
@@ -165,6 +165,34 @@ export const STATUS_COBRANCA: Record<StatusCobrancaSlug, StatusCobrancaConfig> =
 
 /** Lista ordenada dos status para popular seletores na UI. */
 export const STATUS_COBRANCA_LIST: StatusCobrancaConfig[] = Object.values(STATUS_COBRANCA);
+
+/**
+ * Agrupamento dos status para o seletor da UI. Reduz a carga cognitiva: o
+ * operador escolhe primeiro "eu falei / não falei / é exceção". Puramente
+ * visual — não altera slugs, regras ou persistência.
+ */
+export type GrupoStatusCobranca = 'contato_efetivo' | 'sem_contato' | 'excecao';
+
+export const GRUPOS_STATUS_COBRANCA: { grupo: GrupoStatusCobranca; label: string }[] = [
+  { grupo: 'contato_efetivo', label: 'Contato efetivo' },
+  { grupo: 'sem_contato', label: 'Sem contato' },
+  { grupo: 'excecao', label: 'Exceções' },
+];
+
+const GRUPO_POR_STATUS: Record<StatusCobrancaSlug, GrupoStatusCobranca> = {
+  agendamento_pagamento: 'contato_efetivo',
+  sem_previsao_pagamento: 'contato_efetivo',
+  recado: 'sem_contato',
+  nao_atende: 'sem_contato',
+  sem_contato_incorreto: 'sem_contato',
+  suspeita_fraude: 'excecao',
+  devolucao: 'excecao',
+};
+
+/** Status de um grupo, na ordem de STATUS_COBRANCA_LIST. */
+export function statusPorGrupo(grupo: GrupoStatusCobranca): StatusCobrancaConfig[] {
+  return STATUS_COBRANCA_LIST.filter((s) => GRUPO_POR_STATUS[s.slug] === grupo);
+}
 
 /** Retorna a config de um status; lança erro para slug desconhecido. */
 export function getStatusCobranca(slug: StatusCobrancaSlug): StatusCobrancaConfig {
@@ -344,7 +372,7 @@ export function validarStatusCobranca(slug: StatusCobrancaSlug, ctx: CalculoCont
     return 'Informe a data prevista de pagamento.';
   }
   if (exigePesquisa(slug, ctx) && !ctx.pesquisaConfirmada) {
-    return 'Confirme que a pesquisa de contato foi realizada (RCA e sistema de pesquisa).';
+    return 'Confirme que a pesquisa de contato foi realizada.';
   }
   if (cfg.exigeConfirmacaoInterna && !ctx.confirmacaoInterna) {
     return 'Confirme a validação interna da devolução.';

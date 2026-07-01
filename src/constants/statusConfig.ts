@@ -87,7 +87,7 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     sem_previsao_pagamento: { label: 'Sem Previsão de Pagamento', variant: 'warning' },
     recado: { label: 'Recado', variant: 'secondary' },
     nao_atende: { label: 'Não Atende', variant: 'secondary' },
-    sem_contato_incorreto: { label: 'Sem Contato ou Incorreto', variant: 'destructive' },
+    sem_contato_incorreto: { label: 'Contato inexistente/inválido', variant: 'destructive' },
     devolucao: { label: 'Devolução', variant: 'accent' },
   },
   // Status da campanha (campanhas.status)
