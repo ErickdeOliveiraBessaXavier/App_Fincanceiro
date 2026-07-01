@@ -4,7 +4,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { agoraTimestampNegocio } from '@/domain/telecobranca/statusCobranca';
-import { TIPOS_EVENTO, TIPOS_EVENTO_ADMINISTRATIVO } from '@/constants/tiposEvento';
+import { TIPOS_EVENTO } from '@/constants/tiposEvento';
 import {
   Dialog,
   DialogContent,
@@ -78,11 +78,6 @@ export function RegistroEventoModal({
       toast({ title: 'Erro', description: 'Selecione um tipo de evento.', variant: 'destructive' });
       return;
     }
-    const tipoValido = TIPOS_EVENTO_ADMINISTRATIVO.some(t => t.value === tipoEvento);
-    if (!tipoValido) {
-      toast({ title: 'Tipo inválido', description: 'Este evento exige Registrar Resultado para aplicar as regras de cobrança.', variant: 'destructive' });
-      return;
-    }
     try {
       setLoading(true);
       if (!user || !companyId) throw new Error('Sessão inválida');
@@ -122,7 +117,7 @@ export function RegistroEventoModal({
                 <SelectValue placeholder="Selecione o tipo de evento" />
               </SelectTrigger>
               <SelectContent>
-                {TIPOS_EVENTO_ADMINISTRATIVO.map((tipo) => {
+                {TIPOS_EVENTO.map((tipo) => {
                   const Icon = tipo.icon;
                   return (
                     <SelectItem key={tipo.value} value={tipo.value}>
