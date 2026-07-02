@@ -24,6 +24,7 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
+import { formatTelefone } from '@/utils/format';
 
 const empty = { id: '', nome: '', email: '', telefone: '', ativo: true };
 
@@ -81,7 +82,7 @@ function CobradoresTableCard({
                     <TableCell>
                       <div className="text-xs space-y-1">
                         {r.email && <div className="font-bold text-foreground">{r.email}</div>}
-                        {r.telefone && <div className="text-muted-foreground font-medium">{r.telefone}</div>}
+                        {r.telefone && <div className="text-muted-foreground font-medium">{formatTelefone(r.telefone)}</div>}
                       </div>
                     </TableCell>
                     <TableCell>

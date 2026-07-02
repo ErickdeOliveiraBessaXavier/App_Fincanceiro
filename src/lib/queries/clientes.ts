@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { hojeNegocio } from '@/domain/telecobranca/statusCobranca';
+import { soDigitos } from '@/utils/format';
 import { titulosKeys } from './titulos';
 
 // Chaves literais das carteiras (evita import circular com cobradores/vendedores,
@@ -230,7 +231,7 @@ export function useCreateCliente() {
           {
             ...input,
             company_id: companyId,
-            cpf_cnpj: input.cpf_cnpj.replace(/\D/g, ''),
+            cpf_cnpj: soDigitos(input.cpf_cnpj),
             status: 'ativo',
             created_by: user.id,
           },
@@ -274,7 +275,7 @@ export function useUpdateCliente() {
         .from('clientes')
         .update({
           ...rest,
-          cpf_cnpj: rest.cpf_cnpj.replace(/\D/g, ''),
+          cpf_cnpj: soDigitos(rest.cpf_cnpj),
         })
         .eq('id', id);
       if (error) throw error;
@@ -358,7 +359,7 @@ export async function checkCpfCnpjExists(
   cpfCnpj: string,
   excludeId?: string
 ): Promise<boolean> {
-  const cleaned = cpfCnpj.replace(/\D/g, '');
+  const cleaned = soDigitos(cpfCnpj);
   let query = supabase.from('clientes').select('id').eq('cpf_cnpj', cleaned);
   if (excludeId) query = query.neq('id', excludeId);
   const { data, error } = await query.maybeSingle();

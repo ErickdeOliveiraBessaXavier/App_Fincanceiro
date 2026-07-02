@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
 import { getStatusLabel } from '@/constants/statusConfig';
+import { formatCpfCnpj } from '@/utils/format';
 
 type ExportOptions = Parameters<typeof exportToCSV>[0];
 
@@ -224,7 +225,7 @@ export default function Relatorios() {
 
       const data = reportData.rawTitulos.map(t => ({
         clienteNome: t.cliente_nome || 'N/A',
-        cpfCnpj: t.cliente_cpf_cnpj || 'N/A',
+        cpfCnpj: formatCpfCnpj(t.cliente_cpf_cnpj) || 'N/A',
         valor: Number(t.valor_original || 0),
         saldoDevedor: Number(t.saldo_devedor || 0),
         status: getStatusLabel('titulo', t.status),

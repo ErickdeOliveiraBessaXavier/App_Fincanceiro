@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { PageHeader } from '@/components/PageHeader';
+import { soDigitos } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
 // ===================== Parsing de planilha (CSV ou XLSX) =====================
@@ -105,7 +106,7 @@ function toNumber(v: unknown): number | null {
   return isNaN(n) ? null : n;
 }
 
-const onlyDigits = (v: unknown) => String(v ?? '').replace(/\D/g, '');
+const onlyDigits = soDigitos;
 
 interface Parcela {
   numero: number;

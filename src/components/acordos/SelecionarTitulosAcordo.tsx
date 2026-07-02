@@ -7,6 +7,7 @@ import { ChevronDown, ChevronRight, AlertTriangle, FileText, Loader2 } from 'luc
 import { format } from 'date-fns';
 import { TituloAgrupado, TituloItem, ClienteComDividas } from '@/hooks/useTitulosAgrupados';
 import { cn } from '@/lib/utils';
+import { formatCpfCnpj } from '@/utils/format';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -66,7 +67,7 @@ function ClienteSelect({
         <option value="">Selecione um cliente</option>
         {clientes.map((cliente) => (
           <option key={cliente.id} value={cliente.id}>
-            {cliente.nome} - {cliente.cpf_cnpj} (Dívida: {formatCurrency(cliente.valor_total)})
+            {cliente.nome} - {formatCpfCnpj(cliente.cpf_cnpj)} (Dívida: {formatCurrency(cliente.valor_total)})
           </option>
         ))}
       </select>

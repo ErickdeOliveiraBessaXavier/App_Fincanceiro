@@ -27,7 +27,7 @@ import { titulosPresets } from '@/constants/filterPresets';
 import { createClienteAgrupadoFilterFunctions } from '@/utils/filterFunctions';
 import { useCobradores } from '@/lib/queries/cobradores';
 import { useVendedores } from '@/lib/queries/vendedores';
-import { formatCpfCnpj } from '@/utils/format';
+import { formatCpfCnpj, soDigitos } from '@/utils/format';
 import {
   Dialog,
   DialogContent,
@@ -957,7 +957,7 @@ export default function Titulos() {
       });
       return;
     }
-    const numero = telefone.replace(/\D/g, '');
+    const numero = soDigitos(telefone);
     const mensagem = encodeURIComponent(`Olá ${nome}, entramos em contato referente ao seu débito.`);
     window.open(`https://wa.me/55${numero}?text=${mensagem}`, '_blank');
   };

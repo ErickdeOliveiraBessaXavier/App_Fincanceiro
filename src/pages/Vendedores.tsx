@@ -14,6 +14,7 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { supabase } from '@/integrations/supabase/client';
+import { formatTelefone } from '@/utils/format';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -83,7 +84,7 @@ function VendedoresTableCard({
                     <TableCell>
                       <div className="text-xs space-y-1">
                         {r.email && <div className="font-bold text-foreground">{r.email}</div>}
-                        {r.telefone && <div className="text-muted-foreground font-medium">{r.telefone}</div>}
+                        {r.telefone && <div className="text-muted-foreground font-medium">{formatTelefone(r.telefone)}</div>}
                       </div>
                     </TableCell>
                     <TableCell>

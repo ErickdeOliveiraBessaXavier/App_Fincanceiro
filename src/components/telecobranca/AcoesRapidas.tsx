@@ -2,6 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import { soDigitos } from '@/utils/format';
 import {
   Plus,
   Calendar,
@@ -31,7 +32,7 @@ export function AcoesRapidas({
 
   const handleWhatsApp = () => {
     if (telefone) {
-      const cleaned = telefone.replace(/\D/g, '');
+      const cleaned = soDigitos(telefone);
       window.open(`https://wa.me/55${cleaned}`, '_blank');
     } else {
       toast({

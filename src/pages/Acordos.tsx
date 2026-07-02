@@ -14,6 +14,7 @@ import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { acordosFilterConfig } from '@/constants/filterConfigs';
 import { acordosPresets } from '@/constants/filterPresets';
 import { createAcordosFilterFunctions } from '@/utils/filterFunctions';
+import { formatCpfCnpj } from '@/utils/format';
 import {
   Dialog,
   DialogContent,
@@ -771,7 +772,7 @@ export default function Acordos() {
                       <div>
                         <div className="font-medium">{acordo.cliente?.nome}</div>
                         <div className="text-xs text-muted-foreground">
-                          {acordo.cliente?.cpf_cnpj}
+                          {formatCpfCnpj(acordo.cliente?.cpf_cnpj)}
                         </div>
                       </div>
                     </TableCell>
