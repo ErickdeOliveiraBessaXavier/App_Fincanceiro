@@ -12,9 +12,12 @@ import { useVendedores, type VendedorRow } from '@/lib/queries/vendedores';
 import { useUserRole } from '@/hooks/useUserRole';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
+import { GlobalFilter } from '@/components/GlobalFilter';
+import { useGlobalFilter } from '@/hooks/useGlobalFilter';
+import { createAtribuicaoFilterFunctions, SEM_VINCULO } from '@/utils/filterFunctions';
+import type { FilterPreset } from '@/constants/filterPresets';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -24,32 +27,16 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatCpfCnpj } from '@/utils/format';
 
-// Sentinelas do Radix Select (não aceita value vazio).
-const NONE = 'none'; // "sem vínculo"
-const ALL = 'all';   // "todos" (apenas nos filtros)
+// Sentinela do Radix Select (não aceita value vazio) para "sem vínculo".
+const NONE = 'none';
 
-interface Filtros {
-  search: string;
-  cobrador: string; // '' = todos | NONE = sem cobrador | id
-  vendedor: string;
-}
-
-// ===================== Filtro (puro) =====================
-function matchVinculo(atual: string | null | undefined, filtro: string): boolean {
-  if (!filtro) return true;
-  if (filtro === NONE) return !atual;
-  return atual === filtro;
-}
-
-function filtrarClientes(clientes: ClienteRow[], f: Filtros): ClienteRow[] {
-  const termo = f.search.trim().toLowerCase();
-  return clientes.filter((c) => {
-    if (termo && !`${c.nome} ${c.cpf_cnpj}`.toLowerCase().includes(termo)) return false;
-    if (!matchVinculo(c.cobrador_id, f.cobrador)) return false;
-    if (!matchVinculo(c.vendedor_id, f.vendedor)) return false;
-    return true;
-  });
-}
+// Presets rápidos para os cenários comuns de distribuição.
+const atribuicaoPresets: FilterPreset[] = [
+  { id: 'todos', label: 'Todos', filters: {} },
+  { id: 'sem_cobrador', label: 'Sem cobrador', filters: { cobrador: SEM_VINCULO } },
+  { id: 'sem_vendedor', label: 'Sem vendedor', filters: { vendedor: SEM_VINCULO } },
+  { id: 'inadimplentes', label: 'Inadimplentes', filters: { status: 'inadimplente' } },
+];
 
 // ===================== Select reutilizável (linha e barra em massa) =====================
 interface Opcao { id: string; nome: string; }
@@ -73,57 +60,6 @@ function AssignSelect({ value, opcoes, semLabel, onChange, disabled }: AssignSel
         {opcoes.map((o) => <SelectItem key={o.id} value={o.id}>{o.nome}</SelectItem>)}
       </SelectContent>
     </Select>
-  );
-}
-
-// ===================== Filtros =====================
-interface FiltrosBarProps {
-  filtros: Filtros;
-  setFiltros: (f: Filtros) => void;
-  cobradores: CobradorRow[];
-  vendedores: VendedorRow[];
-}
-function FiltrosBar({ filtros, setFiltros, cobradores, vendedores }: FiltrosBarProps) {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-muted-foreground">Buscar</Label>
-        <Input
-          value={filtros.search}
-          placeholder="Nome ou CPF/CNPJ..."
-          onChange={(e) => setFiltros({ ...filtros, search: e.target.value })}
-          className="h-9"
-        />
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-muted-foreground">Cobrador</Label>
-        <Select
-          value={filtros.cobrador || ALL}
-          onValueChange={(v) => setFiltros({ ...filtros, cobrador: v === ALL ? '' : v })}
-        >
-          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Todos</SelectItem>
-            <SelectItem value={NONE}>Sem cobrador</SelectItem>
-            {cobradores.map((c) => <SelectItem key={c.id} value={c.id}>{c.nome}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-1.5">
-        <Label className="text-xs font-medium text-muted-foreground">Vendedor</Label>
-        <Select
-          value={filtros.vendedor || ALL}
-          onValueChange={(v) => setFiltros({ ...filtros, vendedor: v === ALL ? '' : v })}
-        >
-          <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value={ALL}>Todos</SelectItem>
-            <SelectItem value={NONE}>Sem vendedor</SelectItem>
-            {vendedores.map((v) => <SelectItem key={v.id} value={v.id}>{v.nome}</SelectItem>)}
-          </SelectContent>
-        </Select>
-      </div>
-    </div>
   );
 }
 
@@ -207,11 +143,61 @@ export default function Atribuicao() {
   const assignVendedor = useAssignVendedor();
   const { toast } = useToast();
 
-  const [filtros, setFiltros] = useState<Filtros>({ search: '', cobrador: '', vendedor: '' });
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
 
-  const filtrados = useMemo(() => filtrarClientes(clientes, filtros), [clientes, filtros]);
-  const pagination = usePagination(filtrados, 25, JSON.stringify(filtros));
+  const filterFunctions = useMemo(() => createAtribuicaoFilterFunctions(), []);
+
+  // Configuração dos filtros. Cobrador/Vendedor incluem a opção "Sem vínculo"
+  // (para localizar clientes ainda não distribuídos) além da equipe da empresa.
+  const filterConfigs = useMemo(() => [
+    { id: 'search', label: 'Buscar', type: 'text' as const, placeholder: 'Nome ou CPF/CNPJ...' },
+    {
+      id: 'status', label: 'Situação', type: 'select' as const, placeholder: 'Todas',
+      options: [
+        { value: 'ativo', label: 'Ativo' },
+        { value: 'inadimplente', label: 'Inadimplente' },
+        { value: 'em_acordo', label: 'Em Acordo' },
+        { value: 'quitado', label: 'Quitado' },
+      ],
+    },
+    {
+      id: 'cobrador', label: 'Cobrador', type: 'select' as const, placeholder: 'Todos',
+      options: [{ value: SEM_VINCULO, label: 'Sem cobrador' }, ...cobradores.map((c) => ({ value: c.id, label: c.nome }))],
+    },
+    {
+      id: 'vendedor', label: 'Vendedor', type: 'select' as const, placeholder: 'Todos',
+      options: [{ value: SEM_VINCULO, label: 'Sem vendedor' }, ...vendedores.map((v) => ({ value: v.id, label: v.nome }))],
+    },
+    { id: 'cidade', label: 'Cidade', type: 'text' as const, placeholder: 'Filtrar por cidade...' },
+    { id: 'estado', label: 'Estado', type: 'text' as const, placeholder: 'UF' },
+    {
+      id: 'retorno', label: 'Retorno de cobrança', type: 'select' as const, placeholder: 'Todos',
+      options: [
+        { value: 'atrasados', label: 'Atrasados' },
+        { value: 'hoje', label: 'Hoje' },
+        { value: 'proximos_7', label: 'Próximos 7 dias' },
+        { value: 'com_agendamento', label: 'Com agendamento' },
+        { value: 'sem_agendamento', label: 'Sem agendamento' },
+      ],
+    },
+    { id: 'valor_min', label: 'Valor mínimo', type: 'number' as const, placeholder: 'R$ 0,00' },
+    { id: 'valor_max', label: 'Valor máximo', type: 'number' as const, placeholder: 'R$ 999.999,99' },
+  ], [cobradores, vendedores]);
+
+  const {
+    filteredData: filtrados,
+    filters,
+    setFilter,
+    setFilters,
+    clearFilter,
+    clearAllFilters,
+    hasActiveFilters,
+    activeFiltersCount,
+    resultCount,
+    totalCount,
+  } = useGlobalFilter(clientes, filterFunctions);
+
+  const pagination = usePagination(filtrados, 25, JSON.stringify(filters));
   const pending = assignCobrador.isPending || assignVendedor.isPending;
 
   const toggle = (id: string) => {
@@ -277,7 +263,21 @@ export default function Atribuicao() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
-          <FiltrosBar filtros={filtros} setFiltros={setFiltros} cobradores={cobradores} vendedores={vendedores} />
+          <GlobalFilter
+            configs={filterConfigs}
+            filters={filters}
+            onFilterChange={setFilter}
+            onClearFilter={clearFilter}
+            onClearAll={clearAllFilters}
+            hasActiveFilters={hasActiveFilters}
+            activeFiltersCount={activeFiltersCount}
+            resultCount={resultCount}
+            totalCount={totalCount}
+            presets={atribuicaoPresets}
+            onPresetSelect={(preset) => setFilters(preset.filters)}
+            collapsible
+            defaultOpen
+          />
 
           {selecionados.size > 0 && (
             <BulkBar

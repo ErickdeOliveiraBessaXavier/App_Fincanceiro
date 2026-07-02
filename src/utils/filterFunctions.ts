@@ -241,6 +241,36 @@ export const createCampanhasFilterFunctions = () => ({
     commonFilterFunctions.exactMatch(item, value, 'canal'),
 });
 
+/** Sentinela do filtro de vínculo na Atribuição: "sem cobrador/vendedor" (id nulo). */
+export const SEM_VINCULO = '__sem__';
+
+const matchVinculo = (atual: string | null | undefined, value: string): boolean => {
+  if (!value) return true;
+  if (value === SEM_VINCULO) return !atual;
+  return atual === value;
+};
+
+// Filtros do painel de Atribuição de carteiras. Reaproveita os predicados
+// comuns; cobrador/vendedor tratam o sentinela "sem vínculo" (para localizar
+// clientes ainda não distribuídos).
+export const createAtribuicaoFilterFunctions = () => ({
+  search: (item: any, value: string) =>
+    commonFilterFunctions.search(item, value, ['nome', 'cpf_cnpj']),
+  status: (item: any, value: string) =>
+    commonFilterFunctions.exactMatch(item, value, 'status'),
+  cobrador: (item: any, value: string) => matchVinculo(item.cobrador_id, value),
+  vendedor: (item: any, value: string) => matchVinculo(item.vendedor_id, value),
+  cidade: (item: any, value: string) =>
+    commonFilterFunctions.contains(item, value, 'cidade'),
+  estado: (item: any, value: string) =>
+    commonFilterFunctions.contains(item, value, 'estado'),
+  retorno: (item: any, value: string) => filtrarPorRetorno(item, value),
+  valor_min: (item: any, value: string) =>
+    commonFilterFunctions.numberGreaterThan(item, value, 'total_valor'),
+  valor_max: (item: any, value: string) =>
+    commonFilterFunctions.numberLessThan(item, value, 'total_valor'),
+});
+
 // For grouped data (like ClienteAgrupado)
 export const createClienteAgrupadoFilterFunctions = () => ({
   search: (item: any, value: string) => {
