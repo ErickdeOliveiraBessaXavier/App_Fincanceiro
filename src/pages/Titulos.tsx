@@ -27,6 +27,7 @@ import { titulosPresets } from '@/constants/filterPresets';
 import { createClienteAgrupadoFilterFunctions } from '@/utils/filterFunctions';
 import { useCobradores } from '@/lib/queries/cobradores';
 import { useVendedores } from '@/lib/queries/vendedores';
+import { formatCpfCnpj } from '@/utils/format';
 import {
   Dialog,
   DialogContent,
@@ -396,13 +397,13 @@ function ClienteRow({ cliente, expanded, onToggleCliente, onTelecobranca, onWhat
             <div>
               <div className="font-medium">{cliente.nome}</div>
               <div className="text-xs text-muted-foreground md:hidden">
-                {cliente.cpf_cnpj}
+                {formatCpfCnpj(cliente.cpf_cnpj)}
               </div>
             </div>
           </div>
         </TableCell>
         <TableCell className="hidden md:table-cell">
-          {cliente.cpf_cnpj}
+          {formatCpfCnpj(cliente.cpf_cnpj)}
         </TableCell>
         <TableCell>
           <div>
@@ -489,7 +490,7 @@ function NovoTituloDialog({ open, onOpenChange, novoTitulo, setNovoTitulo, clien
             >
               <option value="">Selecione um cliente</option>
               {clientes.map(c => (
-                <option key={c.id} value={c.id}>{c.nome} - {c.cpf_cnpj}</option>
+                <option key={c.id} value={c.id}>{c.nome} - {formatCpfCnpj(c.cpf_cnpj)}</option>
               ))}
             </select>
           </div>
@@ -595,7 +596,7 @@ function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo }: Tit
               </div>
               <div>
                 <Label className="text-muted-foreground">CPF/CNPJ</Label>
-                <p>{titulo.cliente_cpf_cnpj}</p>
+                <p>{formatCpfCnpj(titulo.cliente_cpf_cnpj)}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Valor Original</Label>
