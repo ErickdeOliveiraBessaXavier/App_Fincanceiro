@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { User, Phone, Mail, MapPin, ExternalLink } from 'lucide-react';
+import { formatTelefone } from '@/utils/format';
 
 interface Cliente {
   id: string;
@@ -20,17 +21,6 @@ interface ClienteResumoProps {
 }
 
 export function ClienteResumo({ cliente }: ClienteResumoProps) {
-  const formatPhone = (phone?: string | null) => {
-    if (!phone) return null;
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 11) {
-      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } else if (cleaned.length === 10) {
-      return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    }
-    return phone;
-  };
-
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -48,7 +38,7 @@ export function ClienteResumo({ cliente }: ClienteResumoProps) {
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors group"
             >
               <Phone className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1">{formatPhone(cliente.telefone)}</span>
+              <span className="flex-1">{formatTelefone(cliente.telefone)}</span>
               <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </a>
           )}

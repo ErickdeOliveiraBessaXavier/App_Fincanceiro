@@ -50,6 +50,7 @@ import {
 import { Label } from "@/components/ui/label";
 import type { CobradorRow } from '@/lib/queries/cobradores';
 import type { VendedorRow } from '@/lib/queries/vendedores';
+import { formatCpfCnpj, formatTelefone } from '@/utils/format';
 
 // Atualize a interface Cliente para incluir todos os campos
 interface Cliente {
@@ -134,7 +135,7 @@ function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetail
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1 min-w-0">
           <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">{cliente.nome}</h3>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{cliente.cpf_cnpj}</p>
+          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{formatCpfCnpj(cliente.cpf_cnpj)}</p>
         </div>
         <StatusBadge domain="cliente" status={cliente.status} />
       </div>
@@ -142,7 +143,7 @@ function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetail
         {cliente.telefone && (
           <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
             <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center"><Phone className="h-3.5 w-3.5" /></div>
-            <span>{cliente.telefone}</span>
+            <span>{formatTelefone(cliente.telefone)}</span>
           </div>
         )}
         {cliente.email && (
@@ -195,21 +196,39 @@ function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetail
 function ClienteTableRow({ cliente, isOperador, isVendedor, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
   return (
     <TableRow className="hover:bg-muted/10 transition-colors">
-      <TableCell className="font-bold text-sm text-foreground">{cliente.nome}</TableCell>
-      <TableCell className="font-medium text-xs text-muted-foreground">{cliente.cpf_cnpj}</TableCell>
+      {/* Cliente: nome + CPF/CNPJ empilhados (antes eram 2 colunas) */}
       <TableCell>
-        <div className="text-xs space-y-1">
-          {cliente.telefone && <div className="font-bold text-foreground">{cliente.telefone}</div>}
-          {cliente.email && <div className="text-muted-foreground font-medium">{cliente.email}</div>}
+        <div className="font-bold text-sm text-foreground">{cliente.nome}</div>
+        <div className="text-[11px] font-medium text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</div>
+      </TableCell>
+      {/* Contato: some abaixo de xl (email é o principal vilão de largura) */}
+      <TableCell className="hidden xl:table-cell">
+        <div className="text-xs space-y-0.5">
+          {cliente.telefone
+            ? <div className="font-bold text-foreground">{formatTelefone(cliente.telefone)}</div>
+            : <span className="text-muted-foreground">—</span>}
+          {cliente.email && <div className="text-muted-foreground font-medium truncate max-w-[200px]">{cliente.email}</div>}
         </div>
       </TableCell>
-      <TableCell className="text-xs font-medium">{cliente.cobrador_nome ?? '—'}</TableCell>
-      <TableCell className="text-xs font-medium">{cliente.vendedor_nome ?? '—'}</TableCell>
+      {/* Responsáveis: cobrador + vendedor num só bloco; some abaixo de xl */}
+      <TableCell className="hidden xl:table-cell">
+        <div className="text-xs space-y-0.5">
+          <div><span className="text-muted-foreground">Cob:</span> <span className="font-medium">{cliente.cobrador_nome ?? '—'}</span></div>
+          <div><span className="text-muted-foreground">Vend:</span> <span className="font-medium">{cliente.vendedor_nome ?? '—'}</span></div>
+        </div>
+      </TableCell>
       <TableCell><RetornoCell cliente={cliente} /></TableCell>
-      <TableCell><StatusBadge domain="cliente" status={cliente.status} /></TableCell>
-      <TableCell className="font-bold text-sm">{cliente.total_titulos}</TableCell>
-      <TableCell className="font-black text-sm text-primary">{formatCurrency(cliente.total_valor || 0)}</TableCell>
+      {/* Situação + resumo financeiro (antes eram 3 colunas: situação/títulos/valor) */}
       <TableCell>
+        <div className="space-y-1">
+          <StatusBadge domain="cliente" status={cliente.status} />
+          <div className="text-xs">
+            <span className="font-black text-primary">{formatCurrency(cliente.total_valor || 0)}</span>
+            <span className="text-muted-foreground"> · {cliente.total_titulos} tít.</span>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell className="text-right">
         <DropdownMenu>
           <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
@@ -248,7 +267,19 @@ function ClienteDetailsDialog({ open, onOpenChange, cliente, comunicacoes }: Cli
               <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="detalhes">Detalhes</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
               <TabsContent value="detalhes" className="space-y-4">
                 <div className="space-y-3">
-                  <div><label className="text-sm font-medium">CPF/CNPJ</label><p className="text-sm text-muted-foreground">{cliente.cpf_cnpj}</p></div>
+                  <div><label className="text-sm font-medium">CPF/CNPJ</label><p className="text-sm text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</p></div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-sm font-medium">Telefone</label><p className="text-sm text-muted-foreground">{cliente.telefone ? formatTelefone(cliente.telefone) : '—'}</p></div>
+                    <div><label className="text-sm font-medium">E-mail</label><p className="text-sm text-muted-foreground break-all">{cliente.email || '—'}</p></div>
+                    <div><label className="text-sm font-medium">Cobrador</label><p className="text-sm text-muted-foreground">{cliente.cobrador_nome ?? '—'}</p></div>
+                    <div><label className="text-sm font-medium">Vendedor</label><p className="text-sm text-muted-foreground">{cliente.vendedor_nome ?? '—'}</p></div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium">Endereço</label>
+                    <p className="text-sm text-muted-foreground">
+                      {[cliente.endereco_completo, [cliente.cidade, cliente.estado].filter(Boolean).join(' - ')].filter(Boolean).join(', ') || '—'}
+                    </p>
+                  </div>
                   <div className="flex justify-between items-center pt-4 border-t">
                     <div><label className="text-sm font-medium">Total de Títulos</label><p className="text-2xl font-bold text-primary">{cliente.total_titulos}</p></div>
                     <div><label className="text-sm font-medium">Valor Total</label><p className="text-2xl font-bold text-primary">{formatCurrency(cliente.total_valor || 0)}</p></div>
@@ -742,15 +773,11 @@ export default function Clientes() {
                 <TableHeader className="bg-muted/30">
                   <TableRow>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cliente</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">CPF/CNPJ</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cobrador</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Vendedor</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Próximo retorno</TableHead>
+                    <TableHead className="hidden xl:table-cell text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
+                    <TableHead className="hidden xl:table-cell text-[10px] font-bold uppercase tracking-widest">Responsáveis</TableHead>
+                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Retorno</TableHead>
                     <TableHead className="text-[10px] font-bold uppercase tracking-widest">Situação</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Títulos</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Valor Total</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
+                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

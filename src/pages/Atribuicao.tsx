@@ -22,6 +22,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
+import { formatCpfCnpj } from '@/utils/format';
 
 // Sentinelas do Radix Select (não aceita value vazio).
 const NONE = 'none'; // "sem vínculo"
@@ -185,7 +186,7 @@ function AtribuicaoRow({ cliente, selecionado, cobradores, vendedores, onToggle,
         <Checkbox checked={selecionado} onCheckedChange={() => onToggle(cliente.id)} />
       </TableCell>
       <TableCell className="font-bold text-sm text-foreground">{cliente.nome}</TableCell>
-      <TableCell className="text-xs font-medium text-muted-foreground">{cliente.cpf_cnpj}</TableCell>
+      <TableCell className="text-xs font-medium text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</TableCell>
       <TableCell className="w-52">
         <AssignSelect value={cliente.cobrador_id ?? ''} opcoes={cobradores} semLabel="Sem cobrador" onChange={onCobrador} disabled={pending} />
       </TableCell>

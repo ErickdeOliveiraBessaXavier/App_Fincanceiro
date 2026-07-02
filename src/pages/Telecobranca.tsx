@@ -16,6 +16,7 @@ import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
 import { RegistrarResultadoModal } from '@/components/telecobranca/RegistrarResultadoModal';
 import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
+import { formatCpfCnpj, formatTelefone } from '@/utils/format';
 
 interface Cliente {
   id: string;
@@ -78,27 +79,6 @@ export default function Telecobranca() {
     setRefreshTrigger(prev => prev + 1);
   };
 
-  const formatCpfCnpj = (value: string) => {
-    const cleaned = value.replace(/\D/g, '');
-    if (cleaned.length === 11) {
-      return cleaned.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-    } else if (cleaned.length === 14) {
-      return cleaned.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
-    }
-    return value;
-  };
-
-  const formatPhone = (phone?: string | null) => {
-    if (!phone) return null;
-    const cleaned = phone.replace(/\D/g, '');
-    if (cleaned.length === 11) {
-      return cleaned.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
-    } else if (cleaned.length === 10) {
-      return cleaned.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
-    }
-    return phone;
-  };
-
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -152,7 +132,7 @@ export default function Telecobranca() {
               {cliente.telefone && (
                 <span className="flex items-center gap-1">
                   <Phone className="h-3 w-3" />
-                  {formatPhone(cliente.telefone)}
+                  {formatTelefone(cliente.telefone)}
                 </span>
               )}
             </div>
