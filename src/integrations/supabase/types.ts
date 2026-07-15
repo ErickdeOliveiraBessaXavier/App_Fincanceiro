@@ -1383,10 +1383,24 @@ export type Database = {
           total_pago: number | null
           updated_at: string | null
           valor_original: number | null
-          vendedor_id: string | null
           vencimento_original: string | null
+          vendedor_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "clientes_cobrador_id_fkey"
+            columns: ["cobrador_id"]
+            isOneToOne: false
+            referencedRelation: "cobradores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clientes_vendedor_id_fkey"
+            columns: ["vendedor_id"]
+            isOneToOne: false
+            referencedRelation: "vendedores"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "titulos_cliente_id_fkey"
             columns: ["cliente_id"]
@@ -1416,9 +1430,20 @@ export type Database = {
         }
         Returns: Json
       }
+      audit_log_do_tenant: { Args: { p_audit_id: string }; Returns: boolean }
+      cadastros_incompletos: {
+        Args: never
+        Returns: {
+          created_at: string
+          email: string
+          nome: string
+          user_id: string
+        }[]
+      }
       check_overdue_parcelas: { Args: never; Returns: undefined }
       cobrador_ve_cliente: { Args: { _cliente_id: string }; Returns: boolean }
       cobrador_ve_titulo: { Args: { _titulo_id: string }; Returns: boolean }
+      company_id_do_usuario: { Args: never; Returns: string }
       conceder_desconto_parcela: {
         Args: {
           p_created_by?: string
@@ -1464,17 +1489,6 @@ export type Database = {
       }
       find_or_create_cobrador: { Args: { p_nome: string }; Returns: string }
       find_or_create_vendedor: { Args: { p_nome: string }; Returns: string }
-      registrar_resultado_cobranca: {
-        Args: {
-          p_acordo_id?: string
-          p_cliente_id: string
-          p_data_proximo_contato: string
-          p_descricao?: string
-          p_status_cobranca: string
-          p_titulo_id?: string
-        }
-        Returns: Json
-      }
       has_min_role: {
         Args: { _min: Database["public"]["Enums"]["app_role"]; _uid: string }
         Returns: boolean
@@ -1518,7 +1532,18 @@ export type Database = {
       }
       is_super_admin: { Args: never; Returns: boolean }
       limpar_titulos_empresa: { Args: { p_company_id: string }; Returns: Json }
-      migrate_existing_titulos_to_clientes: { Args: never; Returns: undefined }
+      limpeza_em_andamento: { Args: { p_company_id: string }; Returns: boolean }
+      metricas_empresas: {
+        Args: never
+        Returns: {
+          clientes: number
+          company_id: string
+          titulos_ativos: number
+          titulos_total: number
+          ultima_atividade: string
+          usuarios: number
+        }[]
+      }
       refresh_mv_parcelas: { Args: never; Returns: undefined }
       registrar_pagamento_parcela: {
         Args: {
@@ -1527,6 +1552,17 @@ export type Database = {
           p_meio_pagamento: string
           p_parcela_id: string
           p_valor: number
+        }
+        Returns: Json
+      }
+      registrar_resultado_cobranca: {
+        Args: {
+          p_acordo_id?: string
+          p_cliente_id: string
+          p_data_proximo_contato: string
+          p_descricao?: string
+          p_status_cobranca: string
+          p_titulo_id?: string
         }
         Returns: Json
       }

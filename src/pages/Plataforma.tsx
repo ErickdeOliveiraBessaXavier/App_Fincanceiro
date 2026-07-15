@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2 } from 'lucide-react';
+import { Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2, UserX } from 'lucide-react';
 
 interface CompanyRow {
   id: string;
@@ -21,6 +21,22 @@ interface CompanyRow {
   status: string;
   plano: string;
   created_at: string;
+}
+
+interface CadastroIncompleto {
+  user_id: string;
+  nome: string;
+  email: string;
+  created_at: string;
+}
+
+interface MetricaEmpresa {
+  company_id: string;
+  titulos_ativos: number;
+  titulos_total: number;
+  clientes: number;
+  usuarios: number;
+  ultima_atividade: string | null;
 }
 
 const statusBadge: Record<string, string> = {
@@ -32,15 +48,117 @@ const statusBadge: Record<string, string> = {
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
 
+// Tempo relativo comunica churn melhor que data solta: "há 45 dias" salta aos
+// olhos de um jeito que "01/06/2026" não salta.
+const fmtAtividade = (d: string | null) => {
+  if (!d) return '—';
+  const dias = Math.floor((Date.now() - new Date(d).getTime()) / 86_400_000);
+  if (dias <= 0) return 'hoje';
+  if (dias === 1) return 'ontem';
+  if (dias < 30) return `há ${dias} dias`;
+  return fmtDate(d);
+};
+
 // ===================== Subcomponentes =====================
+// Células de uso da empresa. Quando as métricas ainda não chegaram, mostra "—"
+// em vez de zero: zero seria mentira, "—" é "ainda não sei".
+function MetricasCells({ m }: { m?: MetricaEmpresa }) {
+  if (!m) {
+    return (
+      <>
+        <TableCell className="text-right text-muted-foreground">—</TableCell>
+        <TableCell className="hidden xl:table-cell text-right text-muted-foreground">—</TableCell>
+        <TableCell className="hidden xl:table-cell text-right text-muted-foreground">—</TableCell>
+        <TableCell className="text-muted-foreground">—</TableCell>
+      </>
+    );
+  }
+  // Só os ativos são faturáveis; o total aparece no tooltip quando divergem,
+  // para não parecer que sumiu título.
+  const temCancelados = m.titulos_total !== m.titulos_ativos;
+  return (
+    <>
+      <TableCell
+        className="text-right tabular-nums"
+        title={temCancelados ? `${m.titulos_total} no total (inclui cancelados)` : undefined}
+      >
+        {m.titulos_ativos}
+      </TableCell>
+      <TableCell className="hidden xl:table-cell text-right tabular-nums">{m.clientes}</TableCell>
+      <TableCell className="hidden xl:table-cell text-right tabular-nums">{m.usuarios}</TableCell>
+      <TableCell className="text-muted-foreground">{fmtAtividade(m.ultima_atividade)}</TableCell>
+    </>
+  );
+}
+
+interface EmpresaAcoesProps {
+  c: CompanyRow;
+  statusPending: boolean;
+  onSetStatus: (id: string, status: string) => void;
+  onLimpar: (c: CompanyRow) => void;
+}
+function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar }: EmpresaAcoesProps) {
+  const inativa = c.status === 'suspensa' || c.status === 'cancelada';
+  return (
+    <div className="flex justify-end gap-2">
+      {c.status === 'pendente' && (
+        <Button size="sm" disabled={statusPending} onClick={() => onSetStatus(c.id, 'ativa')}>
+          <Check className="mr-1 h-4 w-4" /> Aprovar
+        </Button>
+      )}
+      {c.status === 'ativa' && (
+        <Button size="sm" variant="outline" disabled={statusPending}
+          onClick={() => onSetStatus(c.id, 'suspensa')}>
+          <Pause className="mr-1 h-4 w-4" /> Suspender
+        </Button>
+      )}
+      {inativa && (
+        <Button size="sm" variant="outline" disabled={statusPending}
+          onClick={() => onSetStatus(c.id, 'ativa')}>
+          <Play className="mr-1 h-4 w-4" /> Reativar
+        </Button>
+      )}
+      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+        title="Limpar todos os títulos desta empresa"
+        onClick={() => onLimpar(c)}>
+        <Trash2 className="mr-1 h-4 w-4" /> Limpar títulos
+      </Button>
+    </div>
+  );
+}
+
+interface EmpresaRowProps extends EmpresaAcoesProps {
+  m?: MetricaEmpresa;
+}
+function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar }: EmpresaRowProps) {
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{c.nome}</TableCell>
+      <TableCell className="hidden xl:table-cell">{c.cnpj ?? '—'}</TableCell>
+      <TableCell className="capitalize">{c.plano}</TableCell>
+      <TableCell>
+        <Badge className={statusBadge[c.status] ?? ''}>
+          <span className="capitalize">{c.status}</span>
+        </Badge>
+      </TableCell>
+      <MetricasCells m={m} />
+      <TableCell className="hidden xl:table-cell">{fmtDate(c.created_at)}</TableCell>
+      <TableCell className="text-right">
+        <EmpresaAcoes c={c} statusPending={statusPending} onSetStatus={onSetStatus} onLimpar={onLimpar} />
+      </TableCell>
+    </TableRow>
+  );
+}
+
 interface EmpresasTableCardProps {
   companies: CompanyRow[];
+  metricas: Map<string, MetricaEmpresa>;
   isLoading: boolean;
   statusPending: boolean;
   onSetStatus: (id: string, status: string) => void;
   onLimpar: (c: CompanyRow) => void;
 }
-function EmpresasTableCard({ companies, isLoading, statusPending, onSetStatus, onLimpar }: EmpresasTableCardProps) {
+function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSetStatus, onLimpar }: EmpresasTableCardProps) {
   return (
     <Card>
       <CardHeader><CardTitle>Empresas cadastradas</CardTitle></CardHeader>
@@ -57,58 +175,79 @@ function EmpresasTableCard({ companies, isLoading, statusPending, onSetStatus, o
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead>CNPJ</TableHead>
+                  <TableHead className="hidden xl:table-cell">CNPJ</TableHead>
                   <TableHead>Plano</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Cadastro</TableHead>
+                  <TableHead className="text-right">Títulos</TableHead>
+                  <TableHead className="hidden xl:table-cell text-right">Clientes</TableHead>
+                  <TableHead className="hidden xl:table-cell text-right">Usuários</TableHead>
+                  <TableHead>Atividade</TableHead>
+                  <TableHead className="hidden xl:table-cell">Cadastro</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {companies.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.nome}</TableCell>
-                    <TableCell>{c.cnpj ?? '—'}</TableCell>
-                    <TableCell className="capitalize">{c.plano}</TableCell>
-                    <TableCell>
-                      <Badge className={statusBadge[c.status] ?? ''}>
-                        <span className="capitalize">{c.status}</span>
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{fmtDate(c.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        {c.status === 'pendente' && (
-                          <Button size="sm" disabled={statusPending}
-                            onClick={() => onSetStatus(c.id, 'ativa')}>
-                            <Check className="mr-1 h-4 w-4" /> Aprovar
-                          </Button>
-                        )}
-                        {c.status === 'ativa' && (
-                          <Button size="sm" variant="outline" disabled={statusPending}
-                            onClick={() => onSetStatus(c.id, 'suspensa')}>
-                            <Pause className="mr-1 h-4 w-4" /> Suspender
-                          </Button>
-                        )}
-                        {(c.status === 'suspensa' || c.status === 'cancelada') && (
-                          <Button size="sm" variant="outline" disabled={statusPending}
-                            onClick={() => onSetStatus(c.id, 'ativa')}>
-                            <Play className="mr-1 h-4 w-4" /> Reativar
-                          </Button>
-                        )}
-                        <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-                          title="Limpar todos os títulos desta empresa"
-                          onClick={() => onLimpar(c)}>
-                          <Trash2 className="mr-1 h-4 w-4" /> Limpar títulos
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
+                  <EmpresaRow
+                    key={c.id}
+                    c={c}
+                    m={metricas.get(c.id)}
+                    statusPending={statusPending}
+                    onSetStatus={onSetStatus}
+                    onLimpar={onLimpar}
+                  />
                 ))}
               </TableBody>
             </Table>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// Contas que se cadastraram e não concluíram a criação da empresa: ficam sem
+// company_id e sem papel. Não são uma company, então não apareceriam na tabela
+// abaixo — e é justamente aí que um cliente real trava sem ninguém notar.
+function CadastrosIncompletosCard({ cadastros }: { cadastros: CadastroIncompleto[] }) {
+  if (cadastros.length === 0) return null;
+
+  const titulo = cadastros.length === 1
+    ? '1 cadastro incompleto'
+    : `${cadastros.length} cadastros incompletos`;
+
+  return (
+    <Card className="border-amber-300/60">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <UserX className="h-4 w-4 text-amber-600" />
+          <CardTitle className="text-sm font-medium">{titulo}</CardTitle>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Criaram a conta mas não concluíram o cadastro da empresa. Sem acesso até concluir.
+        </p>
+      </CardHeader>
+      <CardContent>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>E-mail</TableHead>
+                <TableHead>Desde</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {cadastros.map((c) => (
+                <TableRow key={c.user_id}>
+                  <TableCell className="font-medium">{c.nome}</TableCell>
+                  <TableCell>{c.email}</TableCell>
+                  <TableCell>{fmtDate(c.created_at)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
@@ -174,6 +313,26 @@ export default function Plataforma() {
     },
   });
 
+  const incompletosQuery = useQuery({
+    queryKey: ['plataforma', 'cadastros-incompletos'],
+    enabled: isSuperAdmin,
+    queryFn: async (): Promise<CadastroIncompleto[]> => {
+      const { data, error } = await supabase.rpc('cadastros_incompletos');
+      if (error) throw error;
+      return (data ?? []) as CadastroIncompleto[];
+    },
+  });
+
+  const metricasQuery = useQuery({
+    queryKey: ['plataforma', 'metricas'],
+    enabled: isSuperAdmin,
+    queryFn: async (): Promise<MetricaEmpresa[]> => {
+      const { data, error } = await supabase.rpc('metricas_empresas');
+      if (error) throw error;
+      return (data ?? []) as MetricaEmpresa[];
+    },
+  });
+
   const setStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from('companies').update({ status }).eq('id', id);
@@ -202,6 +361,7 @@ export default function Plataforma() {
       setLimparAlvo(null);
       setConfirmacao('');
       qc.invalidateQueries({ queryKey: ['plataforma', 'companies'] });
+      qc.invalidateQueries({ queryKey: ['plataforma', 'metricas'] });
     },
     onError: (e: any) =>
       toast({ title: 'Erro', description: e.message ?? 'Falha ao limpar', variant: 'destructive' }),
@@ -213,6 +373,7 @@ export default function Plataforma() {
 
   const companies = companiesQuery.data ?? [];
   const count = (s: string) => companies.filter((c) => c.status === s).length;
+  const metricas = new Map((metricasQuery.data ?? []).map((m) => [m.company_id, m]));
 
   return (
     <div className="min-h-screen bg-background">
@@ -259,8 +420,11 @@ export default function Plataforma() {
           </Card>
         </div>
 
+        <CadastrosIncompletosCard cadastros={incompletosQuery.data ?? []} />
+
         <EmpresasTableCard
           companies={companies}
+          metricas={metricas}
           isLoading={companiesQuery.isLoading}
           statusPending={setStatus.isPending}
           onSetStatus={(id, status) => setStatus.mutate({ id, status })}
