@@ -1,0 +1,277 @@
+================================================================
+ESTUDO DE CUSTO, CAPACIDADE E PRECIFICACAO — SISTEMA DE COBRANCA
+Preparado por: Erick de Oliveira
+Data: 15/07/2026
+================================================================
+
+Resumo em uma frase: a infraestrutura custa entre R$ 245 e R$ 600
+por mes para atender de 5 a 40 empresas clientes. O custo NAO
+cresce por titulo — cresce por numero de usuarios simultaneos. Ou
+seja: nosso preco nao deve sair do custo, deve sair do valor. As
+faixas por titulo (modelo Cedrus) servem pra dar previsibilidade
+ao cliente e escada de crescimento pra nos, nao pra cobrir custo.
+
+
+----------------------------------------------------------------
+1. CUSTO FIXO (base, independente de quantos clientes tivermos)
+----------------------------------------------------------------
+
+  Supabase Pro (banco + auth + API)........ R$ 130,00 / mes
+  Dominio .br (R$ 40/ano)..................  R$   3,33 / mes
+  Hospedagem front-end (Vercel Pro)........ R$ 110,00 / mes
+                                            -----------------
+  TOTAL BASE............................... R$ 243,33 / mes
+                                            (~R$ 2.920 / ano)
+
+Observacao sobre a Vercel: hoje o app roda no plano Hobby, que e
+gratuito — mas os termos de uso da Vercel proibem uso comercial no
+Hobby. No momento em que cobrarmos do primeiro cliente, precisamos
+migrar pro plano Pro (US$ 20/mes). Ja incluí esse valor acima pra
+nao criar surpresa. Se preferirmos evitar, da pra hospedar o
+front-end em outro lugar mais barato — mas nao recomendo comecar
+uma operacao paga violando o termo de uso do fornecedor.
+
+
+----------------------------------------------------------------
+2. CUSTO VARIAVEL (o que passa do que ja esta incluso)
+----------------------------------------------------------------
+
+O plano Supabase Pro ja inclui:
+
+  - 8 GB de banco de dados
+  - 250 GB de trafego/mes
+  - 100 GB de arquivos
+  - 100.000 usuarios ativos/mes
+  - 1 instancia de processamento "Micro" (2 nucleos, 1 GB RAM)
+
+Passando disso, o excedente e cobrado assim (valores aproximados,
+convertidos a ~R$ 5,20/US$):
+
+  Banco de dados adicional...... ~R$ 0,65 por GB / mes
+  Trafego adicional............. ~R$ 0,47 por GB
+  Arquivos adicionais........... ~R$ 0,11 por GB / mes
+  Upgrade de processamento:
+      Micro -> Small (2 GB RAM)... ~R$  78 / mes adicionais
+      Small -> Medium (4 GB RAM).. ~R$ 312 / mes adicionais
+      Medium -> Large (8 GB RAM).. ~R$ 572 / mes adicionais
+
+IMPORTANTE: esses precos de fornecedor precisam ser confirmados no
+site antes de fechar qualquer proposta — eles mudam, e o dolar
+tambem. Trate como ordem de grandeza, nao como cotacao.
+
+
+----------------------------------------------------------------
+3. CAPACIDADE REAL — quanto o sistema aguenta
+----------------------------------------------------------------
+
+Levantei a estrutura do banco pra estimar quanto cada titulo
+realmente ocupa. Um titulo "completo" (o titulo em si + suas
+parcelas + o historico de eventos + as comunicacoes registradas +
+os logs de auditoria), ja contando os indices, ocupa algo em torno
+de 10 a 15 KB depois de mais ou menos um ano de uso.
+
+Fazendo a conta:
+
+  10.000 titulos ...........  ~150 MB   (2% do plano)
+  50.000 titulos ...........  ~750 MB   (9% do plano)
+  100.000 titulos ..........  ~1,5 GB   (19% do plano)
+  400.000 titulos ..........  ~6,0 GB   (75% do plano)
+
+CONCLUSAO (e esse e o ponto principal do estudo):
+
+Espaco NAO e o nosso gargalo. Os 8 GB do plano de R$ 130 seguram
+tranquilamente entre 300 e 500 MIL titulos. A intuicao de que "mais
+titulo = mais espaco = mais custo" e verdadeira em teoria, mas na
+pratica a escala e outra: cada titulo custa fracao de centavo de
+armazenamento.
+
+O gargalo real e PROCESSAMENTO — quantas pessoas mexendo no sistema
+ao mesmo tempo. A instancia Micro que vem no Pro segura na faixa de
+20 a 40 usuarios simultaneos. Quando passarmos disso, subimos a
+instancia (Small, Medium...), e ai sim o custo sobe em degraus.
+
+Traduzindo: um cliente com 50.000 titulos e 5 operadores custa MENOS
+pra gente do que um cliente com 5.000 titulos e 40 operadores. Vale
+a pena a gente ter isso claro na cabeca na hora de montar as faixas.
+
+
+----------------------------------------------------------------
+4. CENARIOS DE CRESCIMENTO — custo real por empresa cliente
+----------------------------------------------------------------
+
+O sistema ja foi construido multi-tenant (cada empresa isolada por
+company_id, com as regras de seguranca no proprio banco). Isso
+significa que um unico projeto Supabase atende TODOS os clientes.
+Nao precisamos de um ambiente por cliente. Por isso o custo por
+empresa despenca conforme crescemos:
+
+  CENARIO A — 5 empresas x 5.000 titulos = 25.000 titulos
+    Infra: Pro (Micro). Custo total: R$ 243/mes
+    Custo por empresa: R$ 49/mes
+
+  CENARIO B — 15 empresas x 10.000 titulos = 150.000 titulos
+    Infra: Pro + Small. Custo total: ~R$ 325/mes
+    Custo por empresa: R$ 22/mes
+
+  CENARIO C — 40 empresas x 10.000 titulos = 400.000 titulos
+    Infra: Pro + Medium + disco extra. Custo total: ~R$ 570/mes
+    Custo por empresa: R$ 14/mes
+
+O custo de infraestrutura por cliente fica entre R$ 14 e R$ 49 por
+mes. E irrisorio perto de qualquer preco de mercado.
+
+
+----------------------------------------------------------------
+5. O CUSTO QUE NAO ESTA NA FATURA (e o maior de todos)
+----------------------------------------------------------------
+
+Preciso ser honesto num ponto: se olharmos so a fatura do Supabase,
+vamos precificar errado. O nosso maior custo nao e servidor — e
+tempo de gente. Ou seja, o meu tempo.
+
+Cada cliente novo consome:
+
+  - Implantacao: importacao da base, ajuste de planilha, treinamento
+    da equipe dele. Estimo de 8 a 16 horas por cliente.
+  - Suporte recorrente: duvidas, correcoes, ajustes. Estimo de 2 a
+    5 horas por cliente por mes, caindo depois dos primeiros meses.
+  - Evolucao do produto: o que os clientes pedem e vira roadmap.
+    Isso e custo fixo nosso, nao escala por cliente.
+
+Se considerarmos um custo/hora de R$ 80, um cliente consome de
+R$ 160 a R$ 400 por mes so de suporte — de 5 a 10 vezes o custo de
+servidor. Precisamos definir junto qual custo/hora usar nessa conta,
+porque e ele que determina o preco minimo viavel, nao o Supabase.
+
+Ponto pratico: e por isso que o preco nao pode ser "custo + margem".
+No modelo custo+margem, um cliente Essencial sairia por R$ 100 e a
+gente quebraria no suporte.
+
+
+----------------------------------------------------------------
+6. PROPOSTA DE PLANOS (modelo de faixas, estilo Cedrus)
+----------------------------------------------------------------
+
+A logica: cobramos por faixa de TITULOS ATIVOS (em aberto na base) e
+limitamos usuarios. Titulo liquidado/arquivado nao conta — isso e
+justo pro cliente e da previsibilidade pra ele.
+
+  ESSENCIAL
+    Ate 2.000 titulos ativos | 3 usuarios
+    R$ 347 / mes
+
+  PROFISSIONAL  (plano ancora — e onde queremos a maioria)
+    Ate 10.000 titulos ativos | 10 usuarios
+    R$ 797 / mes
+
+  AVANCADO
+    Ate 30.000 titulos ativos | 25 usuarios
+    R$ 1.697 / mes
+
+  CORPORATIVO
+    Acima de 30.000 titulos | usuarios sob negociacao
+    A partir de R$ 2.500 / mes, sob consulta
+
+  EXCEDENTE
+    R$ 60 por cada 1.000 titulos ativos alem da faixa
+    R$ 45 por usuario adicional / mes
+
+  IMPLANTACAO (cobranca unica, na entrada)
+    R$ 1.500 a R$ 3.000 conforme tamanho da base a importar
+    Cobre importacao, configuracao e treinamento.
+    Esse valor existe justamente pra pagar as 8-16h de setup que
+    hoje sairiam do nosso bolso.
+
+MARGEM ESPERADA:
+
+  Plano Profissional a R$ 797:
+    Custo de infra .............. ~R$  25
+    Custo de suporte (3h a R$80).. ~R$ 240
+    Margem bruta ................. ~R$ 532 (67%)
+
+  Isso e uma margem saudavel e sustentavel pra SaaS. Da folga pra
+  investir em produto e pra absorver cliente que da mais trabalho.
+
+PONTO DE EQUILIBRIO:
+
+  UM unico cliente no plano Essencial (R$ 347) ja paga toda a nossa
+  infraestrutura (R$ 243) com sobra. Do segundo cliente em diante,
+  praticamente tudo que entra vira margem ou remuneracao do nosso
+  tempo.
+
+ANCORAGEM DE VALOR (o argumento comercial):
+
+  Cobranca e um produto onde o cliente RECUPERA dinheiro. Se uma
+  empresa tem R$ 500 mil em carteira e o sistema ajuda a recuperar
+  R$ 100 mil por mes, R$ 797/mes representa 0,8% do que ela
+  recuperou. Esse e o discurso — nao "quanto custa o servidor", e
+  sim "quanto voce recupera a mais". Um operador de cobranca custa
+  R$ 2.500/mes; o sistema custa menos de um terco disso e faz o
+  time inteiro render mais.
+
+
+----------------------------------------------------------------
+7. RISCO QUE PRECISA ENTRAR NA CONTA: MENSAGERIA
+----------------------------------------------------------------
+
+Hoje o WhatsApp do sistema funciona por link (wa.me) — abre a
+conversa no aparelho do operador e ele envia manualmente. Custo
+para nos: ZERO. Isso e otimo agora.
+
+Mas se entrarmos com envio AUTOMATICO em massa (API oficial do
+WhatsApp, SMS ou e-mail em volume), muda o jogo: passa a existir um
+custo por mensagem enviada, cobrado pelo fornecedor. Dependendo do
+volume, esse custo pode facilmente ULTRAPASSAR todo o resto da
+infraestrutura somada.
+
+Se formos por esse caminho, minha recomendacao e:
+  - incluir uma cota de mensagens em cada plano; e
+  - cobrar o excedente por mensagem, repassando o custo com margem.
+
+Ou seja: nao embutir "mensagens ilimitadas" em preco fixo. Esse e o
+tipo de decisao que corroi a margem sem a gente perceber.
+
+
+----------------------------------------------------------------
+8. PONTOS QUE PRECISO DE DECISAO SUA
+----------------------------------------------------------------
+
+  1) Cobramos por TITULO ATIVO (em aberto) ou por titulo IMPORTADO
+     no mes? Minha recomendacao: titulo ativo — e mais previsivel
+     pro cliente e mais facil de defender na negociacao.
+
+  2) Qual custo/hora devo considerar pro meu tempo? E o numero que
+     mais mexe no preco minimo, e nao tenho como definir sozinho.
+
+  3) Assinatura fixa pura, ou modelo hibrido (mensalidade menor +
+     um percentual sobre o valor recuperado)? O hibrido alinha
+     nosso interesse ao do cliente e costuma vender melhor, mas
+     complica a previsao de receita.
+
+  4) Vamos entrar com envio automatico de mensagens no roadmap? A
+     resposta muda a estrutura de custo dos planos (ver item 7).
+
+  5) Confirmo os precos atuais de Supabase e Vercel direto no site
+     antes de fecharmos os numeros? Os valores deste documento sao
+     ordem de grandeza e os fornecedores reajustam.
+
+
+----------------------------------------------------------------
+9. RESUMO PRA DECISAO RAPIDA
+----------------------------------------------------------------
+
+  Custo fixo hoje................. R$ 243 / mes
+  Capacidade do plano atual....... 300 a 500 mil titulos
+  Gargalo real.................... usuarios simultaneos, nao espaco
+  Custo de infra por cliente...... R$ 14 a R$ 49 / mes
+  Maior custo real................ nosso tempo (suporte/implantacao)
+  Ponto de equilibrio............. 1 cliente no menor plano
+  Plano ancora sugerido........... R$ 797/mes (ate 10.000 titulos)
+
+A boa noticia: a estrutura tecnica ja esta pronta pra escalar (o
+sistema nasceu multi-tenant), e a infraestrutura e barata demais pra
+ser o fator limitante. A conversa de preco aqui e uma conversa de
+posicionamento e de quanto do nosso tempo cada cliente consome — nao
+de servidor.
+
+================================================================
