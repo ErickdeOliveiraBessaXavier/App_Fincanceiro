@@ -287,11 +287,14 @@ export function useUpdateCliente() {
   });
 }
 
+// Exclusão de cliente é SOFT (marca deleted_at) via RPC excluir_cliente: o
+// DELETE físico sempre falhava por FK (titulos.cliente_id sem CASCADE). A RPC
+// bloqueia quando o cliente tem título/acordo em aberto e exige role admin.
 export function useDeleteCliente() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (clienteId: string) => {
-      const { error } = await supabase.from('clientes').delete().eq('id', clienteId);
+      const { error } = await supabase.rpc('excluir_cliente', { p_cliente_id: clienteId });
       if (error) throw error;
     },
     onSuccess: () => {

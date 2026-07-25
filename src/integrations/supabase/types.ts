@@ -714,6 +714,7 @@ export type Database = {
           created_at: string
           created_by: string
           data_contato: string | null
+          deleted_at: string | null
           id: string
           mensagem: string | null
           resultado: string | null
@@ -729,6 +730,7 @@ export type Database = {
           created_at?: string
           created_by: string
           data_contato?: string | null
+          deleted_at?: string | null
           id?: string
           mensagem?: string | null
           resultado?: string | null
@@ -744,6 +746,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           data_contato?: string | null
+          deleted_at?: string | null
           id?: string
           mensagem?: string | null
           resultado?: string | null
@@ -1508,6 +1511,10 @@ export type Database = {
       }
       excluir_acordos_definitivo: {
         Args: { p_acordo_ids: string[] }
+        Returns: Json
+      }
+      excluir_cliente: {
+        Args: { p_cliente_id: string }
         Returns: Json
       }
       excluir_titulos_definitivo: {

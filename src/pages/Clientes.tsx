@@ -489,7 +489,8 @@ export default function Clientes() {
       setIsDeleteModalOpen(false);
       setClienteToDelete(null);
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível excluir o cliente.", variant: "destructive" });
+      const description = error instanceof Error ? error.message : "Não foi possível excluir o cliente.";
+      toast({ title: "Erro", description, variant: "destructive" });
     }
   };
 
