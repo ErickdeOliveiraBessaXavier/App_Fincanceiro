@@ -8,8 +8,22 @@ export const titulosKeys = {
   lists: () => [...titulosKeys.all, 'list'] as const,
   list: (filters?: Record<string, unknown>) => [...titulosKeys.lists(), filters ?? {}] as const,
   parcelas: (tituloId: string) => [...titulosKeys.all, 'parcelas', tituloId] as const,
+  pagamentos: (parcelaIds: string[]) =>
+    [...titulosKeys.all, 'pagamentos', [...parcelaIds].sort()] as const,
   clientes: ['titulos', 'clientes-select'] as const,
 };
+
+// Evento de pagamento de uma parcela (subconjunto de eventos_parcela).
+export interface PagamentoEvento {
+  id: string;
+  parcela_id: string;
+  tipo: string;
+  valor: number;
+  meio_pagamento: string | null;
+  descricao: string | null;
+  created_at: string | null;
+  estornado: boolean | null;
+}
 
 // ============== Queries ==============
 
@@ -70,6 +84,29 @@ export function useParcelasByTitulo(tituloId: string | null, enabled = true) {
   });
 }
 
+/**
+ * Lista os pagamentos (eventos de baixa) das parcelas informadas — usado no
+ * histórico do detalhe do título. Traz também os já estornados, para exibição.
+ */
+export function usePagamentosByParcelas(parcelaIds: string[], enabled = true) {
+  return useQuery({
+    queryKey: titulosKeys.pagamentos(parcelaIds),
+    queryFn: async (): Promise<PagamentoEvento[]> => {
+      if (!parcelaIds.length) return [];
+      const { data, error } = await supabase
+        .from('eventos_parcela')
+        .select('id, parcela_id, tipo, valor, meio_pagamento, descricao, created_at, estornado')
+        .in('parcela_id', parcelaIds)
+        .in('tipo', ['pagamento_total', 'pagamento_parcial'])
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as PagamentoEvento[];
+    },
+    enabled: enabled && parcelaIds.length > 0,
+  });
+}
+
 // ============== Mutations ==============
 
 export interface CreateTituloInput {
@@ -122,6 +159,50 @@ export function useHardDeleteTitulos() {
       });
       if (error) throw error;
       await supabase.rpc('refresh_mv_parcelas');
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: titulosKeys.all });
+    },
+  });
+}
+
+/**
+ * Cancelamento (soft delete) de um título — só admin (validado no banco pela
+ * RPC). Marca status='cancelado' + deleted_at, preservando o histórico. O
+ * título some das listagens (a view filtra deleted_at IS NULL). Reversível na
+ * base, ao contrário do hard delete de super admin.
+ */
+export function useCancelarTitulo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ tituloId, motivo }: { tituloId: string; motivo?: string }) => {
+      const { error } = await supabase.rpc('cancelar_titulo', {
+        p_titulo_id: tituloId,
+        p_motivo: motivo ?? null,
+      });
+      if (error) throw error;
+      await supabase.rpc('refresh_mv_parcelas');
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: titulosKeys.all });
+    },
+  });
+}
+
+/**
+ * Estorno de um pagamento (baixa) lançado por engano — só financeiro/admin
+ * (validado no banco). Exige motivo. A RPC marca o evento como estornado,
+ * cria o lançamento espelhado e já atualiza o saldo (refresh da MV).
+ */
+export function useEstornarPagamento() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ eventoId, motivo }: { eventoId: string; motivo: string }) => {
+      const { error } = await supabase.rpc('estornar_evento_parcela', {
+        p_evento_id: eventoId,
+        p_motivo: motivo,
+      });
+      if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: titulosKeys.all });

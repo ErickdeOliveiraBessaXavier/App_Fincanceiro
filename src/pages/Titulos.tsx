@@ -2,7 +2,7 @@ import { PageHeader } from '@/components/PageHeader';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, Phone } from 'lucide-react';
+import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, Phone, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   useTitulos,
@@ -10,7 +10,11 @@ import {
   useParcelasByTitulo,
   useCreateTitulo,
   useHardDeleteTitulos,
+  useCancelarTitulo,
+  useEstornarPagamento,
+  usePagamentosByParcelas,
   titulosKeys,
+  type PagamentoEvento,
 } from '@/lib/queries/titulos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,6 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils } from '@/utils/titulo';
 import { StatusBadge } from '@/components/StatusBadge';
 import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
@@ -52,6 +57,10 @@ import { AplicarEncargoModal } from '@/components/titulos/AplicarEncargoModal';
 import { ConcederDescontoModal } from '@/components/titulos/ConcederDescontoModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
+
+// Extrai a mensagem de um erro desconhecido, com fallback para o toast.
+const msgErro = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
 
 interface ClienteAgrupado {
   id: string;
@@ -119,6 +128,7 @@ function tituloView(t: TituloConsolidado) {
 interface TituloRowActions {
   isOperador: boolean;
   isFinanceiro: boolean;
+  isAdmin: boolean;
   isSuperAdmin: boolean;
   expandedTitulos: Set<string>;
   parcelasTitulo: Parcela[];
@@ -127,6 +137,7 @@ interface TituloRowActions {
   onPagamento: (p: Parcela) => void;
   onEncargo: (p: Parcela) => void;
   onDesconto: (p: Parcela) => void;
+  onCancelarTitulo: (t: TituloConsolidado) => void;
   onHardDelete: (t: TituloConsolidado) => void;
 }
 
@@ -265,16 +276,27 @@ function TituloAcoesMenu({ titulo, actions }: { titulo: TituloConsolidado; actio
           Ver Detalhes
         </DropdownMenuItem>
         {titulo.status !== 'pago' && <TituloPendenteItens titulo={titulo} actions={actions} />}
-        {actions.isSuperAdmin && (
+        {(actions.isAdmin || actions.isSuperAdmin) && (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuItem
-              className="text-destructive focus:text-destructive"
-              onClick={() => actions.onHardDelete(titulo)}
-            >
-              <Trash2 className="h-4 w-4 mr-2" />
-              Excluir definitivamente
-            </DropdownMenuItem>
+            {actions.isAdmin && (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => actions.onCancelarTitulo(titulo)}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Cancelar título
+              </DropdownMenuItem>
+            )}
+            {actions.isSuperAdmin && (
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive"
+                onClick={() => actions.onHardDelete(titulo)}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Excluir definitivamente
+              </DropdownMenuItem>
+            )}
           </>
         )}
       </DropdownMenuContent>
@@ -571,13 +593,144 @@ function NovoTituloDialog({ open, onOpenChange, novoTitulo, setNovoTitulo, clien
   );
 }
 
+// Ação por pagamento: badge "Estornado" ou botão "Estornar" (financeiro+).
+function PagamentoAcao({ estornado, podeEstornar, onIniciarEstorno }: {
+  estornado: boolean;
+  podeEstornar: boolean;
+  onIniciarEstorno: () => void;
+}) {
+  if (estornado) return <Badge variant="outline" className="text-xs">Estornado</Badge>;
+  if (podeEstornar) {
+    return (
+      <Button variant="ghost" size="sm" className="h-8" onClick={onIniciarEstorno}>
+        Estornar
+      </Button>
+    );
+  }
+  return null;
+}
+
+interface PagamentoItemProps {
+  pagamento: PagamentoEvento;
+  isFinanceiro: boolean;
+  emEstorno: boolean;
+  motivo: string;
+  isPending: boolean;
+  onIniciarEstorno: () => void;
+  onMotivoChange: (v: string) => void;
+  onConfirmar: () => void;
+  onCancelar: () => void;
+}
+function PagamentoItem({
+  pagamento, isFinanceiro, emEstorno, motivo, isPending,
+  onIniciarEstorno, onMotivoChange, onConfirmar, onCancelar,
+}: PagamentoItemProps) {
+  return (
+    <div className="p-3 border rounded-lg text-sm">
+      <div className="flex justify-between items-center gap-3">
+        <div>
+          <span className="font-medium">{FormatUtils.currency(pagamento.valor)}</span>
+          {pagamento.meio_pagamento && (
+            <span className="text-muted-foreground ml-2">via {pagamento.meio_pagamento}</span>
+          )}
+          <div className="text-xs text-muted-foreground">
+            Data do pagamento: {pagamento.created_at ? FormatUtils.date(pagamento.created_at) : '—'}
+          </div>
+        </div>
+        <PagamentoAcao
+          estornado={!!pagamento.estornado}
+          podeEstornar={isFinanceiro && !emEstorno}
+          onIniciarEstorno={onIniciarEstorno}
+        />
+      </div>
+      {emEstorno && (
+        <div className="mt-3 space-y-2 border-t pt-3">
+          <Label className="text-xs">Motivo do estorno (obrigatório)</Label>
+          <Textarea
+            value={motivo}
+            onChange={(e) => onMotivoChange(e.target.value)}
+            placeholder="Ex: baixa lançada na parcela errada"
+          />
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" onClick={onCancelar} disabled={isPending}>
+              Voltar
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={onConfirmar}
+              disabled={isPending || !motivo.trim()}
+            >
+              {isPending ? 'Estornando...' : 'Confirmar estorno'}
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Histórico de baixas do título (data/valor/meio) + estorno da baixa errada.
+function HistoricoPagamentos({ parcelaIds, isFinanceiro, onEstornado }: {
+  parcelaIds: string[];
+  isFinanceiro: boolean;
+  onEstornado: () => void;
+}) {
+  const { data: pagamentos = [], isLoading } = usePagamentosByParcelas(parcelaIds);
+  const estornar = useEstornarPagamento();
+  const { toast } = useToast();
+  const [alvoId, setAlvoId] = useState<string | null>(null);
+  const [motivo, setMotivo] = useState('');
+
+  const iniciarEstorno = (id: string) => { setAlvoId(id); setMotivo(''); };
+  const cancelarEstorno = () => { setAlvoId(null); setMotivo(''); };
+
+  const confirmarEstorno = async () => {
+    if (!alvoId || !motivo.trim()) return;
+    try {
+      await estornar.mutateAsync({ eventoId: alvoId, motivo: motivo.trim() });
+      toast({ title: 'Baixa estornada', description: 'O pagamento foi estornado e o saldo atualizado.' });
+      cancelarEstorno();
+      onEstornado();
+    } catch (error) {
+      toast({ title: 'Erro', description: msgErro(error, 'Não foi possível estornar a baixa'), variant: 'destructive' });
+    }
+  };
+
+  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando pagamentos...</p>;
+  if (!pagamentos.length) return <p className="text-sm text-muted-foreground">Nenhum pagamento registrado.</p>;
+
+  return (
+    <div className="space-y-2">
+      {pagamentos.map((pg) => (
+        <PagamentoItem
+          key={pg.id}
+          pagamento={pg}
+          isFinanceiro={isFinanceiro}
+          emEstorno={alvoId === pg.id}
+          motivo={motivo}
+          isPending={estornar.isPending}
+          onIniciarEstorno={() => iniciarEstorno(pg.id)}
+          onMotivoChange={setMotivo}
+          onConfirmar={confirmarEstorno}
+          onCancelar={cancelarEstorno}
+        />
+      ))}
+    </div>
+  );
+}
+
 interface TituloDetailsDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   titulo: TituloConsolidado | null;
   parcelasTitulo: Parcela[];
+  isFinanceiro: boolean;
+  onEstornado: () => void;
 }
-function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo }: TituloDetailsDialogProps) {
+function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo, isFinanceiro, onEstornado }: TituloDetailsDialogProps) {
+  const parcelasDoTitulo = titulo ? parcelasTitulo.filter(p => p.titulo_id === titulo.id) : [];
+  const parcelaIds = parcelasDoTitulo.map(p => p.id);
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -621,22 +774,36 @@ function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo }: Tit
             <div>
               <Label className="text-muted-foreground">Parcelas</Label>
               <div className="mt-2 space-y-2">
-                {parcelasTitulo
-                  .filter(p => p.titulo_id === titulo.id)
-                  .map((parcela) => (
-                    <div key={parcela.id} className="flex justify-between items-center p-3 border rounded-lg">
-                      <div>
-                        <span className="font-medium">Parcela {parcela.numero_parcela}</span>
-                        <span className="text-muted-foreground ml-2">
-                          Venc: {FormatUtils.date(parcela.vencimento)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span>{FormatUtils.currency(parcela.saldo_atual || 0)}</span>
-                        <StatusBadge domain="parcela" status={parcela.status || 'a_vencer'} />
-                      </div>
+                {parcelasDoTitulo.map((parcela) => (
+                  <div key={parcela.id} className="flex justify-between items-center p-3 border rounded-lg">
+                    <div>
+                      <span className="font-medium">Parcela {parcela.numero_parcela}</span>
+                      <span className="text-muted-foreground ml-2">
+                        Venc: {FormatUtils.date(parcela.vencimento)}
+                      </span>
+                      {parcela.data_ultimo_pagamento && (
+                        <div className="text-xs text-primary">
+                          Pago em: {FormatUtils.date(parcela.data_ultimo_pagamento)}
+                        </div>
+                      )}
                     </div>
-                  ))}
+                    <div className="flex items-center gap-3">
+                      <span>{FormatUtils.currency(parcela.saldo_atual || 0)}</span>
+                      <StatusBadge domain="parcela" status={parcela.status || 'a_vencer'} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <Label className="text-muted-foreground">Histórico de pagamentos</Label>
+              <div className="mt-2">
+                <HistoricoPagamentos
+                  parcelaIds={parcelaIds}
+                  isFinanceiro={isFinanceiro}
+                  onEstornado={onEstornado}
+                />
               </div>
             </div>
           </div>
@@ -677,12 +844,53 @@ function HardDeleteTituloDialog({ titulo, isPending, onCancel, onConfirm }: Hard
   );
 }
 
+interface CancelarTituloDialogProps {
+  titulo: TituloConsolidado | null;
+  isPending: boolean;
+  motivo: string;
+  onMotivoChange: (v: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}
+function CancelarTituloDialog({ titulo, isPending, motivo, onMotivoChange, onCancel, onConfirm }: CancelarTituloDialogProps) {
+  return (
+    <Dialog open={!!titulo} onOpenChange={(o) => !o && onCancel()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Cancelar título</DialogTitle>
+          <DialogDescription>
+            O título <span className="font-medium">{titulo?.numero_documento}</span> será
+            marcado como <strong>cancelado</strong> e sairá das listagens, preservando todo o
+            histórico financeiro. Um super admin ainda poderá excluí-lo em definitivo depois.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-2">
+          <Label>Motivo (opcional)</Label>
+          <Textarea
+            value={motivo}
+            onChange={(e) => onMotivoChange(e.target.value)}
+            placeholder="Ex: título lançado em duplicidade"
+          />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={onCancel} disabled={isPending}>
+            Voltar
+          </Button>
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+            {isPending ? 'Cancelando...' : 'Cancelar título'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Titulos() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isFinanceiro, isOperador, isSuperAdmin } = useUserRole();
+  const { isFinanceiro, isOperador, isAdmin, isSuperAdmin } = useUserRole();
 
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
@@ -691,12 +899,15 @@ export default function Titulos() {
   const { data: vendedores = [] } = useVendedores();
   const createTituloMutation = useCreateTitulo();
   const hardDeleteMutation = useHardDeleteTitulos();
+  const cancelarTituloMutation = useCancelarTitulo();
 
   // UI state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [selectedTitulo, setSelectedTitulo] = useState<TituloConsolidado | null>(null);
   const [tituloToHardDelete, setTituloToHardDelete] = useState<TituloConsolidado | null>(null);
+  const [tituloToCancel, setTituloToCancel] = useState<TituloConsolidado | null>(null);
+  const [motivoCancel, setMotivoCancel] = useState('');
   const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
   const [expandedTitulos, setExpandedTitulos] = useState<Set<string>>(new Set());
   // Incrementado quando o cache de parcelas é atualizado, para forçar a
@@ -850,6 +1061,29 @@ export default function Titulos() {
     setIsDetailsModalOpen(true);
   };
 
+  // Cancelamento (admin): soft delete reversível, preserva o histórico.
+  const openCancelarTitulo = (titulo: TituloConsolidado) => {
+    setMotivoCancel('');
+    setTituloToCancel(titulo);
+  };
+
+  const handleCancelarTitulo = async () => {
+    if (!tituloToCancel) return;
+    try {
+      await cancelarTituloMutation.mutateAsync({ tituloId: tituloToCancel.id, motivo: motivoCancel.trim() || undefined });
+      toast({ title: 'Título cancelado', description: 'O título saiu das listagens e o histórico foi preservado.' });
+      setTituloToCancel(null);
+    } catch (error) {
+      toast({ title: 'Erro', description: msgErro(error, 'Não foi possível cancelar o título'), variant: 'destructive' });
+    }
+  };
+
+  // Após estornar uma baixa: re-busca as parcelas do título aberto e a lista.
+  const handleEstornado = async () => {
+    if (selectedTitulo) await fetchParcelasTitulo(selectedTitulo.id);
+    await queryClient.invalidateQueries({ queryKey: titulosKeys.all });
+  };
+
   // Exclusão DEFINITIVA (super admin): apaga fisicamente o título. Irreversível.
   const handleHardDeleteTitulo = async () => {
     if (!tituloToHardDelete) return;
@@ -857,8 +1091,8 @@ export default function Titulos() {
       await hardDeleteMutation.mutateAsync([tituloToHardDelete.id]);
       toast({ title: 'Excluído definitivamente', description: 'O título foi removido do banco de dados.' });
       setTituloToHardDelete(null);
-    } catch (error: any) {
-      toast({ title: 'Erro', description: error?.message ?? 'Não foi possível excluir definitivamente', variant: 'destructive' });
+    } catch (error) {
+      toast({ title: 'Erro', description: msgErro(error, 'Não foi possível excluir definitivamente'), variant: 'destructive' });
     }
   };
 
@@ -1010,13 +1244,14 @@ export default function Titulos() {
   };
 
   const tituloActions: TituloRowActions = {
-    isOperador, isFinanceiro, isSuperAdmin,
+    isOperador, isFinanceiro, isAdmin, isSuperAdmin,
     expandedTitulos, parcelasTitulo,
     onToggleTitulo: toggleTituloExpanded,
     onDetails: openDetails,
     onPagamento: openPagamentoModal,
     onEncargo: openEncargoModal,
     onDesconto: openDescontoModal,
+    onCancelarTitulo: openCancelarTitulo,
     onHardDelete: setTituloToHardDelete,
   };
 
@@ -1128,6 +1363,17 @@ export default function Titulos() {
         onOpenChange={setIsDetailsModalOpen}
         titulo={selectedTitulo}
         parcelasTitulo={parcelasTitulo}
+        isFinanceiro={isFinanceiro}
+        onEstornado={handleEstornado}
+      />
+
+      <CancelarTituloDialog
+        titulo={tituloToCancel}
+        isPending={cancelarTituloMutation.isPending}
+        motivo={motivoCancel}
+        onMotivoChange={setMotivoCancel}
+        onCancel={() => setTituloToCancel(null)}
+        onConfirm={handleCancelarTitulo}
       />
 
       <HardDeleteTituloDialog

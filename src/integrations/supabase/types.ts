@@ -1454,6 +1454,10 @@ export type Database = {
         }
         Returns: Json
       }
+      cancelar_titulo: {
+        Args: { p_motivo?: string; p_titulo_id: string }
+        Returns: Json
+      }
       criar_empresa_e_admin: {
         Args: { p_cnpj?: string; p_nome: string; p_slug?: string }
         Returns: Json
