@@ -4,6 +4,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
+import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Phone, FileText, Clock, Handshake } from 'lucide-react';
 import { ClienteResumo } from '@/components/telecobranca/ClienteResumo';
@@ -109,6 +118,21 @@ export default function Telecobranca() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumbs: orienta e dá volta em 1 clique para a lista de clientes. */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/clientes">Clientes</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>{cliente.nome}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header Aprimorado */}
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-4">
@@ -220,9 +244,19 @@ export default function Telecobranca() {
   );
 }
 
+interface AcordoResumo {
+  id: string;
+  status: string;
+  valor_original: number;
+  valor_acordo: number;
+  parcelas: number;
+  valor_parcela: number;
+  desconto: number;
+}
+
 // Componente interno para lista de acordos do cliente
 function AcordosCliente({ clienteId }: { clienteId: string }) {
-  const [acordos, setAcordos] = useState<any[]>([]);
+  const [acordos, setAcordos] = useState<AcordoResumo[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 

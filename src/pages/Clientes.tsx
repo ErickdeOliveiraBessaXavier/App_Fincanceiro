@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Eye, Edit, Phone, Mail, MessageSquare, FileText, User, Trash2, MoreHorizontal, CheckCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Eye, Edit, Phone, Mail, FileText, User, Trash2, MoreHorizontal, CheckCircle, AlertTriangle } from 'lucide-react';
 import {
   useClientes,
-  useComunicacoes,
   useCreateCliente,
   useUpdateCliente,
   useDeleteCliente,
@@ -18,7 +17,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -82,21 +80,8 @@ interface FormErrors {
 }
 
 // ===================== Helpers puros =====================
-function getTipoIcon(tipo: string) {
-  switch (tipo) {
-    case 'ligacao': return <Phone className="h-4 w-4" />;
-    case 'email': return <Mail className="h-4 w-4" />;
-    case 'sms':
-    case 'whatsapp': return <MessageSquare className="h-4 w-4" />;
-    case 'visita': return <User className="h-4 w-4" />;
-    default: return <FileText className="h-4 w-4" />;
-  }
-}
-
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
-
-const formatDateTime = (date: string) => new Date(date).toLocaleString('pt-BR');
 
 const formatDateShort = (date: string) =>
   new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -134,7 +119,7 @@ function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetail
     <div className="p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all shadow-sm group">
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1 min-w-0">
-          <h3 className="font-bold text-lg text-foreground truncate group-hover:text-primary transition-colors">{cliente.nome}</h3>
+          <button type="button" onClick={() => onDetails(cliente)} className="block text-left font-bold text-lg text-foreground truncate hover:text-primary hover:underline transition-colors">{cliente.nome}</button>
           <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{formatCpfCnpj(cliente.cpf_cnpj)}</p>
         </div>
         <StatusBadge domain="cliente" status={cliente.status} />
@@ -198,7 +183,7 @@ function ClienteTableRow({ cliente, isOperador, isVendedor, onTelecobranca, onDe
     <TableRow className="hover:bg-muted/10 transition-colors">
       {/* Cliente: nome + CPF/CNPJ empilhados (antes eram 2 colunas) */}
       <TableCell>
-        <div className="font-bold text-sm text-foreground">{cliente.nome}</div>
+        <button type="button" onClick={() => onDetails(cliente)} className="block text-left font-bold text-sm text-foreground hover:text-primary hover:underline transition-colors">{cliente.nome}</button>
         <div className="text-[11px] font-medium text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</div>
       </TableCell>
       {/* Contato: some abaixo de xl (email é o principal vilão de largura) */}
@@ -247,60 +232,6 @@ function ClienteTableRow({ cliente, isOperador, isVendedor, onTelecobranca, onDe
         </DropdownMenu>
       </TableCell>
     </TableRow>
-  );
-}
-
-interface ClienteDetailsDialogProps {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  cliente: ClienteRow | null;
-  comunicacoes: { id: string; tipo: string; assunto: string; created_at: string }[];
-}
-function ClienteDetailsDialog({ open, onOpenChange, cliente, comunicacoes }: ClienteDetailsDialogProps) {
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto">
-        {cliente && (
-          <>
-            <DialogHeader><DialogTitle className="flex items-center gap-2"><User className="h-5 w-5" />{cliente.nome}</DialogTitle><DialogDescription>Detalhes e histórico do cliente.</DialogDescription></DialogHeader>
-            <Tabs defaultValue="detalhes" className="w-full">
-              <TabsList className="grid w-full grid-cols-2"><TabsTrigger value="detalhes">Detalhes</TabsTrigger><TabsTrigger value="historico">Histórico</TabsTrigger></TabsList>
-              <TabsContent value="detalhes" className="space-y-4">
-                <div className="space-y-3">
-                  <div><label className="text-sm font-medium">CPF/CNPJ</label><p className="text-sm text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</p></div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div><label className="text-sm font-medium">Telefone</label><p className="text-sm text-muted-foreground">{cliente.telefone ? formatTelefone(cliente.telefone) : '—'}</p></div>
-                    <div><label className="text-sm font-medium">E-mail</label><p className="text-sm text-muted-foreground break-all">{cliente.email || '—'}</p></div>
-                    <div><label className="text-sm font-medium">Cobrador</label><p className="text-sm text-muted-foreground">{cliente.cobrador_nome ?? '—'}</p></div>
-                    <div><label className="text-sm font-medium">Vendedor</label><p className="text-sm text-muted-foreground">{cliente.vendedor_nome ?? '—'}</p></div>
-                  </div>
-                  <div>
-                    <label className="text-sm font-medium">Endereço</label>
-                    <p className="text-sm text-muted-foreground">
-                      {[cliente.endereco_completo, [cliente.cidade, cliente.estado].filter(Boolean).join(' - ')].filter(Boolean).join(', ') || '—'}
-                    </p>
-                  </div>
-                  <div className="flex justify-between items-center pt-4 border-t">
-                    <div><label className="text-sm font-medium">Total de Títulos</label><p className="text-2xl font-bold text-primary">{cliente.total_titulos}</p></div>
-                    <div><label className="text-sm font-medium">Valor Total</label><p className="text-2xl font-bold text-primary">{formatCurrency(cliente.total_valor || 0)}</p></div>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="historico" className="space-y-4">
-                <div className="space-y-3">
-                  {comunicacoes.length > 0 ? comunicacoes.map((comunicacao) => (
-                    <div key={comunicacao.id} className="border rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-2">{getTipoIcon(comunicacao.tipo)}<span className="text-sm font-medium capitalize">{comunicacao.tipo}</span><span className="text-xs text-muted-foreground ml-auto">{formatDateTime(comunicacao.created_at)}</span></div>
-                      <h4 className="text-sm font-medium mb-1">{comunicacao.assunto}</h4>
-                    </div>
-                  )) : <p className="text-sm text-muted-foreground text-center py-4">Nenhuma comunicação registrada</p>}
-                </div>
-              </TabsContent>
-            </Tabs>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
   );
 }
 
@@ -459,9 +390,6 @@ export default function Clientes() {
   const updateClienteMutation = useUpdateCliente();
   const deleteClienteMutation = useDeleteCliente();
 
-  const [selectedCliente, setSelectedCliente] = useState<ClienteRow | null>(null);
-  const { data: comunicacoes = [] } = useComunicacoes(selectedCliente?.id ?? null);
-
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState({
     nome: '',
@@ -476,7 +404,6 @@ export default function Clientes() {
     cobrador_id: '',
     vendedor_id: '',
   });
-  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCliente, setEditingCliente] = useState({
     id: '',
@@ -567,7 +494,7 @@ export default function Clientes() {
   };
 
   const goTelecobranca = (c: ClienteRow) => navigate(`/telecobranca/${c.id}`);
-  const openDetails = (c: ClienteRow) => { setSelectedCliente(c); setIsDetailsModalOpen(true); };
+  const openDetails = (c: ClienteRow) => navigate(`/clientes/${c.id}`);
   const openDelete = (c: ClienteRow) => { setClienteToDelete(c); setIsDeleteModalOpen(true); };
   const openEdit = (c: ClienteRow) => {
     setEditingCliente({
@@ -823,13 +750,6 @@ export default function Clientes() {
         onSave={handleEditCliente}
         cobradores={cobradores}
         vendedores={vendedores}
-      />
-
-      <ClienteDetailsDialog
-        open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
-        cliente={selectedCliente}
-        comunicacoes={comunicacoes}
       />
 
       <DeleteClienteDialog

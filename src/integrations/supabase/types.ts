@@ -1454,8 +1454,31 @@ export type Database = {
         }
         Returns: Json
       }
+      cancelar_acordo: {
+        Args: { p_acordo_id: string }
+        Returns: Json
+      }
       cancelar_titulo: {
         Args: { p_motivo?: string; p_titulo_id: string }
+        Returns: Json
+      }
+      criar_acordo: {
+        Args: {
+          p_cliente_id: string
+          p_cronograma: Json
+          p_data_vencimento_primeira_parcela: string
+          p_desconto: number
+          p_observacoes?: string
+          p_parcelas: number
+          p_titulo_id: string
+          p_valor_acordo: number
+          p_valor_original: number
+          p_valor_parcela: number
+        }
+        Returns: Json
+      }
+      pagar_parcela_acordo: {
+        Args: { p_data_pagamento?: string; p_parcela_acordo_id: string }
         Returns: Json
       }
       criar_empresa_e_admin: {

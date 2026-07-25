@@ -24,6 +24,7 @@ export type BadgeVariant =
 export type StatusDomain =
   | 'titulo'
   | 'parcela'
+  | 'parcela_acordo'
   | 'cliente'
   | 'acordo'
   | 'agendamento'
@@ -53,6 +54,12 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     a_vencer: { label: 'A Vencer', variant: 'warning' },
     vencido: { label: 'Vencida', variant: 'destructive' },
     pendente: { label: 'A Vencer', variant: 'warning' }, // legado
+  },
+  // Status da parcela de um acordo (parcelas_acordo.status)
+  parcela_acordo: {
+    paga: { label: 'Paga', variant: 'success' },
+    pendente: { label: 'Pendente', variant: 'warning' },
+    vencida: { label: 'Vencida', variant: 'destructive' },
   },
   // Status do cliente (derivado dos títulos em useClientes)
   cliente: {

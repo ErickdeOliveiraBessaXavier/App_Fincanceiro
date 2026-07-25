@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2 } from 'lucide-react';
-import { useAcordos, useCreateAcordo, useCancelAcordo, type AcordoRow } from '@/lib/queries/acordos';
+import { useAcordos, useCreateAcordo, useCancelAcordo, useParcelasAcordo, usePagarParcelaAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -275,6 +275,235 @@ function NovoAcordoDialog({
   );
 }
 
+// Status de exibição da parcela do acordo: se não está paga, deriva vencida/pendente
+// pela data — o campo `status` armazenado costuma ficar em 'pendente'.
+function statusExibicaoParcela(p: ParcelaAcordoRow): 'paga' | 'vencida' | 'pendente' {
+  if (p.status === 'paga' || p.data_pagamento) return 'paga';
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  return new Date(p.data_vencimento) < hoje ? 'vencida' : 'pendente';
+}
+
+interface ResumoParcelas {
+  total: number;
+  pagas: number;
+  valorPago: number;
+  saldo: number;
+  proximoVencimento: string | null;
+}
+function resumoParcelasAcordo(parcelas: ParcelaAcordoRow[]): ResumoParcelas {
+  let pagas = 0;
+  let valorPago = 0;
+  let saldo = 0;
+  let proximo: string | null = null;
+  for (const p of parcelas) {
+    if (statusExibicaoParcela(p) === 'paga') {
+      pagas += 1;
+      valorPago += Number(p.valor_total);
+    } else {
+      saldo += Number(p.valor_total);
+      if (!proximo || p.data_vencimento < proximo) proximo = p.data_vencimento;
+    }
+  }
+  return { total: parcelas.length, pagas, valorPago, saldo, proximoVencimento: proximo };
+}
+
+function ResumoParcelasCards({ resumo }: { resumo: ResumoParcelas }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+      <div>
+        <Label className="text-muted-foreground">Progresso</Label>
+        <p className="font-medium">{resumo.pagas}/{resumo.total} pagas</p>
+      </div>
+      <div>
+        <Label className="text-muted-foreground">Valor pago</Label>
+        <p className="font-medium text-primary">{formatCurrency(resumo.valorPago)}</p>
+      </div>
+      <div>
+        <Label className="text-muted-foreground">Saldo restante</Label>
+        <p className="font-medium text-destructive">{formatCurrency(resumo.saldo)}</p>
+      </div>
+      <div>
+        <Label className="text-muted-foreground">Próx. vencimento</Label>
+        <p className="font-medium">{resumo.proximoVencimento ? formatDate(resumo.proximoVencimento) : '—'}</p>
+      </div>
+    </div>
+  );
+}
+
+interface ParcelaAcordoRowProps {
+  parcela: ParcelaAcordoRow;
+  podePagar: boolean;
+  emPagamento: boolean;
+  dataPagamento: string;
+  isPending: boolean;
+  onIniciar: (id: string) => void;
+  onDataChange: (v: string) => void;
+  onConfirmar: () => void;
+  onCancelar: () => void;
+}
+function ParcelaAcordoTableRow({
+  parcela, podePagar, emPagamento, dataPagamento, isPending,
+  onIniciar, onDataChange, onConfirmar, onCancelar,
+}: ParcelaAcordoRowProps) {
+  const st = statusExibicaoParcela(parcela);
+  return (
+    <>
+      <TableRow>
+        <TableCell className="font-medium">{parcela.numero_parcela}</TableCell>
+        <TableCell>{formatDate(parcela.data_vencimento)}</TableCell>
+        <TableCell>{formatCurrency(parcela.valor_total)}</TableCell>
+        <TableCell className="text-muted-foreground">
+          {parcela.valor_juros > 0 ? formatCurrency(parcela.valor_juros) : '—'}
+        </TableCell>
+        <TableCell>
+          <StatusBadge domain="parcela_acordo" status={st} />
+        </TableCell>
+        <TableCell>{parcela.data_pagamento ? formatDate(parcela.data_pagamento) : '—'}</TableCell>
+        {podePagar && (
+          <TableCell className="text-right">
+            {st !== 'paga' && !emPagamento && (
+              <Button size="sm" variant="outline" className="h-8" onClick={() => onIniciar(parcela.id)}>
+                Registrar pagamento
+              </Button>
+            )}
+          </TableCell>
+        )}
+      </TableRow>
+      {emPagamento && (
+        <TableRow>
+          <TableCell colSpan={7} className="bg-muted/30">
+            <div className="flex flex-wrap items-end gap-2 py-1">
+              <div className="space-y-1">
+                <Label className="text-xs">Data do pagamento</Label>
+                <Input
+                  type="date"
+                  value={dataPagamento}
+                  onChange={(e) => onDataChange(e.target.value)}
+                  className="h-8 w-40"
+                />
+              </div>
+              <Button size="sm" onClick={onConfirmar} disabled={isPending}>
+                {isPending ? 'Registrando...' : 'Confirmar'}
+              </Button>
+              <Button size="sm" variant="outline" onClick={onCancelar} disabled={isPending}>
+                Voltar
+              </Button>
+            </div>
+          </TableCell>
+        </TableRow>
+      )}
+    </>
+  );
+}
+
+interface ParcelasAcordoTabelaProps {
+  parcelas: ParcelaAcordoRow[];
+  podePagar: boolean;
+  pagandoId: string | null;
+  dataPagamento: string;
+  isPending: boolean;
+  onIniciar: (id: string) => void;
+  onDataChange: (v: string) => void;
+  onConfirmar: () => void;
+  onCancelar: () => void;
+}
+function ParcelasAcordoTabela({
+  parcelas, podePagar, pagandoId, dataPagamento, isPending,
+  onIniciar, onDataChange, onConfirmar, onCancelar,
+}: ParcelasAcordoTabelaProps) {
+  return (
+    <div className="rounded-md border overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Parcela</TableHead>
+            <TableHead>Vencimento</TableHead>
+            <TableHead>Valor</TableHead>
+            <TableHead>Juros</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Pago em</TableHead>
+            {podePagar && <TableHead className="text-right">Ações</TableHead>}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {parcelas.map((p) => (
+            <ParcelaAcordoTableRow
+              key={p.id}
+              parcela={p}
+              podePagar={podePagar}
+              emPagamento={pagandoId === p.id}
+              dataPagamento={dataPagamento}
+              isPending={isPending}
+              onIniciar={onIniciar}
+              onDataChange={onDataChange}
+              onConfirmar={onConfirmar}
+              onCancelar={onCancelar}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+function ParcelasAcordoSecao({ acordoId, open, acordoCancelado }: {
+  acordoId: string | null;
+  open: boolean;
+  acordoCancelado: boolean;
+}) {
+  const { data: parcelas = [], isLoading } = useParcelasAcordo(acordoId, open);
+  const { isOperador } = useUserRole();
+  const pagar = usePagarParcelaAcordo();
+  const { toast } = useToast();
+  const [pagandoId, setPagandoId] = useState<string | null>(null);
+  const [dataPagamento, setDataPagamento] = useState('');
+
+  const iniciar = (id: string) => {
+    setPagandoId(id);
+    setDataPagamento(new Date().toISOString().split('T')[0]);
+  };
+
+  const confirmar = async () => {
+    if (!pagandoId) return;
+    try {
+      await pagar.mutateAsync({ parcelaAcordoId: pagandoId, dataPagamento: dataPagamento || undefined });
+      toast({ title: 'Pagamento registrado', description: 'A parcela do acordo foi baixada.' });
+      setPagandoId(null);
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Não foi possível registrar o pagamento',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  if (isLoading) {
+    return <p className="text-sm text-muted-foreground">Carregando parcelas...</p>;
+  }
+  if (parcelas.length === 0) {
+    return <p className="text-sm text-muted-foreground">Nenhuma parcela cadastrada para este acordo.</p>;
+  }
+
+  return (
+    <div className="space-y-3">
+      <ResumoParcelasCards resumo={resumoParcelasAcordo(parcelas)} />
+      <ParcelasAcordoTabela
+        parcelas={parcelas}
+        podePagar={isOperador && !acordoCancelado}
+        pagandoId={pagandoId}
+        dataPagamento={dataPagamento}
+        isPending={pagar.isPending}
+        onIniciar={iniciar}
+        onDataChange={setDataPagamento}
+        onConfirmar={confirmar}
+        onCancelar={() => setPagandoId(null)}
+      />
+    </div>
+  );
+}
+
 interface AcordoDetailsDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -283,7 +512,7 @@ interface AcordoDetailsDialogProps {
 function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Detalhes do Acordo</DialogTitle>
           <DialogDescription>
@@ -334,6 +563,17 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
                 <p>{acordo.observacoes}</p>
               </div>
             )}
+
+            <div>
+              <Label className="text-muted-foreground">Parcelas do acordo</Label>
+              <div className="mt-2">
+                <ParcelasAcordoSecao
+                  acordoId={acordo.id}
+                  open={open}
+                  acordoCancelado={acordo.status === 'cancelado'}
+                />
+              </div>
+            </div>
           </div>
         )}
       </DialogContent>
@@ -375,6 +615,8 @@ function CancelAcordoDialog({ open, onOpenChange, onCancel, onConfirm, isPending
 
 export default function Acordos() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const preSelectedData = location.state as LocationState | null;
 
   // === Data via React Query ===
@@ -417,6 +659,17 @@ export default function Acordos() {
       setIsCreateModalOpen(true);
     }
   }, [preSelectedData, refetchTitulos]);
+
+  // Deep link ?id=<acordo>: abre os detalhes direto (ex.: link vindo da ficha do cliente).
+  useEffect(() => {
+    const id = searchParams.get('id');
+    if (!id || acordos.length === 0) return;
+    const alvo = acordos.find((a) => a.id === id);
+    if (alvo) {
+      setSelectedAcordo(alvo);
+      setIsDetailsModalOpen(true);
+    }
+  }, [searchParams, acordos]);
 
   const validateForm = () => {
     const errors: FormErrors = {};
@@ -770,7 +1023,13 @@ export default function Acordos() {
                   <TableRow key={acordo.id}>
                     <TableCell>
                       <div>
-                        <div className="font-medium">{acordo.cliente?.nome}</div>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/clientes/${acordo.cliente_id}`)}
+                          className="block text-left font-medium hover:text-primary hover:underline transition-colors"
+                        >
+                          {acordo.cliente?.nome}
+                        </button>
                         <div className="text-xs text-muted-foreground">
                           {formatCpfCnpj(acordo.cliente?.cpf_cnpj)}
                         </div>

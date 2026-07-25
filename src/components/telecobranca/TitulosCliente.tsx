@@ -5,10 +5,12 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Handshake, AlertTriangle, FileText, ChevronDown, ChevronRight } from 'lucide-react';
+import { Handshake, AlertTriangle, FileText, ChevronDown, ChevronRight, DollarSign } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { useUserRole } from '@/hooks/useUserRole';
+import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
 
 interface Parcela {
   id: string;
@@ -109,9 +111,14 @@ function ResumoItem({ label, valor, destaque }: { label: string; valor: string; 
   );
 }
 
-function ParcelaRow({ parcela, totalParcelas }: { parcela: Parcela; totalParcelas: number }) {
+function ParcelaRow({ parcela, totalParcelas, onPagar }: {
+  parcela: Parcela;
+  totalParcelas: number;
+  onPagar?: (p: Parcela) => void;
+}) {
   const atraso = calcularAtraso(parcela.vencimento);
   const isVencida = parcela.status === 'vencido';
+  const podePagar = isAberta(parcela.status) && parcela.saldo_atual > 0;
 
   return (
     <TableRow>
@@ -134,6 +141,16 @@ function ParcelaRow({ parcela, totalParcelas }: { parcela: Parcela; totalParcela
       <TableCell>
         <StatusBadge domain="parcela" status={parcela.status} />
       </TableCell>
+      {onPagar && (
+        <TableCell className="text-right">
+          {podePagar && (
+            <Button size="sm" variant="outline" className="h-8" onClick={() => onPagar(parcela)}>
+              <DollarSign className="h-3.5 w-3.5 mr-1" />
+              Pagar
+            </Button>
+          )}
+        </TableCell>
+      )}
     </TableRow>
   );
 }
@@ -143,8 +160,9 @@ interface TituloGrupoCardProps {
   isExpanded: boolean;
   onToggle: () => void;
   onAcordo: () => void;
+  onPagar?: (p: Parcela) => void;
 }
-function TituloGrupoCard({ grupo, isExpanded, onToggle, onAcordo }: TituloGrupoCardProps) {
+function TituloGrupoCard({ grupo, isExpanded, onToggle, onAcordo, onPagar }: TituloGrupoCardProps) {
   const situacao = situacaoTitulo(grupo);
   const totalParcelas = grupo.totalParcelas || grupo.parcelas.length;
 
@@ -204,11 +222,12 @@ function TituloGrupoCard({ grupo, isExpanded, onToggle, onAcordo }: TituloGrupoC
                 <TableHead>Saldo</TableHead>
                 <TableHead>Atraso</TableHead>
                 <TableHead>Status</TableHead>
+                {onPagar && <TableHead className="text-right">Ações</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
               {grupo.parcelas.map((parcela) => (
-                <ParcelaRow key={parcela.id} parcela={parcela} totalParcelas={totalParcelas} />
+                <ParcelaRow key={parcela.id} parcela={parcela} totalParcelas={totalParcelas} onPagar={onPagar} />
               ))}
             </TableBody>
           </Table>
@@ -219,11 +238,20 @@ function TituloGrupoCard({ grupo, isExpanded, onToggle, onAcordo }: TituloGrupoC
 }
 
 // ===================== Componente principal =====================
+interface PagamentoState {
+  open: boolean;
+  parcelaId: string;
+  parcelaNumero: number;
+  saldoAtual: number;
+}
+
 export function TitulosCliente({ clienteId }: TitulosClienteProps) {
   const [grupos, setGrupos] = useState<TituloGrupo[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+  const [pagamento, setPagamento] = useState<PagamentoState>({ open: false, parcelaId: '', parcelaNumero: 0, saldoAtual: 0 });
   const navigate = useNavigate();
+  const { isOperador } = useUserRole();
 
   useEffect(() => {
     fetchParcelas();
@@ -286,6 +314,21 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
     });
   };
 
+  const abrirPagamento = (parcela: Parcela) => {
+    setPagamento({
+      open: true,
+      parcelaId: parcela.id,
+      parcelaNumero: parcela.numero_parcela,
+      saldoAtual: parcela.saldo_atual,
+    });
+  };
+
+  // registrar_pagamento_parcela não recalcula a MV; refazemos aqui antes de reler.
+  const aposPagamento = async () => {
+    await supabase.rpc('refresh_mv_parcelas');
+    await fetchParcelas();
+  };
+
   if (loading) {
     return (
       <Card>
@@ -299,39 +342,51 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Títulos e Parcelas
-          </CardTitle>
-          <div className="text-right">
-            <p className="text-sm text-muted-foreground">Total em Aberto</p>
-            <p className="text-xl font-bold text-destructive">{formatCurrency(totalEmAberto)}</p>
+    <>
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Títulos e Parcelas
+            </CardTitle>
+            <div className="text-right">
+              <p className="text-sm text-muted-foreground">Total em Aberto</p>
+              <p className="text-xl font-bold text-destructive">{formatCurrency(totalEmAberto)}</p>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {grupos.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
-            <p>Nenhum título encontrado</p>
-          </div>
-        ) : (
-          <div className="border rounded-lg divide-y">
-            {grupos.map((grupo) => (
-              <TituloGrupoCard
-                key={grupo.tituloId}
-                grupo={grupo}
-                isExpanded={expandidos.has(grupo.tituloId)}
-                onToggle={() => toggleExpand(grupo.tituloId)}
-                onAcordo={() => irParaAcordo(grupo.tituloId)}
-              />
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+        </CardHeader>
+        <CardContent>
+          {grupos.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Nenhum título encontrado</p>
+            </div>
+          ) : (
+            <div className="border rounded-lg divide-y">
+              {grupos.map((grupo) => (
+                <TituloGrupoCard
+                  key={grupo.tituloId}
+                  grupo={grupo}
+                  isExpanded={expandidos.has(grupo.tituloId)}
+                  onToggle={() => toggleExpand(grupo.tituloId)}
+                  onAcordo={() => irParaAcordo(grupo.tituloId)}
+                  onPagar={isOperador ? abrirPagamento : undefined}
+                />
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <RegistrarPagamentoModal
+        open={pagamento.open}
+        onOpenChange={(open) => setPagamento((prev) => ({ ...prev, open }))}
+        parcelaId={pagamento.parcelaId}
+        parcelaNumero={pagamento.parcelaNumero}
+        saldoAtual={pagamento.saldoAtual}
+        onSuccess={aposPagamento}
+      />
+    </>
   );
 }

@@ -390,12 +390,13 @@ interface ClienteRowProps {
   cliente: ClienteAgrupado;
   expanded: boolean;
   onToggleCliente: (id: string) => void;
+  onOpenFicha: (id: string) => void;
   onTelecobranca: (id: string) => void;
   onWhatsApp: (telefone: string | null, nome: string) => void;
   onEmail: (email: string | null, nome: string) => void;
   actions: TituloRowActions;
 }
-function ClienteRow({ cliente, expanded, onToggleCliente, onTelecobranca, onWhatsApp, onEmail, actions }: ClienteRowProps) {
+function ClienteRow({ cliente, expanded, onToggleCliente, onOpenFicha, onTelecobranca, onWhatsApp, onEmail, actions }: ClienteRowProps) {
   return (
     <React.Fragment>
       <TableRow className="bg-muted/30 hover:bg-muted/50">
@@ -417,7 +418,13 @@ function ClienteRow({ cliente, expanded, onToggleCliente, onTelecobranca, onWhat
           <div className="flex items-center gap-2">
             <User className="h-4 w-4 text-muted-foreground" />
             <div>
-              <div className="font-medium">{cliente.nome}</div>
+              <button
+                type="button"
+                onClick={() => onOpenFicha(cliente.id)}
+                className="block text-left font-medium hover:text-primary hover:underline transition-colors"
+              >
+                {cliente.nome}
+              </button>
               <div className="text-xs text-muted-foreground md:hidden">
                 {formatCpfCnpj(cliente.cpf_cnpj)}
               </div>
@@ -1327,6 +1334,7 @@ export default function Titulos() {
                     cliente={cliente}
                     expanded={expandedClientes.has(cliente.id)}
                     onToggleCliente={toggleClienteExpanded}
+                    onOpenFicha={(id) => navigate(`/clientes/${id}`)}
                     onTelecobranca={(id) => navigate(`/telecobranca/${id}`)}
                     onWhatsApp={openWhatsApp}
                     onEmail={openEmail}

@@ -62,6 +62,9 @@ const App = () => (
               <Route path="/plataforma/importar" element={<PlataformaImportar />} />
               <Route path="/" element={<Layout><HomeRoute /></Layout>} />
               <Route path="/clientes" element={<Layout><Clientes /></Layout>} />
+              {/* Ficha do cliente (hub 360º): mesma tela da telecobrança, leitura liberada
+                  ao vendedor; ações de escrita ficam gated por papel dentro da ficha. */}
+              <Route path="/clientes/:clienteId" element={<Layout><Telecobranca /></Layout>} />
               <Route path="/cobradores" element={<Layout><BlockVendedorRoute><Cobradores /></BlockVendedorRoute></Layout>} />
               <Route path="/vendedores" element={<Layout><BlockVendedorRoute><Vendedores /></BlockVendedorRoute></Layout>} />
               <Route path="/titulos" element={<Layout><BlockVendedorRoute><Titulos /></BlockVendedorRoute></Layout>} />
