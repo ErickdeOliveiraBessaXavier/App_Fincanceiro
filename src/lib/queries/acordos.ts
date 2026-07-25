@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json } from '@/integrations/supabase/types';
 import { titulosKeys } from './titulos';
 import { clientesKeys } from './clientes';
 
@@ -53,7 +54,7 @@ export interface ParcelaAcordoRow {
 }
 
 export interface CreateAcordoInput {
-  titulo_id: string;
+  titulo_ids: string[];
   cliente_id: string;
   valor_original: number;
   valor_acordo: number;
@@ -63,6 +64,11 @@ export interface CreateAcordoInput {
   data_vencimento_primeira_parcela: string;
   observacoes?: string;
   cronograma: ParcelaAcordoInput[];
+}
+
+export interface TituloDoAcordo {
+  id: string;
+  numero_documento: string | null;
 }
 
 // ============== Query Keys ==============
@@ -149,7 +155,7 @@ export function useCreateAcordo() {
   return useMutation({
     mutationFn: async (input: CreateAcordoInput) => {
       const { data, error } = await supabase.rpc('criar_acordo', {
-        p_titulo_id: input.titulo_id,
+        p_titulo_ids: input.titulo_ids,
         p_cliente_id: input.cliente_id,
         p_valor_original: input.valor_original,
         p_valor_acordo: input.valor_acordo,
@@ -158,7 +164,7 @@ export function useCreateAcordo() {
         p_valor_parcela: input.valor_parcela,
         p_data_vencimento_primeira_parcela: input.data_vencimento_primeira_parcela,
         p_observacoes: input.observacoes ?? null,
-        p_cronograma: input.cronograma,
+        p_cronograma: input.cronograma as unknown as Json,
       });
       if (error) throw error;
       return data;

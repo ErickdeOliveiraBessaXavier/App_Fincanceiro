@@ -767,10 +767,9 @@ export default function Acordos() {
       const cronogramaParcelas = calcularCronograma();
       const valorTotalComJuros = cronogramaParcelas.reduce((sum, p) => sum + p.valor_total, 0);
       const valorParcela = valorTotalComJuros / newAcordo.parcelas;
-      const tituloPrincipal = newAcordo.titulo_ids[0];
 
       await createAcordoMutation.mutateAsync({
-        titulo_id: tituloPrincipal,
+        titulo_ids: newAcordo.titulo_ids,
         cliente_id: newAcordo.cliente_id,
         valor_original: newAcordo.valor_original,
         valor_acordo: valorTotalComJuros,

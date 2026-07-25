@@ -1470,7 +1470,7 @@ export type Database = {
           p_desconto: number
           p_observacoes?: string
           p_parcelas: number
-          p_titulo_id: string
+          p_titulo_ids: string[]
           p_valor_acordo: number
           p_valor_original: number
           p_valor_parcela: number
