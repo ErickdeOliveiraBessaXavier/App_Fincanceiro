@@ -20,6 +20,24 @@ export function formatCpfCnpj(value?: string | null): string {
 }
 
 /**
+ * Formata data para pt-BR (dd/mm/aaaa).
+ *
+ * Strings de data pura ('2026-08-15', vindas de colunas `date` do Postgres) são
+ * montadas direto dos componentes, sem passar por `Date`: `new Date('2026-08-15')`
+ * é lido como meia-noite UTC e, em fusos negativos como o do Brasil, imprime o
+ * DIA ANTERIOR. Timestamps completos continuam pelo caminho normal.
+ */
+export function formatData(value?: string | null): string {
+  if (!value) return '';
+  const dataPura = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (dataPura) {
+    const [, ano, mes, dia] = dataPura;
+    return `${dia}/${mes}/${ano}`;
+  }
+  return new Date(value).toLocaleDateString('pt-BR');
+}
+
+/**
  * Formata telefone BR: (00) 00000-0000 (celular) ou (00) 0000-0000 (fixo).
  * Fora de 10/11 dígitos, devolve o valor original.
  */

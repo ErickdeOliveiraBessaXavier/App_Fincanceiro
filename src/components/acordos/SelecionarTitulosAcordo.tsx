@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ChevronDown, ChevronRight, AlertTriangle, FileText, Loader2 } from 'lucide-react';
-import { format } from 'date-fns';
 import { TituloAgrupado, TituloItem, ClienteComDividas } from '@/hooks/useTitulosAgrupados';
 import { cn } from '@/lib/utils';
-import { formatCpfCnpj } from '@/utils/format';
+import { formatCpfCnpj, formatData } from '@/utils/format';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
-
-const formatDate = (value: string) => format(new Date(value), 'dd/MM/yyyy');
 
 interface SelecionarTitulosAcordoProps {
   clientes: ClienteComDividas[];
@@ -58,19 +59,19 @@ function ClienteSelect({
 }) {
   return (
     <div className="space-y-2">
-      <label className="text-sm font-medium">Cliente *</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-      >
-        <option value="">Selecione um cliente</option>
-        {clientes.map((cliente) => (
-          <option key={cliente.id} value={cliente.id}>
-            {cliente.nome} - {formatCpfCnpj(cliente.cpf_cnpj)} (Dívida: {formatCurrency(cliente.valor_total)})
-          </option>
-        ))}
-      </select>
+      <Label>Cliente *</Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger>
+          <SelectValue placeholder="Selecione um cliente" />
+        </SelectTrigger>
+        <SelectContent>
+          {clientes.map((cliente) => (
+            <SelectItem key={cliente.id} value={cliente.id}>
+              {cliente.nome} — {formatCpfCnpj(cliente.cpf_cnpj)} ({formatCurrency(cliente.valor_total)})
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -93,7 +94,7 @@ function ParcelaLinha({ titulo, totalParcelas }: { titulo: TituloItem; totalParc
           Parcela {titulo.numero_parcela}{totalParcelas > 1 ? `/${totalParcelas}` : ''}
         </span>
         <span className="text-muted-foreground whitespace-nowrap">
-          Venc: {formatDate(titulo.vencimento)}
+          Venc: {formatData(titulo.vencimento)}
         </span>
         <StatusBadge domain="parcela" status={titulo.status} />
       </div>
@@ -153,7 +154,7 @@ function DividaCard({ divida, isSelected, isExpanded, onToggleSelect, onToggleEx
               <ResumoItem label="Parcelas" valor={`${divida.parcelas_abertas} de ${divida.total_parcelas}`} />
               <ResumoItem label="Valor total" valor={formatCurrency(valorOriginal)} />
               <ResumoItem label="Em aberto" valor={formatCurrency(divida.valor_total)} destaque />
-              <ResumoItem label="Venc. mais antigo" valor={formatDate(divida.vencimento_mais_antigo)} />
+              <ResumoItem label="Venc. mais antigo" valor={formatData(divida.vencimento_mais_antigo)} />
             </div>
           </div>
         </button>
@@ -217,8 +218,8 @@ function DividasSection({
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="text-sm font-medium">Títulos em Aberto</label>
+      <div className="flex items-center justify-between gap-2">
+        <Label>Títulos em Aberto</Label>
         <button type="button" onClick={onSelectAll} className="text-xs text-primary hover:underline">
           {todasSelecionadas ? 'Desmarcar todos' : 'Selecionar todos'}
         </button>

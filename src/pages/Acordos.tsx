@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect, useCallback, useMemo, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2 } from 'lucide-react';
@@ -14,7 +14,7 @@ import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { acordosFilterConfig } from '@/constants/filterConfigs';
 import { acordosPresets } from '@/constants/filterPresets';
 import { createAcordosFilterFunctions } from '@/utils/filterFunctions';
-import { formatCpfCnpj } from '@/utils/format';
+import { formatCpfCnpj, formatData } from '@/utils/format';
 import {
   Dialog,
   DialogContent,
@@ -103,7 +103,30 @@ interface LocationState {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
-const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
+// Largura dos modais de acordo. O respiro lateral no mobile vem da base
+// (ui/dialog.tsx); aqui só liberamos a largura no desktop — 75vw é o token de
+// "modal largo" já usado em Clientes.tsx — e apertamos o padding no celular.
+const MODAL_LARGO = 'sm:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6';
+// Modais de confirmação: não esticam no desktop.
+const MODAL_ESTREITO = 'sm:max-w-md p-4 sm:p-6';
+
+// Par rótulo/valor usado nas fichas de leitura do modal de detalhes.
+function CampoDetalhe({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <Label className="text-xs text-muted-foreground">{label}</Label>
+      <div className="font-medium break-words">{children}</div>
+    </div>
+  );
+}
+
+function TituloSecao({ children }: { children: ReactNode }) {
+  return (
+    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h4>
+  );
+}
 
 // ===================== Subcomponentes =====================
 // Cronograma editável: as datas vêm sugeridas a partir da 1ª parcela, mas cada
@@ -137,15 +160,17 @@ function CronogramaEditavel({
       <div className="space-y-1.5">
         {cronograma.map((p) => (
           <div key={p.numero} className="flex items-center gap-2">
-            <span className="w-20 shrink-0 text-sm text-muted-foreground">Parcela {p.numero}</span>
+            <span className="w-16 sm:w-20 shrink-0 text-xs sm:text-sm text-muted-foreground">
+              Parcela {p.numero}
+            </span>
             <Input
               type="date"
               value={p.data_vencimento}
               onChange={(e) => onDataParcelaChange(p.numero, e.target.value)}
-              className="h-8 flex-1"
+              className="h-8 flex-1 min-w-0"
               aria-label={`Vencimento da parcela ${p.numero}`}
             />
-            <span className="w-28 shrink-0 text-right text-sm font-medium">
+            <span className="w-24 sm:w-28 shrink-0 text-right text-xs sm:text-sm font-medium">
               {formatCurrency(p.valor_total)}
             </span>
           </div>
@@ -175,7 +200,7 @@ function ConfiguracaoAcordo({
 }: ConfiguracaoAcordoProps) {
   return (
     <>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label>Valor Original</Label>
           <Input
@@ -199,7 +224,9 @@ function ConfiguracaoAcordo({
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      {/* No mobile: Parcelas e Juros lado a lado, a data em linha própria — um
+          input de data em meia tela de celular fica ilegível. */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         <div className="space-y-2">
           <Label>Parcelas</Label>
           <Input
@@ -220,7 +247,7 @@ function ConfiguracaoAcordo({
             onChange={(e) => setNewAcordo(prev => ({ ...prev, taxa_juros: parseFloat(e.target.value) || 0 }))}
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-2 col-span-2 sm:col-span-1">
           <Label>1ª Parcela</Label>
           <Input
             type="date"
@@ -274,33 +301,41 @@ function NovoAcordoDialog({
   newAcordo, setNewAcordo, formErrors, cronograma, temDatasManuais,
   onDataParcelaChange, onResetDatas, onCancel, onCreate,
 }: NovoAcordoDialogProps) {
+  // Sem título escolhido não há o que configurar: mantém uma coluna só, para a
+  // seleção não ficar espremida com metade do modal vazia ao lado.
+  const mostrarConfiguracao = !loadingTitulos && newAcordo.titulo_ids.length > 0;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={MODAL_LARGO}>
         <DialogHeader>
           <DialogTitle>Novo Acordo</DialogTitle>
           <DialogDescription>
             Selecione os títulos e configure o acordo de pagamento
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
-          <SelecionarTitulosAcordo
-            clientes={clientes}
-            clienteIdPreSelecionado={clienteIdPreSelecionado}
-            loading={loadingTitulos}
-            onSelectionChange={onSelectionChange}
-          />
-
-          {!loadingTitulos && newAcordo.titulo_ids.length > 0 && (
-            <ConfiguracaoAcordo
-              newAcordo={newAcordo}
-              setNewAcordo={setNewAcordo}
-              formErrors={formErrors}
-              cronograma={cronograma}
-              temDatasManuais={temDatasManuais}
-              onDataParcelaChange={onDataParcelaChange}
-              onResetDatas={onResetDatas}
+        <div className={`grid gap-6 ${mostrarConfiguracao ? 'lg:grid-cols-2' : ''}`}>
+          <div className="min-w-0">
+            <SelecionarTitulosAcordo
+              clientes={clientes}
+              clienteIdPreSelecionado={clienteIdPreSelecionado}
+              loading={loadingTitulos}
+              onSelectionChange={onSelectionChange}
             />
+          </div>
+
+          {mostrarConfiguracao && (
+            <div className="min-w-0 space-y-4">
+              <ConfiguracaoAcordo
+                newAcordo={newAcordo}
+                setNewAcordo={setNewAcordo}
+                formErrors={formErrors}
+                cronograma={cronograma}
+                temDatasManuais={temDatasManuais}
+                onDataParcelaChange={onDataParcelaChange}
+                onResetDatas={onResetDatas}
+              />
+            </div>
           )}
         </div>
         <DialogFooter>
@@ -367,7 +402,7 @@ function ResumoParcelasCards({ resumo }: { resumo: ResumoParcelas }) {
       </div>
       <div>
         <Label className="text-muted-foreground">Próx. vencimento</Label>
-        <p className="font-medium">{resumo.proximoVencimento ? formatDate(resumo.proximoVencimento) : '—'}</p>
+        <p className="font-medium">{resumo.proximoVencimento ? formatData(resumo.proximoVencimento) : '—'}</p>
       </div>
     </div>
   );
@@ -384,6 +419,77 @@ interface ParcelaAcordoRowProps {
   onConfirmar: () => void;
   onCancelar: () => void;
 }
+// Formulário de baixa da parcela — compartilhado pela linha da tabela (desktop)
+// e pelo card (mobile), para as duas formas não divergirem.
+function FormPagamentoParcela({
+  dataPagamento, isPending, onDataChange, onConfirmar, onCancelar,
+}: Pick<ParcelaAcordoRowProps, 'dataPagamento' | 'isPending' | 'onDataChange' | 'onConfirmar' | 'onCancelar'>) {
+  return (
+    <div className="flex flex-wrap items-end gap-2 py-1">
+      <div className="space-y-1">
+        <Label className="text-xs">Data do pagamento</Label>
+        <Input
+          type="date"
+          value={dataPagamento}
+          onChange={(e) => onDataChange(e.target.value)}
+          className="h-8 w-40"
+        />
+      </div>
+      <Button size="sm" onClick={onConfirmar} disabled={isPending}>
+        {isPending ? 'Registrando...' : 'Confirmar'}
+      </Button>
+      <Button size="sm" variant="outline" onClick={onCancelar} disabled={isPending}>
+        Voltar
+      </Button>
+    </div>
+  );
+}
+
+// Forma da parcela no MOBILE: a tabela de 7 colunas não cabe em tela de celular
+// sem rolagem horizontal, então lá cada parcela vira um card.
+function ParcelaAcordoCard({
+  parcela, podePagar, emPagamento, dataPagamento, isPending,
+  onIniciar, onDataChange, onConfirmar, onCancelar,
+}: ParcelaAcordoRowProps) {
+  const st = statusExibicaoParcela(parcela);
+  return (
+    <div className="rounded-lg border p-3 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium">Parcela {parcela.numero_parcela}</span>
+        <StatusBadge domain="parcela_acordo" status={st} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <CampoDetalhe label="Vencimento">{formatData(parcela.data_vencimento)}</CampoDetalhe>
+        <CampoDetalhe label="Valor">{formatCurrency(parcela.valor_total)}</CampoDetalhe>
+        <CampoDetalhe label="Juros">
+          {parcela.valor_juros > 0 ? formatCurrency(parcela.valor_juros) : '—'}
+        </CampoDetalhe>
+        <CampoDetalhe label="Pago em">
+          {parcela.data_pagamento ? formatData(parcela.data_pagamento) : '—'}
+        </CampoDetalhe>
+      </div>
+
+      {podePagar && st !== 'paga' && !emPagamento && (
+        <Button size="sm" variant="outline" className="h-8 w-full" onClick={() => onIniciar(parcela.id)}>
+          Registrar pagamento
+        </Button>
+      )}
+      {emPagamento && (
+        <div className="rounded-md bg-muted/30 px-2">
+          <FormPagamentoParcela
+            dataPagamento={dataPagamento}
+            isPending={isPending}
+            onDataChange={onDataChange}
+            onConfirmar={onConfirmar}
+            onCancelar={onCancelar}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ParcelaAcordoTableRow({
   parcela, podePagar, emPagamento, dataPagamento, isPending,
   onIniciar, onDataChange, onConfirmar, onCancelar,
@@ -393,7 +499,7 @@ function ParcelaAcordoTableRow({
     <>
       <TableRow>
         <TableCell className="font-medium">{parcela.numero_parcela}</TableCell>
-        <TableCell>{formatDate(parcela.data_vencimento)}</TableCell>
+        <TableCell>{formatData(parcela.data_vencimento)}</TableCell>
         <TableCell>{formatCurrency(parcela.valor_total)}</TableCell>
         <TableCell className="text-muted-foreground">
           {parcela.valor_juros > 0 ? formatCurrency(parcela.valor_juros) : '—'}
@@ -401,7 +507,7 @@ function ParcelaAcordoTableRow({
         <TableCell>
           <StatusBadge domain="parcela_acordo" status={st} />
         </TableCell>
-        <TableCell>{parcela.data_pagamento ? formatDate(parcela.data_pagamento) : '—'}</TableCell>
+        <TableCell>{parcela.data_pagamento ? formatData(parcela.data_pagamento) : '—'}</TableCell>
         {podePagar && (
           <TableCell className="text-right">
             {st !== 'paga' && !emPagamento && (
@@ -415,23 +521,13 @@ function ParcelaAcordoTableRow({
       {emPagamento && (
         <TableRow>
           <TableCell colSpan={7} className="bg-muted/30">
-            <div className="flex flex-wrap items-end gap-2 py-1">
-              <div className="space-y-1">
-                <Label className="text-xs">Data do pagamento</Label>
-                <Input
-                  type="date"
-                  value={dataPagamento}
-                  onChange={(e) => onDataChange(e.target.value)}
-                  className="h-8 w-40"
-                />
-              </div>
-              <Button size="sm" onClick={onConfirmar} disabled={isPending}>
-                {isPending ? 'Registrando...' : 'Confirmar'}
-              </Button>
-              <Button size="sm" variant="outline" onClick={onCancelar} disabled={isPending}>
-                Voltar
-              </Button>
-            </div>
+            <FormPagamentoParcela
+              dataPagamento={dataPagamento}
+              isPending={isPending}
+              onDataChange={onDataChange}
+              onConfirmar={onConfirmar}
+              onCancelar={onCancelar}
+            />
           </TableCell>
         </TableRow>
       )}
@@ -439,7 +535,7 @@ function ParcelaAcordoTableRow({
   );
 }
 
-interface ParcelasAcordoTabelaProps {
+interface ParcelasAcordoListaProps {
   parcelas: ParcelaAcordoRow[];
   podePagar: boolean;
   pagandoId: string | null;
@@ -450,42 +546,52 @@ interface ParcelasAcordoTabelaProps {
   onConfirmar: () => void;
   onCancelar: () => void;
 }
-function ParcelasAcordoTabela({
+// Duas formas do mesmo dado: tabela a partir de md, cards abaixo disso.
+function ParcelasAcordoLista({
   parcelas, podePagar, pagandoId, dataPagamento, isPending,
   onIniciar, onDataChange, onConfirmar, onCancelar,
-}: ParcelasAcordoTabelaProps) {
+}: ParcelasAcordoListaProps) {
+  const propsComuns = (p: ParcelaAcordoRow) => ({
+    parcela: p,
+    podePagar,
+    emPagamento: pagandoId === p.id,
+    dataPagamento,
+    isPending,
+    onIniciar,
+    onDataChange,
+    onConfirmar,
+    onCancelar,
+  });
+
   return (
-    <div className="rounded-md border overflow-x-auto">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Parcela</TableHead>
-            <TableHead>Vencimento</TableHead>
-            <TableHead>Valor</TableHead>
-            <TableHead>Juros</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Pago em</TableHead>
-            {podePagar && <TableHead className="text-right">Ações</TableHead>}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {parcelas.map((p) => (
-            <ParcelaAcordoTableRow
-              key={p.id}
-              parcela={p}
-              podePagar={podePagar}
-              emPagamento={pagandoId === p.id}
-              dataPagamento={dataPagamento}
-              isPending={isPending}
-              onIniciar={onIniciar}
-              onDataChange={onDataChange}
-              onConfirmar={onConfirmar}
-              onCancelar={onCancelar}
-            />
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <>
+      <div className="hidden md:block rounded-md border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Parcela</TableHead>
+              <TableHead>Vencimento</TableHead>
+              <TableHead>Valor</TableHead>
+              <TableHead>Juros</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Pago em</TableHead>
+              {podePagar && <TableHead className="text-right">Ações</TableHead>}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {parcelas.map((p) => (
+              <ParcelaAcordoTableRow key={p.id} {...propsComuns(p)} />
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      <div className="md:hidden space-y-2">
+        {parcelas.map((p) => (
+          <ParcelaAcordoCard key={p.id} {...propsComuns(p)} />
+        ))}
+      </div>
+    </>
   );
 }
 
@@ -531,7 +637,7 @@ function ParcelasAcordoSecao({ acordoId, open, acordoCancelado }: {
   return (
     <div className="space-y-3">
       <ResumoParcelasCards resumo={resumoParcelasAcordo(parcelas)} />
-      <ParcelasAcordoTabela
+      <ParcelasAcordoLista
         parcelas={parcelas}
         podePagar={isOperador && !acordoCancelado}
         pagandoId={pagandoId}
@@ -551,10 +657,50 @@ interface AcordoDetailsDialogProps {
   onOpenChange: (o: boolean) => void;
   acordo: AcordoRow | null;
 }
+// Ficha de leitura do acordo (coluna estreita no desktop). Pares rótulo/valor
+// curtos ficam em 2 colunas enquanto a ficha é larga, e empilham quando ela vira
+// sidebar em lg.
+function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
+  return (
+    <div className="space-y-5">
+      <section className="space-y-2">
+        <TituloSecao>Negociação</TituloSecao>
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+          <CampoDetalhe label="Valor original">{formatCurrency(acordo.valor_original)}</CampoDetalhe>
+          <CampoDetalhe label="Valor do acordo">
+            <span className="text-primary">{formatCurrency(acordo.valor_acordo)}</span>
+          </CampoDetalhe>
+          <CampoDetalhe label="Desconto">{acordo.desconto.toFixed(1)}%</CampoDetalhe>
+        </div>
+      </section>
+
+      <section className="space-y-2">
+        <TituloSecao>Plano de pagamento</TituloSecao>
+        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+          <CampoDetalhe label="Parcelas">
+            {acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}
+          </CampoDetalhe>
+          <CampoDetalhe label="Data do acordo">{formatData(acordo.data_acordo)}</CampoDetalhe>
+          <CampoDetalhe label="1ª parcela">
+            {formatData(acordo.data_vencimento_primeira_parcela)}
+          </CampoDetalhe>
+        </div>
+      </section>
+
+      {acordo.observacoes && (
+        <section className="space-y-2">
+          <TituloSecao>Observações</TituloSecao>
+          <p className="text-sm break-words">{acordo.observacoes}</p>
+        </section>
+      )}
+    </div>
+  );
+}
+
 function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={MODAL_LARGO}>
         <DialogHeader>
           <DialogTitle>Detalhes do Acordo</DialogTitle>
           <DialogDescription>
@@ -562,53 +708,24 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
           </DialogDescription>
         </DialogHeader>
         {acordo && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-muted-foreground">Cliente</Label>
-                <p className="font-medium">{acordo.cliente?.nome}</p>
+          <div className="space-y-5">
+            {/* Identidade do registro: de quem é e em que pé está. */}
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
+              <div className="min-w-0">
+                <Label className="text-xs text-muted-foreground">Cliente</Label>
+                <p className="text-base font-semibold break-words">{acordo.cliente?.nome}</p>
               </div>
-              <div>
-                <Label className="text-muted-foreground">Status</Label>
-                <div className="mt-1">
-                  <StatusBadge domain="acordo" status={acordo.status} />
-                </div>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Valor Original</Label>
-                <p>{formatCurrency(acordo.valor_original)}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Valor do Acordo</Label>
-                <p className="font-medium">{formatCurrency(acordo.valor_acordo)}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Desconto</Label>
-                <p>{acordo.desconto.toFixed(1)}%</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Parcelas</Label>
-                <p>{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">Data do Acordo</Label>
-                <p>{formatDate(acordo.data_acordo)}</p>
-              </div>
-              <div>
-                <Label className="text-muted-foreground">1ª Parcela</Label>
-                <p>{formatDate(acordo.data_vencimento_primeira_parcela)}</p>
-              </div>
+              <StatusBadge domain="acordo" status={acordo.status} />
             </div>
-            {acordo.observacoes && (
-              <div>
-                <Label className="text-muted-foreground">Observações</Label>
-                <p>{acordo.observacoes}</p>
-              </div>
-            )}
 
-            <div>
-              <Label className="text-muted-foreground">Parcelas do acordo</Label>
-              <div className="mt-2">
+            <div className="grid gap-6 lg:grid-cols-3">
+              <div className="lg:col-span-1">
+                <FichaAcordo acordo={acordo} />
+              </div>
+
+              {/* min-w-0 deixa a tabela encolher dentro do grid em vez de estourar. */}
+              <div className="lg:col-span-2 min-w-0 space-y-2">
+                <TituloSecao>Parcelas do acordo</TituloSecao>
                 <ParcelasAcordoSecao
                   acordoId={acordo.id}
                   open={open}
@@ -633,7 +750,7 @@ interface ConfirmAcordoActionDialogProps {
 function CancelAcordoDialog({ open, onOpenChange, onCancel, onConfirm, isPending }: ConfirmAcordoActionDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className={MODAL_ESTREITO}>
         <DialogHeader>
           <DialogTitle>Cancelar Acordo</DialogTitle>
           <DialogDescription>
