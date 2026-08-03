@@ -275,7 +275,10 @@ export function SelecionarTitulosAcordo({
     }
 
     const dividasEscolhidas = clienteAtual.dividas.filter((d) => dividasSelecionadas.has(d.id));
-    const tituloIds = dividasEscolhidas.flatMap((d) => d.titulos.map((t) => t.id));
+    // Um id por título selecionado. `d.titulos` é a lista de PARCELAS e todas
+    // carregam o mesmo titulo_id — o flatMap antigo repetia o título uma vez por
+    // parcela, e criar_acordo estourava a UNIQUE (acordo_id, titulo_id).
+    const tituloIds = dividasEscolhidas.map((d) => d.id);
     const valorTotal = dividasEscolhidas.reduce((sum, d) => sum + d.valor_total, 0);
 
     onSelectionChange({

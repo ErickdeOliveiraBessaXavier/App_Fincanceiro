@@ -39,6 +39,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      acordo_titulos: {
+        Row: {
+          acordo_id: string
+          company_id: string
+          created_at: string
+          id: string
+          titulo_id: string
+        }
+        Insert: {
+          acordo_id: string
+          company_id: string
+          created_at?: string
+          id?: string
+          titulo_id: string
+        }
+        Update: {
+          acordo_id?: string
+          company_id?: string
+          created_at?: string
+          id?: string
+          titulo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "acordo_titulos_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acordo_titulos_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acordo_titulos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "acordo_titulos_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       acordos: {
         Row: {
           cliente_id: string
@@ -1443,7 +1496,16 @@ export type Database = {
           user_id: string
         }[]
       }
+      cancelar_acordo: { Args: { p_acordo_id: string }; Returns: Json }
+      cancelar_titulo: {
+        Args: { p_motivo?: string; p_titulo_id: string }
+        Returns: Json
+      }
       check_overdue_parcelas: { Args: never; Returns: undefined }
+      cliente_tem_titulo_em_aberto: {
+        Args: { p_cliente_id: string }
+        Returns: boolean
+      }
       cobrador_ve_cliente: { Args: { _cliente_id: string }; Returns: boolean }
       cobrador_ve_titulo: { Args: { _titulo_id: string }; Returns: boolean }
       company_id_do_usuario: { Args: never; Returns: string }
@@ -1457,31 +1519,19 @@ export type Database = {
         }
         Returns: Json
       }
-      cancelar_acordo: {
-        Args: { p_acordo_id: string }
-        Returns: Json
-      }
-      cancelar_titulo: {
-        Args: { p_motivo?: string; p_titulo_id: string }
-        Returns: Json
-      }
       criar_acordo: {
         Args: {
           p_cliente_id: string
           p_cronograma: Json
           p_data_vencimento_primeira_parcela: string
           p_desconto: number
-          p_observacoes?: string
+          p_observacoes: string
           p_parcelas: number
           p_titulo_ids: string[]
           p_valor_acordo: number
           p_valor_original: number
           p_valor_parcela: number
         }
-        Returns: Json
-      }
-      pagar_parcela_acordo: {
-        Args: { p_data_pagamento?: string; p_parcela_acordo_id: string }
         Returns: Json
       }
       criar_empresa_e_admin: {
@@ -1513,10 +1563,7 @@ export type Database = {
         Args: { p_acordo_ids: string[] }
         Returns: Json
       }
-      excluir_cliente: {
-        Args: { p_cliente_id: string }
-        Returns: Json
-      }
+      excluir_cliente: { Args: { p_cliente_id: string }; Returns: Json }
       excluir_titulos_definitivo: {
         Args: { p_titulo_ids: string[] }
         Returns: Json
@@ -1567,6 +1614,10 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       limpar_titulos_empresa: { Args: { p_company_id: string }; Returns: Json }
       limpeza_em_andamento: { Args: { p_company_id: string }; Returns: boolean }
+      liquidar_parcelas_titulo: {
+        Args: { p_motivo: string; p_titulo_id: string }
+        Returns: undefined
+      }
       metricas_empresas: {
         Args: never
         Returns: {
@@ -1577,6 +1628,10 @@ export type Database = {
           ultima_atividade: string
           usuarios: number
         }[]
+      }
+      pagar_parcela_acordo: {
+        Args: { p_data_pagamento?: string; p_parcela_acordo_id: string }
+        Returns: Json
       }
       refresh_mv_parcelas: { Args: never; Returns: undefined }
       registrar_pagamento_parcela: {

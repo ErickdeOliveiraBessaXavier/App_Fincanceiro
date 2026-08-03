@@ -30,6 +30,12 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { SelecionarTitulosAcordo } from '@/components/acordos/SelecionarTitulosAcordo';
+import {
+  gerarCronograma,
+  podarDatasManuais,
+  type CronogramaParcela,
+  type DatasManuais,
+} from '@/domain/acordos/cronograma';
 
 interface Acordo {
   id: string;
@@ -72,15 +78,6 @@ interface NovoAcordo {
   observacoes?: string;
 }
 
-interface CronogramaParcela {
-  numero: number;
-  valor: number;
-  valor_juros: number;
-  valor_total: number;
-  data_vencimento: string;
-  status: 'pendente' | 'paga' | 'vencida';
-}
-
 interface FormErrors {
   cliente_id?: string;
   valor_acordo?: string;
@@ -109,16 +106,72 @@ const formatCurrency = (value: number) =>
 const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
 
 // ===================== Subcomponentes =====================
+// Cronograma editável: as datas vêm sugeridas a partir da 1ª parcela, mas cada
+// linha pode ser ajustada. Editar a 1ª move a âncora e re-sugere as seguintes.
+interface CronogramaEditavelProps {
+  cronograma: CronogramaParcela[];
+  temDatasManuais: boolean;
+  onDataParcelaChange: (numero: number, data: string) => void;
+  onResetDatas: () => void;
+}
+function CronogramaEditavel({
+  cronograma, temDatasManuais, onDataParcelaChange, onResetDatas,
+}: CronogramaEditavelProps) {
+  const total = cronograma.reduce((sum, p) => sum + p.valor_total, 0);
+
+  return (
+    <div className="p-4 bg-muted rounded-lg space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <h4 className="font-medium">Cronograma de Parcelas</h4>
+        {temDatasManuais && (
+          <button type="button" onClick={onResetDatas} className="text-xs text-primary hover:underline">
+            Restaurar sugestão
+          </button>
+        )}
+      </div>
+
+      <p className="text-xs text-muted-foreground">
+        As datas seguem o dia da 1ª parcela nos meses seguintes. Ajuste qualquer parcela livremente.
+      </p>
+
+      <div className="space-y-1.5">
+        {cronograma.map((p) => (
+          <div key={p.numero} className="flex items-center gap-2">
+            <span className="w-20 shrink-0 text-sm text-muted-foreground">Parcela {p.numero}</span>
+            <Input
+              type="date"
+              value={p.data_vencimento}
+              onChange={(e) => onDataParcelaChange(p.numero, e.target.value)}
+              className="h-8 flex-1"
+              aria-label={`Vencimento da parcela ${p.numero}`}
+            />
+            <span className="w-28 shrink-0 text-right text-sm font-medium">
+              {formatCurrency(p.valor_total)}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div className="border-t pt-2 font-medium flex justify-between text-sm">
+        <span>Total</span>
+        <span>{formatCurrency(total)}</span>
+      </div>
+    </div>
+  );
+}
+
 interface ConfiguracaoAcordoProps {
   newAcordo: NovoAcordo;
   setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
   formErrors: FormErrors;
-  showCronograma: boolean;
   cronograma: CronogramaParcela[];
-  onVisualizarCronograma: () => void;
+  temDatasManuais: boolean;
+  onDataParcelaChange: (numero: number, data: string) => void;
+  onResetDatas: () => void;
 }
 function ConfiguracaoAcordo({
-  newAcordo, setNewAcordo, formErrors, showCronograma, cronograma, onVisualizarCronograma,
+  newAcordo, setNewAcordo, formErrors, cronograma, temDatasManuais,
+  onDataParcelaChange, onResetDatas,
 }: ConfiguracaoAcordoProps) {
   return (
     <>
@@ -186,26 +239,13 @@ function ConfiguracaoAcordo({
         />
       </div>
 
-      <Button variant="outline" onClick={onVisualizarCronograma} className="w-full">
-        Visualizar Cronograma
-      </Button>
-
-      {showCronograma && cronograma.length > 0 && (
-        <div className="p-4 bg-muted rounded-lg">
-          <h4 className="font-medium mb-2">Cronograma de Parcelas</h4>
-          <div className="space-y-1 text-sm">
-            {cronograma.map((p) => (
-              <div key={p.numero} className="flex justify-between">
-                <span>Parcela {p.numero} - {formatDate(p.data_vencimento)}</span>
-                <span>{formatCurrency(p.valor_total)}</span>
-              </div>
-            ))}
-            <div className="border-t pt-2 mt-2 font-medium flex justify-between">
-              <span>Total</span>
-              <span>{formatCurrency(cronograma.reduce((sum, p) => sum + p.valor_total, 0))}</span>
-            </div>
-          </div>
-        </div>
+      {cronograma.length > 0 && (
+        <CronogramaEditavel
+          cronograma={cronograma}
+          temDatasManuais={temDatasManuais}
+          onDataParcelaChange={onDataParcelaChange}
+          onResetDatas={onResetDatas}
+        />
       )}
     </>
   );
@@ -222,16 +262,17 @@ interface NovoAcordoDialogProps {
   newAcordo: NovoAcordo;
   setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
   formErrors: FormErrors;
-  showCronograma: boolean;
   cronograma: CronogramaParcela[];
-  onVisualizarCronograma: () => void;
+  temDatasManuais: boolean;
+  onDataParcelaChange: (numero: number, data: string) => void;
+  onResetDatas: () => void;
   onCancel: () => void;
   onCreate: () => void;
 }
 function NovoAcordoDialog({
   open, onOpenChange, clientes, clienteIdPreSelecionado, loadingTitulos, isCreating, onSelectionChange,
-  newAcordo, setNewAcordo, formErrors, showCronograma, cronograma,
-  onVisualizarCronograma, onCancel, onCreate,
+  newAcordo, setNewAcordo, formErrors, cronograma, temDatasManuais,
+  onDataParcelaChange, onResetDatas, onCancel, onCreate,
 }: NovoAcordoDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -255,9 +296,10 @@ function NovoAcordoDialog({
               newAcordo={newAcordo}
               setNewAcordo={setNewAcordo}
               formErrors={formErrors}
-              showCronograma={showCronograma}
               cronograma={cronograma}
-              onVisualizarCronograma={onVisualizarCronograma}
+              temDatasManuais={temDatasManuais}
+              onDataParcelaChange={onDataParcelaChange}
+              onResetDatas={onResetDatas}
             />
           )}
         </div>
@@ -644,9 +686,42 @@ export default function Acordos() {
   });
 
   const [formErrors, setFormErrors] = useState<FormErrors>({});
-  const [cronograma, setCronograma] = useState<CronogramaParcela[]>([]);
-  const [showCronograma, setShowCronograma] = useState(false);
+  // Datas que o usuário sobrescreveu na mão, por número de parcela. O resto do
+  // cronograma é sugerido a partir do vencimento da 1ª parcela.
+  const [datasManuais, setDatasManuais] = useState<DatasManuais>({});
   const { toast } = useToast();
+
+  // Ignora sobrescritas de parcelas que não existem mais (ex.: 6 -> 3 parcelas).
+  const datasAtivas = useMemo(
+    () => podarDatasManuais(datasManuais, newAcordo.parcelas),
+    [datasManuais, newAcordo.parcelas],
+  );
+
+  const cronograma = useMemo(
+    () => gerarCronograma(
+      {
+        valorAcordo: newAcordo.valor_acordo,
+        parcelas: newAcordo.parcelas,
+        taxaJuros: newAcordo.taxa_juros,
+        primeiroVencimento: newAcordo.data_vencimento_primeira_parcela,
+      },
+      datasAtivas,
+    ),
+    [
+      newAcordo.valor_acordo, newAcordo.parcelas, newAcordo.taxa_juros,
+      newAcordo.data_vencimento_primeira_parcela, datasAtivas,
+    ],
+  );
+
+  // A 1ª parcela é a âncora da sugestão: editá-la re-sugere as seguintes.
+  // As demais viram sobrescrita individual e param de acompanhar a âncora.
+  const handleDataParcelaChange = useCallback((numero: number, data: string) => {
+    if (numero === 1) {
+      setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: data }));
+      return;
+    }
+    setDatasManuais(prev => ({ ...prev, [numero]: data }));
+  }, []);
   // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
   // Cancelar exige financeiro+ (RLS acordos_update).
   const { isOperador, isFinanceiro } = useUserRole();
@@ -695,38 +770,13 @@ export default function Acordos() {
       isValid = false;
     }
 
+    if (cronograma.some((p) => !p.data_vencimento)) {
+      errors.data_vencimento_primeira_parcela = 'Preencha o vencimento de todas as parcelas';
+      isValid = false;
+    }
+
     setFormErrors(errors);
     return isValid;
-  };
-
-  const calcularCronograma = () => {
-    if (!newAcordo.valor_acordo || !newAcordo.parcelas || !newAcordo.data_vencimento_primeira_parcela) {
-      return [];
-    }
-
-    const parcelas: CronogramaParcela[] = [];
-    const valorBase = newAcordo.valor_acordo / newAcordo.parcelas;
-    const taxaJuros = (newAcordo.taxa_juros || 0) / 100;
-    const dataInicio = new Date(newAcordo.data_vencimento_primeira_parcela);
-
-    for (let i = 0; i < newAcordo.parcelas; i++) {
-      const dataVencimento = new Date(dataInicio);
-      dataVencimento.setMonth(dataVencimento.getMonth() + i);
-      
-      const valorJuros = valorBase * taxaJuros * (i + 1);
-      const valorTotal = valorBase + valorJuros;
-
-      parcelas.push({
-        numero: i + 1,
-        valor: valorBase,
-        valor_juros: valorJuros,
-        valor_total: valorTotal,
-        data_vencimento: dataVencimento.toISOString().split('T')[0],
-        status: 'pendente'
-      });
-    }
-
-    return parcelas;
   };
 
   const handleSelectionChange = useCallback((selection: SelectionData | null) => {
@@ -764,7 +814,8 @@ export default function Acordos() {
 
     try {
       const desconto = ((newAcordo.valor_original - newAcordo.valor_acordo) / newAcordo.valor_original) * 100;
-      const cronogramaParcelas = calcularCronograma();
+      // Usa o cronograma exibido — inclui as datas que o usuário ajustou na mão.
+      const cronogramaParcelas = cronograma;
       const valorTotalComJuros = cronogramaParcelas.reduce((sum, p) => sum + p.valor_total, 0);
       const valorParcela = valorTotalComJuros / newAcordo.parcelas;
 
@@ -793,7 +844,7 @@ export default function Acordos() {
       });
 
       setIsCreateModalOpen(false);
-      setShowCronograma(false);
+      setDatasManuais({});
       setNewAcordo({
         cliente_id: '',
         titulo_ids: [],
@@ -815,12 +866,6 @@ export default function Acordos() {
         variant: "destructive",
       });
     }
-  };
-
-  const visualizarCronograma = () => {
-    const cronogramaCalculado = calcularCronograma();
-    setCronograma(cronogramaCalculado);
-    setShowCronograma(true);
   };
 
   const handleCancelAcordo = async () => {
@@ -1102,9 +1147,10 @@ export default function Acordos() {
         newAcordo={newAcordo}
         setNewAcordo={setNewAcordo}
         formErrors={formErrors}
-        showCronograma={showCronograma}
         cronograma={cronograma}
-        onVisualizarCronograma={visualizarCronograma}
+        temDatasManuais={Object.keys(datasAtivas).length > 0}
+        onDataParcelaChange={handleDataParcelaChange}
+        onResetDatas={() => setDatasManuais({})}
         onCancel={() => setIsCreateModalOpen(false)}
         onCreate={handleCreateAcordo}
       />
