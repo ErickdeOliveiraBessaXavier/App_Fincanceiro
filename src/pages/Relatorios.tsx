@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
 import { getStatusLabel } from '@/constants/statusConfig';
-import { formatCpfCnpj } from '@/utils/format';
+import { formatCpfCnpj, formatData } from '@/utils/format';
 
 type ExportOptions = Parameters<typeof exportToCSV>[0];
 
@@ -200,9 +200,9 @@ export default function Relatorios() {
     }).format(value);
   };
 
-  const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR');
-  };
+  // 'data_acordo' é data pura; formatData trata isso e ainda aceita timestamps
+  // completos (created_at) pelo caminho normal.
+  const formatDate = (date: string) => formatData(date);
 
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     if (!reportData) return;

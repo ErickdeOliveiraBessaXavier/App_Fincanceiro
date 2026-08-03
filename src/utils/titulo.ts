@@ -1,6 +1,8 @@
 // Utilitários para a nova arquitetura Event Sourcing
 // A lógica principal agora está no banco de dados
 
+import { formatData } from '@/utils/format';
+
 export type TituloStatus = 'pago' | 'pendente' | 'a_vencer' | 'vencido' | 'renegociado';
 export type ParcelaStatus = 'pago' | 'pendente' | 'a_vencer' | 'vencido' | 'renegociado';
 
@@ -78,11 +80,15 @@ export const FormatUtils = {
     }).format(value);
   },
 
-  date: (date: string): string => {
-    return new Date(date).toLocaleDateString('pt-BR');
-  },
+  // Delega para o formatador único (src/utils/format.ts): strings de data pura
+  // ('2026-08-27') não podem passar por `new Date`, que as lê como meia-noite
+  // UTC e imprime o dia anterior no fuso do Brasil.
+  date: (date: string): string => formatData(date),
 
   dateToInput: (date: string): string => {
+    // Já está no formato do <input type="date">; converter só reintroduz o
+    // deslocamento de fuso.
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) return date;
     return new Date(date).toISOString().split('T')[0];
   },
 

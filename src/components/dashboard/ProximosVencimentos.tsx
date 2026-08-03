@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CalendarClock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { parseDataLocal } from '@/utils/format';
 
 interface Vencimento {
   id: string;
@@ -24,7 +25,9 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
+    // parseDataLocal: 'vencimento' é data pura; `new Date` a leria como UTC e
+    // exibiria o dia anterior no Brasil.
+    return parseDataLocal(date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
   };
 
   const getUrgencyStyles = (dias: number) => {

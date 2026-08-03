@@ -10,6 +10,7 @@ import { format, differenceInDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
+import { formatData } from '@/utils/format';
 import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
 
 interface Parcela {
@@ -125,7 +126,7 @@ function ParcelaRow({ parcela, totalParcelas, onPagar }: {
       <TableCell className="font-medium">
         {parcela.numero_parcela}{totalParcelas > 1 ? `/${totalParcelas}` : ''}
       </TableCell>
-      <TableCell>{format(new Date(parcela.vencimento), 'dd/MM/yyyy')}</TableCell>
+      <TableCell>{formatData(parcela.vencimento)}</TableCell>
       <TableCell>{formatCurrency(parcela.valor_nominal)}</TableCell>
       <TableCell className="font-medium">{formatCurrency(parcela.saldo_atual)}</TableCell>
       <TableCell>

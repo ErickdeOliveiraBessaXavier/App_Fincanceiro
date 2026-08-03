@@ -27,6 +27,17 @@ export function formatCpfCnpj(value?: string | null): string {
  * é lido como meia-noite UTC e, em fusos negativos como o do Brasil, imprime o
  * DIA ANTERIOR. Timestamps completos continuam pelo caminho normal.
  */
+/**
+ * Converte para `Date` no fuso LOCAL. Use quando precisar de um formato que o
+ * `formatData` não cobre (ex.: 'dd/mmm') — nunca `new Date(str)` direto, que
+ * trata data pura como UTC.
+ */
+export function parseDataLocal(value: string): Date {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(value);
+}
+
 export function formatData(value?: string | null): string {
   if (!value) return '';
   const dataPura = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);

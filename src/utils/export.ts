@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
+import { formatData } from '@/utils/format';
 
 export interface ExportColumn {
   header: string;
@@ -144,6 +145,6 @@ export const formatCurrency = (value: number): string => {
   }).format(value);
 };
 
-export const formatDate = (date: string): string => {
-  return new Date(date).toLocaleDateString('pt-BR');
-};
+// Delega para o formatador único: `new Date('2026-08-27')` é meia-noite UTC e
+// imprimiria 26/08 no fuso do Brasil — dado errado dentro do arquivo exportado.
+export const formatDate = (date: string): string => formatData(date);

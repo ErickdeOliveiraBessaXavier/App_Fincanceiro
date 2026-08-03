@@ -48,7 +48,7 @@ import {
 import { Label } from "@/components/ui/label";
 import type { CobradorRow } from '@/lib/queries/cobradores';
 import type { VendedorRow } from '@/lib/queries/vendedores';
-import { formatCpfCnpj, formatTelefone } from '@/utils/format';
+import { formatCpfCnpj, formatTelefone, formatData } from '@/utils/format';
 
 // Atualize a interface Cliente para incluir todos os campos
 interface Cliente {
@@ -83,8 +83,8 @@ interface FormErrors {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
 
-const formatDateShort = (date: string) =>
-  new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+// 'proximo_retorno' é data pura: formatData evita o deslocamento de fuso.
+const formatDateShort = (date: string) => formatData(date);
 
 // Célula "Próximo retorno": data + status de cobrança; destaca atrasados.
 function RetornoCell({ cliente }: { cliente: ClienteRow }) {
