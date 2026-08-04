@@ -221,6 +221,26 @@ export function useCancelAcordo() {
   });
 }
 
-// Hard delete por-acordo não tem entrada na UI: o super admin opera no painel
-// da Plataforma (limpeza por empresa). A RPC excluir_acordos_definitivo existe
-// no banco como ferramenta de plataforma, mas não é exposta na tela de Acordos.
+/**
+ * Exclusão DEFINITIVA (hard delete) de acordos — admin da própria empresa.
+ *
+ * A RPC só aceita acordo já CANCELADO: acordo ativo mantém as parcelas do título
+ * liquidadas por novação, e apagá-lo direto deixaria o título com saldo zerado e
+ * nenhum acordo apontando para ele. Cancelar primeiro estorna a liquidação.
+ */
+export function useHardDeleteAcordos() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (acordoIds: string[]) => {
+      const { error } = await supabase.rpc('excluir_acordos_definitivo', {
+        p_acordo_ids: acordoIds,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: acordosKeys.all });
+      qc.invalidateQueries({ queryKey: titulosKeys.all });
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
+    },
+  });
+}

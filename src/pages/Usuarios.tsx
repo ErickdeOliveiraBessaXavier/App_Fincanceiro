@@ -297,9 +297,6 @@ export default function Usuarios() {
     if (role === 'admin') return { cls: 'bg-red-100 text-red-800', icon: <Shield className="h-4 w-4" />, label: 'admin' };
     if (role === 'operador') return { cls: 'bg-blue-100 text-blue-800', icon: <UserCog className="h-4 w-4" />, label: 'cobrador' };
     if (role === 'vendedor') return { cls: 'bg-teal-100 text-teal-800', icon: <Store className="h-4 w-4" />, label: 'vendedor' };
-    // papéis legados (não usados no modelo de 3 níveis)
-    if (role === 'financeiro') return { cls: 'bg-amber-100 text-amber-800', icon: <UserCog className="h-4 w-4" />, label: 'financeiro' };
-    if (role === 'leitura') return { cls: 'bg-slate-100 text-slate-800', icon: <User className="h-4 w-4" />, label: 'leitura' };
     return { cls: 'bg-gray-100 text-gray-800', icon: <User className="h-4 w-4" />, label: 'sem papel' };
   };
 

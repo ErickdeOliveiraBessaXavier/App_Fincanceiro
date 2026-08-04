@@ -1,28 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { RANK, papeisValidos, papelMaisAlto, type AppRole } from '@/domain/perfis';
 
-export type AppRole = 'leitura' | 'vendedor' | 'operador' | 'financeiro' | 'admin' | 'super_admin';
-
-// Espelha public.role_rank no banco: 'vendedor' fica abaixo de 'operador'
-// (read-only). Só a ordem relativa importa.
-const RANK: Record<AppRole, number> = {
-  leitura: 1,
-  vendedor: 2,
-  operador: 3,
-  financeiro: 4,
-  admin: 5,
-  super_admin: 6,
-};
+export type { AppRole };
 
 // Cache leve da role no localStorage para o menu não "piscar" no reload.
 // É só UX/visibilidade — a segurança real continua na RLS do banco.
 const storageKey = (userId: string) => `user-roles:${userId}`;
+
 const readCachedRoles = (userId?: string): AppRole[] | undefined => {
   if (!userId) return undefined;
   try {
     const raw = localStorage.getItem(storageKey(userId));
-    return raw ? (JSON.parse(raw) as AppRole[]) : undefined;
+    return raw ? papeisValidos(JSON.parse(raw)) : undefined;
   } catch {
     return undefined;
   }
@@ -45,7 +36,7 @@ export function useUserRole() {
         .select('role')
         .eq('user_id', userId!);
       if (error) throw error;
-      const roles = (data || []).map((r: any) => r.role as AppRole);
+      const roles = papeisValidos((data || []).map((r) => r.role));
       try {
         if (userId) localStorage.setItem(storageKey(userId), JSON.stringify(roles));
       } catch {
@@ -56,9 +47,7 @@ export function useUserRole() {
   });
 
   const roles = query.data ?? [];
-  const highest: AppRole | null = roles.length
-    ? (roles.reduce((a, b) => (RANK[a] >= RANK[b] ? a : b)) as AppRole)
-    : null;
+  const highest = papelMaisAlto(roles);
 
   const hasMinRole = (min: AppRole) =>
     highest ? RANK[highest] >= RANK[min] : false;
@@ -68,10 +57,8 @@ export function useUserRole() {
     role: highest,
     isSuperAdmin: roles.includes('super_admin'),
     isAdmin: hasMinRole('admin'),
-    isFinanceiro: hasMinRole('financeiro'),
     isOperador: hasMinRole('operador'),
     isVendedor: highest === 'vendedor',
-    isReadOnly: highest === 'leitura',
     hasMinRole,
     isLoading: query.isLoading,
   };

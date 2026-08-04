@@ -20,6 +20,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
@@ -370,9 +371,26 @@ interface DeleteClienteDialogProps {
 }
 function DeleteClienteDialog({ open, onOpenChange, cliente, onCancel, onConfirm }: DeleteClienteDialogProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent><DialogHeader><DialogTitle>Confirmar Exclusão</DialogTitle><DialogDescription>Tem certeza que deseja excluir o cliente {cliente?.nome}? Esta ação não pode ser desfeita.</DialogDescription></DialogHeader><DialogFooter className="gap-2"><Button variant="ghost" onClick={onCancel}>Cancelar</Button><Button variant="destructive" onClick={onConfirm}>Excluir</Button></DialogFooter></DialogContent>
-    </Dialog>
+    <ConfirmarAcaoDestrutiva
+      open={open}
+      onOpenChange={(o) => { onOpenChange(o); if (!o) onCancel(); }}
+      titulo="Excluir cliente"
+      descricao={
+        <>
+          <p>
+            O cliente <span className="font-medium">{cliente?.nome}</span> sai das listagens
+            junto com seus agendamentos e comunicações. O histórico financeiro é preservado
+            no banco.
+          </p>
+          <p>
+            A exclusão é recusada se houver título ou acordo em aberto — quite ou cancele antes.
+          </p>
+        </>
+      }
+      rotuloConfirmar="Excluir cliente"
+      textoConfirmacao="EXCLUIR"
+      onConfirm={onConfirm}
+    />
   );
 }
 

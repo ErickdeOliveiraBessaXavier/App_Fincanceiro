@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
+import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
@@ -127,9 +128,7 @@ function tituloView(t: TituloConsolidado) {
 // ===================== Subcomponentes da árvore cliente/título/parcela =====================
 interface TituloRowActions {
   isOperador: boolean;
-  isFinanceiro: boolean;
   isAdmin: boolean;
-  isSuperAdmin: boolean;
   expandedTitulos: Set<string>;
   parcelasTitulo: Parcela[];
   onToggleTitulo: (id: string) => void;
@@ -141,10 +140,10 @@ interface TituloRowActions {
   onHardDelete: (t: TituloConsolidado) => void;
 }
 
-function ParcelaRow({ parcela, isOperador, isFinanceiro, onPagamento, onEncargo, onDesconto }: {
+function ParcelaRow({ parcela, isOperador, isAdmin, onPagamento, onEncargo, onDesconto }: {
   parcela: Parcela;
   isOperador: boolean;
-  isFinanceiro: boolean;
+  isAdmin: boolean;
   onPagamento: (p: Parcela) => void;
   onEncargo: (p: Parcela) => void;
   onDesconto: (p: Parcela) => void;
@@ -202,7 +201,7 @@ function ParcelaRow({ parcela, isOperador, isFinanceiro, onPagamento, onEncargo,
                   Registrar Pagamento
                 </DropdownMenuItem>
               )}
-              {isFinanceiro && (
+              {isAdmin && (
                 <>
                   <DropdownMenuItem onClick={() => onEncargo(parcela)}>
                     <Percent className="h-4 w-4 mr-2" />
@@ -244,7 +243,7 @@ function TituloPendenteItens({ titulo, actions }: { titulo: TituloConsolidado; a
           Registrar Pagamento
         </DropdownMenuItem>
       )}
-      {actions.isFinanceiro && (
+      {actions.isAdmin && (
         <>
           <DropdownMenuItem onClick={() => actions.onEncargo(firstParcela)}>
             <Percent className="h-4 w-4 mr-2" />
@@ -276,27 +275,23 @@ function TituloAcoesMenu({ titulo, actions }: { titulo: TituloConsolidado; actio
           Ver Detalhes
         </DropdownMenuItem>
         {titulo.status !== 'pago' && <TituloPendenteItens titulo={titulo} actions={actions} />}
-        {(actions.isAdmin || actions.isSuperAdmin) && (
+        {actions.isAdmin && (
           <>
             <DropdownMenuSeparator />
-            {actions.isAdmin && (
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => actions.onCancelarTitulo(titulo)}
-              >
-                <XCircle className="h-4 w-4 mr-2" />
-                Cancelar título
-              </DropdownMenuItem>
-            )}
-            {actions.isSuperAdmin && (
-              <DropdownMenuItem
-                className="text-destructive focus:text-destructive"
-                onClick={() => actions.onHardDelete(titulo)}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Excluir definitivamente
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => actions.onCancelarTitulo(titulo)}
+            >
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancelar título
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="text-destructive focus:text-destructive"
+              onClick={() => actions.onHardDelete(titulo)}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Excluir definitivamente
+            </DropdownMenuItem>
           </>
         )}
       </DropdownMenuContent>
@@ -376,7 +371,7 @@ function TituloRow({ titulo, actions }: { titulo: TituloConsolidado; actions: Ti
           key={parcela.id}
           parcela={parcela}
           isOperador={actions.isOperador}
-          isFinanceiro={actions.isFinanceiro}
+          isAdmin={actions.isAdmin}
           onPagamento={actions.onPagamento}
           onEncargo={actions.onEncargo}
           onDesconto={actions.onDesconto}
@@ -619,7 +614,7 @@ function PagamentoAcao({ estornado, podeEstornar, onIniciarEstorno }: {
 
 interface PagamentoItemProps {
   pagamento: PagamentoEvento;
-  isFinanceiro: boolean;
+  isAdmin: boolean;
   emEstorno: boolean;
   motivo: string;
   isPending: boolean;
@@ -629,7 +624,7 @@ interface PagamentoItemProps {
   onCancelar: () => void;
 }
 function PagamentoItem({
-  pagamento, isFinanceiro, emEstorno, motivo, isPending,
+  pagamento, isAdmin, emEstorno, motivo, isPending,
   onIniciarEstorno, onMotivoChange, onConfirmar, onCancelar,
 }: PagamentoItemProps) {
   return (
@@ -646,7 +641,7 @@ function PagamentoItem({
         </div>
         <PagamentoAcao
           estornado={!!pagamento.estornado}
-          podeEstornar={isFinanceiro && !emEstorno}
+          podeEstornar={isAdmin && !emEstorno}
           onIniciarEstorno={onIniciarEstorno}
         />
       </div>
@@ -678,9 +673,9 @@ function PagamentoItem({
 }
 
 // Histórico de baixas do título (data/valor/meio) + estorno da baixa errada.
-function HistoricoPagamentos({ parcelaIds, isFinanceiro, onEstornado }: {
+function HistoricoPagamentos({ parcelaIds, isAdmin, onEstornado }: {
   parcelaIds: string[];
-  isFinanceiro: boolean;
+  isAdmin: boolean;
   onEstornado: () => void;
 }) {
   const { data: pagamentos = [], isLoading } = usePagamentosByParcelas(parcelaIds);
@@ -713,7 +708,7 @@ function HistoricoPagamentos({ parcelaIds, isFinanceiro, onEstornado }: {
         <PagamentoItem
           key={pg.id}
           pagamento={pg}
-          isFinanceiro={isFinanceiro}
+          isAdmin={isAdmin}
           emEstorno={alvoId === pg.id}
           motivo={motivo}
           isPending={estornar.isPending}
@@ -732,10 +727,10 @@ interface TituloDetailsDialogProps {
   onOpenChange: (o: boolean) => void;
   titulo: TituloConsolidado | null;
   parcelasTitulo: Parcela[];
-  isFinanceiro: boolean;
+  isAdmin: boolean;
   onEstornado: () => void;
 }
-function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo, isFinanceiro, onEstornado }: TituloDetailsDialogProps) {
+function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo, isAdmin, onEstornado }: TituloDetailsDialogProps) {
   const parcelasDoTitulo = titulo ? parcelasTitulo.filter(p => p.titulo_id === titulo.id) : [];
   const parcelaIds = parcelasDoTitulo.map(p => p.id);
   return (
@@ -808,7 +803,7 @@ function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo, isFin
               <div className="mt-2">
                 <HistoricoPagamentos
                   parcelaIds={parcelaIds}
-                  isFinanceiro={isFinanceiro}
+                  isAdmin={isAdmin}
                   onEstornado={onEstornado}
                 />
               </div>
@@ -828,26 +823,25 @@ interface HardDeleteTituloDialogProps {
 }
 function HardDeleteTituloDialog({ titulo, isPending, onCancel, onConfirm }: HardDeleteTituloDialogProps) {
   return (
-    <Dialog open={!!titulo} onOpenChange={(o) => !o && onCancel()}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Excluir definitivamente</DialogTitle>
-          <DialogDescription>
+    <ConfirmarAcaoDestrutiva
+      open={!!titulo}
+      onOpenChange={(o) => !o && onCancel()}
+      titulo="Excluir definitivamente"
+      descricao={
+        <>
+          <p>
             Isto <strong>apaga do banco</strong> o título{' '}
             <span className="font-medium">{titulo?.numero_documento}</span> e tudo
-            vinculado a ele (parcelas, pagamentos, acordos, anexos). <strong>Não dá para desfazer.</strong>
-          </DialogDescription>
-        </DialogHeader>
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
-            {isPending ? 'Excluindo...' : 'Excluir definitivamente'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+            vinculado a ele (parcelas, pagamentos, anexos).
+          </p>
+          <p><strong>Não dá para desfazer.</strong></p>
+        </>
+      }
+      rotuloConfirmar="Excluir definitivamente"
+      textoConfirmacao="EXCLUIR"
+      isPending={isPending}
+      onConfirm={onConfirm}
+    />
   );
 }
 
@@ -868,7 +862,7 @@ function CancelarTituloDialog({ titulo, isPending, motivo, onMotivoChange, onCan
           <DialogDescription>
             O título <span className="font-medium">{titulo?.numero_documento}</span> será
             marcado como <strong>cancelado</strong> e sairá das listagens, preservando todo o
-            histórico financeiro. Um super admin ainda poderá excluí-lo em definitivo depois.
+            histórico financeiro. A exclusão definitiva continua disponível depois, no mesmo menu.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-2">
@@ -897,7 +891,7 @@ export default function Titulos() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isFinanceiro, isOperador, isAdmin, isSuperAdmin } = useUserRole();
+  const { isOperador, isAdmin } = useUserRole();
 
   // === Data via React Query ===
   const { data: titulos = [], isLoading: loading } = useTitulos();
@@ -1251,7 +1245,7 @@ export default function Titulos() {
   };
 
   const tituloActions: TituloRowActions = {
-    isOperador, isFinanceiro, isAdmin, isSuperAdmin,
+    isOperador, isAdmin,
     expandedTitulos, parcelasTitulo,
     onToggleTitulo: toggleTituloExpanded,
     onDetails: openDetails,
@@ -1371,7 +1365,7 @@ export default function Titulos() {
         onOpenChange={setIsDetailsModalOpen}
         titulo={selectedTitulo}
         parcelasTitulo={parcelasTitulo}
-        isFinanceiro={isFinanceiro}
+        isAdmin={isAdmin}
         onEstornado={handleEstornado}
       />
 

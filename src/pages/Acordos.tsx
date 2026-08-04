@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2 } from 'lucide-react';
-import { useAcordos, useCreateAcordo, useCancelAcordo, useParcelasAcordo, usePagarParcelaAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
+import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2, Trash2 } from 'lucide-react';
+import { useAcordos, useCreateAcordo, useCancelAcordo, useHardDeleteAcordos, useParcelasAcordo, usePagarParcelaAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
+import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -782,6 +783,7 @@ export default function Acordos() {
   const { data: acordos = [], isLoading: loading } = useAcordos();
   const createAcordoMutation = useCreateAcordo();
   const cancelAcordoMutation = useCancelAcordo();
+  const hardDeleteAcordoMutation = useHardDeleteAcordos();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -789,6 +791,7 @@ export default function Acordos() {
   const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const [selectedAcordo, setSelectedAcordo] = useState<AcordoRow | null>(null);
   const [acordoToCancel, setAcordoToCancel] = useState<AcordoRow | null>(null);
+  const [acordoToHardDelete, setAcordoToHardDelete] = useState<AcordoRow | null>(null);
 
   const [newAcordo, setNewAcordo] = useState<NovoAcordo>({
     cliente_id: '',
@@ -839,9 +842,9 @@ export default function Acordos() {
     }
     setDatasManuais(prev => ({ ...prev, [numero]: data }));
   }, []);
-  // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
-  // Cancelar exige financeiro+ (RLS acordos_update).
-  const { isOperador, isFinanceiro } = useUserRole();
+  // Vendedor é read-only: escondemos as ações de escrita.
+  // Cancelar e excluir exigem admin (RLS acordos_update / RPCs de acordo).
+  const { isOperador, isAdmin } = useUserRole();
 
   const { clientes: clientesComDividas, loading: loadingTitulos, refetch: refetchTitulos } = useTitulosAgrupados();
 
@@ -981,6 +984,23 @@ export default function Acordos() {
         title: "Erro",
         description: "Não foi possível criar o acordo",
         variant: "destructive",
+      });
+    }
+  };
+
+  const handleHardDeleteAcordo = async () => {
+    if (!acordoToHardDelete) return;
+    try {
+      await hardDeleteAcordoMutation.mutateAsync([acordoToHardDelete.id]);
+      setAcordoToHardDelete(null);
+      toast({ title: 'Sucesso', description: 'Acordo excluído definitivamente' });
+      refetchTitulos();
+    } catch (error) {
+      console.error('Erro ao excluir acordo:', error);
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Não foi possível excluir o acordo',
+        variant: 'destructive',
       });
     }
   };
@@ -1221,7 +1241,7 @@ export default function Acordos() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {isFinanceiro && acordo.status !== 'cancelado' && (
+                        {isAdmin && acordo.status !== 'cancelado' && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -1232,6 +1252,19 @@ export default function Acordos() {
                             }}
                           >
                             <Ban className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {/* Purga só depois do cancelamento: um acordo ativo mantém as
+                            parcelas do título liquidadas (novação). A RPC recusa o
+                            acordo não cancelado — o botão espelha essa regra. */}
+                        {isAdmin && acordo.status === 'cancelado' && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Excluir definitivamente"
+                            onClick={() => setAcordoToHardDelete(acordo)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
                       </div>
@@ -1284,6 +1317,30 @@ export default function Acordos() {
         onCancel={() => setIsCancelModalOpen(false)}
         onConfirm={handleCancelAcordo}
         isPending={cancelAcordoMutation.isPending}
+      />
+
+      <ConfirmarAcaoDestrutiva
+        open={!!acordoToHardDelete}
+        onOpenChange={(o) => !o && setAcordoToHardDelete(null)}
+        titulo="Excluir acordo definitivamente"
+        descricao={
+          <>
+            <p>
+              Isto <strong>apaga do banco</strong> o acordo de{' '}
+              <span className="font-medium">{acordoToHardDelete?.cliente_nome}</span> e todas as
+              suas parcelas, inclusive as já pagas.
+            </p>
+            <p>
+              O acordo já está cancelado, então a dívida original do título permanece como está.
+              O que se perde é o <strong>histórico da negociação</strong>.
+            </p>
+            <p><strong>Não dá para desfazer.</strong></p>
+          </>
+        }
+        rotuloConfirmar="Excluir definitivamente"
+        textoConfirmacao="EXCLUIR"
+        isPending={hardDeleteAcordoMutation.isPending}
+        onConfirm={handleHardDeleteAcordo}
       />
     </div>
   );

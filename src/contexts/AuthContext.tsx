@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import type { AppRole } from '@/hooks/useUserRole';
+import { papeisValidos, papelMaisAlto, type AppRole } from '@/domain/perfis';
 
 interface AuthContextType {
   user: User | null;
@@ -52,7 +52,9 @@ function readClaims(session: Session | null): TenantClaims {
   const claims = parseJwt(session?.access_token);
   return {
     companyId: (claims?.company_id as string) ?? null,
-    role: (claims?.user_role as AppRole) ?? null,
+    // Token emitido antes de 20260803140000 pode trazer 'financeiro'/'leitura';
+    // o filtro os descarta e o fallback abaixo relê o papel válido do banco.
+    role: papeisValidos([claims?.user_role])[0] ?? null,
   };
 }
 
@@ -98,11 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         supabase.from('user_roles').select('role').eq('user_id', user.id),
       ]);
       if (!active) return;
-      const ranks: Record<string, number> = { leitura: 1, operador: 2, financeiro: 3, admin: 4, super_admin: 5 };
-      const roles = (rolesData ?? []).map((r: any) => r.role as AppRole);
-      const highest = roles.length
-        ? roles.reduce((a, b) => (ranks[a] >= ranks[b] ? a : b))
-        : null;
+      const highest = papelMaisAlto(papeisValidos((rolesData ?? []).map((r) => r.role)));
       if (profile?.company_id) setCompanyId(profile.company_id);
       if (highest) setRole(highest);
     })();
