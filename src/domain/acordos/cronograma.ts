@@ -83,6 +83,14 @@ export function gerarCronograma(
   });
 }
 
+/**
+ * Soma das parcelas já com juros. É este total — e não o valor digitado — que
+ * o cliente vai pagar e que fica gravado em `acordos.valor_acordo`.
+ */
+export function totalCronograma(cronograma: CronogramaParcela[]): number {
+  return cronograma.reduce((soma, p) => soma + p.valor_total, 0);
+}
+
 /** Descarta sobrescritas de parcelas que não existem mais (ex.: 6 -> 3 parcelas). */
 export function podarDatasManuais(datasManuais: DatasManuais, parcelas: number): DatasManuais {
   const podadas: DatasManuais = {};

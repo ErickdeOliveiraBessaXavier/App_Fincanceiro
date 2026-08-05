@@ -26,6 +26,8 @@ import { RegistrarResultadoModal } from '@/components/telecobranca/RegistrarResu
 import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
 import { formatCpfCnpj, formatTelefone } from '@/utils/format';
+import { resumoNegociacao } from '@/domain/acordos/negociacao';
+import { cn } from '@/lib/utils';
 
 interface Cliente {
   id: string;
@@ -254,6 +256,23 @@ interface AcordoResumo {
   desconto: number;
 }
 
+// Diferença entre o débito e o valor fechado. Derivada dos valores gravados, e
+// não da coluna `desconto`: ela é limitada a 0..100 e não representa acordo
+// fechado acima do débito (juros/acréscimo).
+function NegociacaoResumo({ valorOriginal, valorAcordo }: { valorOriginal: number; valorAcordo: number }) {
+  const { tipo, percentual } = resumoNegociacao(valorOriginal, valorAcordo);
+  const acrescimo = tipo === 'acrescimo';
+
+  return (
+    <div>
+      <p className="text-muted-foreground">{acrescimo ? 'Acréscimo' : 'Desconto'}</p>
+      <p className={cn('font-medium', acrescimo ? 'text-amber-600' : 'text-green-600')}>
+        {percentual.toFixed(1)}%
+      </p>
+    </div>
+  );
+}
+
 // Componente interno para lista de acordos do cliente
 function AcordosCliente({ clienteId }: { clienteId: string }) {
   const [acordos, setAcordos] = useState<AcordoResumo[]>([]);
@@ -340,10 +359,7 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
               <p className="text-muted-foreground">Parcelas</p>
               <p className="font-medium">{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</p>
             </div>
-            <div>
-              <p className="text-muted-foreground">Desconto</p>
-              <p className="font-medium text-green-600">{acordo.desconto}%</p>
-            </div>
+            <NegociacaoResumo valorOriginal={acordo.valor_original} valorAcordo={acordo.valor_acordo} />
           </div>
         </div>
       ))}

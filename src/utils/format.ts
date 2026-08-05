@@ -49,6 +49,29 @@ export function formatData(value?: string | null): string {
 }
 
 /**
+ * Valor monetário para digitação: "15.600,20" (sem o símbolo, que ocuparia
+ * espaço dentro do campo). Para exibir texto pronto use `Intl` com
+ * `style: 'currency'` como no resto do app.
+ */
+export function formatMoeda(valor: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(valor || 0);
+}
+
+/**
+ * Texto digitado -> número em reais. Só os dígitos importam e os dois últimos
+ * são os centavos ("1560020" -> 15600.20), então o usuário nunca precisa
+ * digitar ponto ou vírgula e não sobra zero à esquerda. O corte em 15 dígitos
+ * mantém o resultado dentro do inteiro seguro do JS.
+ */
+export function parseMoeda(texto: string): number {
+  const digitos = soDigitos(texto).slice(0, 15);
+  return digitos ? Number(digitos) / 100 : 0;
+}
+
+/**
  * Formata telefone BR: (00) 00000-0000 (celular) ou (00) 0000-0000 (fixo).
  * Fora de 10/11 dígitos, devolve o valor original.
  */

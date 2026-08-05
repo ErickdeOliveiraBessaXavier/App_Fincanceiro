@@ -31,12 +31,16 @@ import { useUserRole } from '@/hooks/useUserRole';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { SelecionarTitulosAcordo } from '@/components/acordos/SelecionarTitulosAcordo';
+import { InputMoeda } from '@/components/InputMoeda';
+import { cn } from '@/lib/utils';
 import {
   gerarCronograma,
   podarDatasManuais,
+  totalCronograma,
   type CronogramaParcela,
   type DatasManuais,
 } from '@/domain/acordos/cronograma';
+import { descontoPercentual, resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociacao';
 
 interface Acordo {
   id: string;
@@ -141,7 +145,7 @@ interface CronogramaEditavelProps {
 function CronogramaEditavel({
   cronograma, temDatasManuais, onDataParcelaChange, onResetDatas,
 }: CronogramaEditavelProps) {
-  const total = cronograma.reduce((sum, p) => sum + p.valor_total, 0);
+  const total = totalCronograma(cronograma);
 
   return (
     <div className="p-4 bg-muted rounded-lg space-y-3">
@@ -186,6 +190,22 @@ function CronogramaEditavel({
   );
 }
 
+// Torna explícita a diferença entre o débito e o que foi negociado — inclusive
+// quando o acordo fecha ACIMA do débito, caso legítimo (juros/acréscimo) que
+// antes só aparecia como um erro no salvamento.
+function ResumoNegociacaoHint({ valorOriginal, valorAcordo }: { valorOriginal: number; valorAcordo: number }) {
+  const resumo = resumoNegociacao(valorOriginal, valorAcordo);
+  if (resumo.tipo === 'neutro') return null;
+
+  const acrescimo = resumo.tipo === 'acrescimo';
+  return (
+    <span className={cn('block text-xs', acrescimo ? 'text-amber-600' : 'text-muted-foreground')}>
+      {acrescimo ? 'Acréscimo' : 'Desconto'} de {formatCurrency(resumo.valor)}
+      {' '}({resumo.percentual.toFixed(1)}%) sobre o débito
+    </span>
+  );
+}
+
 interface ConfiguracaoAcordoProps {
   newAcordo: NovoAcordo;
   setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
@@ -212,15 +232,18 @@ function ConfiguracaoAcordo({
         </div>
         <div className="space-y-2">
           <Label>Valor do Acordo</Label>
-          <Input
-            type="number"
-            step="0.01"
+          <InputMoeda
             value={newAcordo.valor_acordo}
-            onChange={(e) => setNewAcordo(prev => ({ ...prev, valor_acordo: parseFloat(e.target.value) || 0 }))}
+            onChange={(valor) => setNewAcordo(prev => ({ ...prev, valor_acordo: valor }))}
             className={formErrors.valor_acordo ? "border-red-500" : ""}
           />
-          {formErrors.valor_acordo && (
+          {formErrors.valor_acordo ? (
             <span className="text-xs text-red-500">{formErrors.valor_acordo}</span>
+          ) : (
+            <ResumoNegociacaoHint
+              valorOriginal={newAcordo.valor_original}
+              valorAcordo={totalCronograma(cronograma) || newAcordo.valor_acordo}
+            />
           )}
         </div>
       </div>
@@ -658,10 +681,22 @@ interface AcordoDetailsDialogProps {
   onOpenChange: (o: boolean) => void;
   acordo: AcordoRow | null;
 }
+// Rótulos do resumo da negociação. O caso neutro reaproveita 'Desconto' e é
+// exibido como '—'.
+const ROTULO_NEGOCIACAO: Record<TipoNegociacao, string> = {
+  desconto: 'Desconto',
+  acrescimo: 'Acréscimo',
+  neutro: 'Desconto',
+};
+
 // Ficha de leitura do acordo (coluna estreita no desktop). Pares rótulo/valor
 // curtos ficam em 2 colunas enquanto a ficha é larga, e empilham quando ela vira
 // sidebar em lg.
 function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
+  // Derivado dos valores gravados, e não da coluna `desconto`: ela é limitada a
+  // 0..100 e não representa acordos fechados acima do débito.
+  const negociacao = resumoNegociacao(acordo.valor_original, acordo.valor_acordo);
+
   return (
     <div className="space-y-5">
       <section className="space-y-2">
@@ -671,7 +706,11 @@ function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
           <CampoDetalhe label="Valor do acordo">
             <span className="text-primary">{formatCurrency(acordo.valor_acordo)}</span>
           </CampoDetalhe>
-          <CampoDetalhe label="Desconto">{acordo.desconto.toFixed(1)}%</CampoDetalhe>
+          <CampoDetalhe label={ROTULO_NEGOCIACAO[negociacao.tipo]}>
+            {negociacao.tipo === 'neutro'
+              ? '—'
+              : `${formatCurrency(negociacao.valor)} (${negociacao.percentual.toFixed(1)}%)`}
+          </CampoDetalhe>
         </div>
       </section>
 
@@ -933,11 +972,14 @@ export default function Acordos() {
     }
 
     try {
-      const desconto = ((newAcordo.valor_original - newAcordo.valor_acordo) / newAcordo.valor_original) * 100;
       // Usa o cronograma exibido — inclui as datas que o usuário ajustou na mão.
       const cronogramaParcelas = cronograma;
-      const valorTotalComJuros = cronogramaParcelas.reduce((sum, p) => sum + p.valor_total, 0);
+      const valorTotalComJuros = totalCronograma(cronogramaParcelas);
       const valorParcela = valorTotalComJuros / newAcordo.parcelas;
+      // Percentual sobre o mesmo par de valores que será gravado. Acordo acima
+      // do débito não tem desconto (a coluna só aceita 0..100) — a diferença
+      // fica legível em valor_original x valor_acordo.
+      const desconto = descontoPercentual(newAcordo.valor_original, valorTotalComJuros);
 
       await createAcordoMutation.mutateAsync({
         titulo_ids: newAcordo.titulo_ids,
@@ -982,7 +1024,10 @@ export default function Acordos() {
       console.error('Erro ao criar acordo:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar o acordo",
+        // A mensagem do banco (constraint, permissão, título já em acordo) é
+        // mais útil que um texto genérico — antes o operador via só "não foi
+        // possível" e não tinha como corrigir o cadastro.
+        description: error instanceof Error ? error.message : "Não foi possível criar o acordo",
         variant: "destructive",
       });
     }
@@ -1327,7 +1372,7 @@ export default function Acordos() {
           <>
             <p>
               Isto <strong>apaga do banco</strong> o acordo de{' '}
-              <span className="font-medium">{acordoToHardDelete?.cliente_nome}</span> e todas as
+              <span className="font-medium">{acordoToHardDelete?.cliente?.nome}</span> e todas as
               suas parcelas, inclusive as já pagas.
             </p>
             <p>
