@@ -1,17 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Clock } from 'lucide-react';
-
-interface AgingData {
-  label: string;
-  range: string;
-  count: number;
-  value: number;
-  color: string;
-}
+import type { FaixaAging } from '@/domain/metricas';
 
 interface AgingReportProps {
-  data: AgingData[];
+  data: FaixaAging[];
   totalValue: number;
 }
 
@@ -31,7 +23,9 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
             <Clock className="h-5 w-5 text-primary" />
             Tempo de Atraso
           </CardTitle>
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Títulos Vencidos</span>
+          {/* "Parcelas": o count sempre foi de parcelas em atraso (de título e
+              de acordo), nunca de títulos — o rótulo antigo induzia ao erro. */}
+          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Parcelas Vencidas</span>
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
@@ -51,7 +45,9 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
                 </div>
                 <div className="text-right">
                   <span className="font-bold text-foreground">{item.count}</span>
-                  <span className="text-muted-foreground text-xs ml-1 font-medium">títulos</span>
+                  <span className="text-muted-foreground text-xs ml-1 font-medium">
+                    {item.count === 1 ? 'parcela' : 'parcelas'}
+                  </span>
                 </div>
               </div>
               <div className="flex items-center gap-4">

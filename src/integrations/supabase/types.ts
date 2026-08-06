@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,31 +11,6 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -889,6 +864,7 @@ export type Database = {
       }
       eventos_parcela: {
         Row: {
+          acordo_id: string | null
           company_id: string
           created_at: string | null
           created_by: string | null
@@ -904,6 +880,7 @@ export type Database = {
           valor: number
         }
         Insert: {
+          acordo_id?: string | null
           company_id: string
           created_at?: string | null
           created_by?: string | null
@@ -919,6 +896,7 @@ export type Database = {
           valor: number
         }
         Update: {
+          acordo_id?: string | null
           company_id?: string
           created_at?: string | null
           created_by?: string | null
@@ -934,6 +912,13 @@ export type Database = {
           valor?: number
         }
         Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "eventos_parcela_company_id_fkey"
             columns: ["company_id"]
@@ -1409,8 +1394,35 @@ export type Database = {
           },
         ]
       }
+      vw_recebimentos: {
+        Row: {
+          acordo_id: string | null
+          company_id: string | null
+          data_recebimento: string | null
+          meio_pagamento: string | null
+          origem: string | null
+          recebimento_id: string | null
+          titulo_id: string | null
+          valor: number | null
+        }
+        Relationships: []
+      }
+      vw_recebimentos_tenant: {
+        Row: {
+          acordo_id: string | null
+          company_id: string | null
+          data_recebimento: string | null
+          meio_pagamento: string | null
+          origem: string | null
+          recebimento_id: string | null
+          titulo_id: string | null
+          valor: number | null
+        }
+        Relationships: []
+      }
       vw_titulos_completos: {
         Row: {
+          acordo_status: string | null
           cliente_cpf_cnpj: string | null
           cliente_email: string | null
           cliente_id: string | null
@@ -1615,9 +1627,10 @@ export type Database = {
       limpar_titulos_empresa: { Args: { p_company_id: string }; Returns: Json }
       limpeza_em_andamento: { Args: { p_company_id: string }; Returns: boolean }
       liquidar_parcelas_titulo: {
-        Args: { p_motivo: string; p_titulo_id: string }
+        Args: { p_acordo_id: string; p_motivo: string; p_titulo_id: string }
         Returns: undefined
       }
+      marcar_parcelas_acordo_vencidas: { Args: never; Returns: Json }
       metricas_empresas: {
         Args: never
         Returns: {
@@ -1797,9 +1810,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       app_role: [

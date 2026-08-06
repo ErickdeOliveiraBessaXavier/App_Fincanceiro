@@ -3,17 +3,10 @@ import { Badge } from '@/components/ui/badge';
 import { CalendarClock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parseDataLocal } from '@/utils/format';
-
-interface Vencimento {
-  id: string;
-  clienteNome: string;
-  valor: number;
-  vencimento: string;
-  diasRestantes: number;
-}
+import type { ProximoVencimento } from '@/domain/metricas';
 
 interface ProximosVencimentosProps {
-  vencimentos: Vencimento[];
+  vencimentos: ProximoVencimento[];
 }
 
 const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
@@ -50,7 +43,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
             <CalendarClock className="h-6 w-6 text-muted-foreground" />
           </div>
           <p className="text-sm font-medium text-muted-foreground text-center">
-            Nenhum título vencendo nos próximos 7 dias.
+            Nenhuma parcela vencendo nos próximos 7 dias.
           </p>
         </CardContent>
       </Card>
@@ -100,7 +93,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
         
         {vencimentos.length > 5 && (
           <button className="w-full py-3 text-xs font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors uppercase tracking-widest">
-            Ver mais {vencimentos.length - 5} títulos
+            Ver mais {vencimentos.length - 5} parcelas
           </button>
         )}
       </CardContent>

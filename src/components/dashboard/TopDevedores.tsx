@@ -3,12 +3,7 @@ import { Badge } from '@/components/ui/badge';
 import { TrendingDown, User, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-interface Devedor {
-  clienteId: string;
-  clienteNome: string;
-  totalValor: number;
-  totalTitulos: number;
-}
+import type { Devedor } from '@/domain/metricas';
 
 interface TopDevedoresProps {
   devedores: Devedor[];
@@ -77,7 +72,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
                       {devedor.clienteNome}
                     </span>
                     <span className="text-xs font-medium text-muted-foreground">
-                      {devedor.totalTitulos} {devedor.totalTitulos === 1 ? 'título pendente' : 'títulos pendentes'}
+                      {devedor.totalItens} {devedor.totalItens === 1 ? 'parcela vencida' : 'parcelas vencidas'}
                     </span>
                   </div>
                 </div>
