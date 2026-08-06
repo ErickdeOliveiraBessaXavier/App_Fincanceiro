@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Edit, Phone, Mail, FileText, User, Trash2, MoreHorizontal, CheckCircle, AlertTriangle } from 'lucide-react';
 import {
@@ -588,11 +589,7 @@ export default function Clientes() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <CarregandoConteudo />;
   }
 
   return (

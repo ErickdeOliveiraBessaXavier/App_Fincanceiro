@@ -23,6 +23,7 @@ export type BadgeVariant =
 
 export type StatusDomain =
   | 'titulo'
+  | 'titulo_acordo'
   | 'parcela'
   | 'parcela_acordo'
   | 'cliente'
@@ -47,6 +48,19 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     // existe acordo ativo — agora tem um único rótulo em todo o app.
     renegociado: { label: 'Em Acordo', variant: 'accent' },
     pendente: { label: 'A Vencer', variant: 'warning' }, // legado
+  },
+  // Situação do título que está vinculado a um acordo (acordos.status).
+  //
+  // O acordo é uma novação: ele liquida as parcelas originais e o saldo do
+  // título zera. Por isso o status derivado do saldo diria "Pago/Quitado" —
+  // indistinguível de uma dívida realmente quitada em dinheiro. Enquanto houver
+  // acordo não cancelado, quem manda no rótulo do título é o estado do ACORDO.
+  titulo_acordo: {
+    ativo: { label: 'Em Acordo', variant: 'accent' },
+    cumprido: { label: 'Acordo Cumprido', variant: 'success' },
+    quebrado: { label: 'Acordo Quebrado', variant: 'destructive' },
+    // 'cancelado' não entra: o cancelamento estorna a liquidação e o título
+    // volta a valer pelo próprio saldo.
   },
   // Status consolidado da parcela (vw_parcelas_consolidadas.status)
   parcela: {

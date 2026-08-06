@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { DollarSign, AlertTriangle, Clock, MessageSquare } from 'lucide-react';
 import { differenceInDays, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { parseDataLocal } from '@/utils/format';
 
 interface MetricasClienteProps {
   clienteId: string;
@@ -32,7 +33,9 @@ function calcularMetricasParcelas(parcelas: ParcelaMetrica[]) {
     }
     if (parcela.status === 'vencido') {
       parcelasVencidas++;
-      const diasAtraso = differenceInDays(hoje, new Date(parcela.vencimento!));
+      // parseDataLocal: coluna `date` pura lida com `new Date` vira o dia
+      // anterior no fuso do Brasil e inflava o atraso em 1 dia.
+      const diasAtraso = differenceInDays(hoje, parseDataLocal(parcela.vencimento!));
       if (diasAtraso > maiorAtraso) {
         maiorAtraso = diasAtraso;
       }

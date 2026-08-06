@@ -9,6 +9,7 @@ import ProximosVencimentos from '@/components/dashboard/ProximosVencimentos';
 import TopDevedores from '@/components/dashboard/TopDevedores';
 import StatPillar from '@/components/StatPillar';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
+import { parseDataLocal } from '@/utils/format';
 
 interface DashboardStats {
   totalTitulos: number;
@@ -131,7 +132,9 @@ const Dashboard = () => {
       const proximos = titulosData
         .filter(t => {
           if (!t.proximo_vencimento) return false;
-          const venc = new Date(t.proximo_vencimento);
+          // parseDataLocal: `new Date('2026-08-05')` é meia-noite UTC, ou seja
+          // o dia anterior no Brasil — o que vence HOJE ficava de fora da lista.
+          const venc = parseDataLocal(t.proximo_vencimento);
           return venc >= today && venc <= seteDias && t.status === 'a_vencer';
         })
         .map(t => ({
@@ -139,7 +142,7 @@ const Dashboard = () => {
           clienteNome: t.cliente_nome || 'Desconhecido',
           valor: Number(t.saldo_devedor),
           vencimento: t.proximo_vencimento!,
-          diasRestantes: Math.ceil((new Date(t.proximo_vencimento!).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+          diasRestantes: Math.ceil((parseDataLocal(t.proximo_vencimento!).getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
         }))
         .sort((a, b) => a.diasRestantes - b.diasRestantes);
       
@@ -190,7 +193,7 @@ const Dashboard = () => {
 
     return ranges.map(range => {
       const filtered = parcelasVencidas.filter(p => {
-        const diasAtraso = Math.floor((today.getTime() - new Date(p.vencimento).getTime()) / (1000 * 60 * 60 * 24));
+        const diasAtraso = Math.floor((today.getTime() - parseDataLocal(p.vencimento).getTime()) / (1000 * 60 * 60 * 24));
         return diasAtraso >= range.min && diasAtraso <= range.max;
       });
 

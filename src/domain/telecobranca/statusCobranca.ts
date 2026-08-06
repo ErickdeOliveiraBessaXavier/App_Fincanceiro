@@ -17,6 +17,8 @@
  * encadeado por status.
  */
 
+import { isoDeData } from '@/utils/format';
+
 export type StatusCobrancaSlug =
   | 'suspeita_fraude'
   | 'agendamento_pagamento'
@@ -271,6 +273,15 @@ export function hojeNegocio(): Date {
     .split('-')
     .map(Number);
   return new Date(ano, mes - 1, dia, 12, 0, 0, 0);
+}
+
+/**
+ * "Hoje" no fuso do negócio como 'YYYY-MM-DD' — valor inicial de campos
+ * `<input type="date">`. Substitui `new Date().toISOString().split('T')[0]`,
+ * que à noite no Brasil já está no dia seguinte em UTC e sugeria amanhã.
+ */
+export function hojeIso(): string {
+  return isoDeData(hojeNegocio());
 }
 
 /** Soma dias corridos a uma data, sem mutar o original. */

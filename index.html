@@ -5,10 +5,52 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>App Financeiro</title>
     <meta name="description" content="Aplicativo de Finanças Pessoais" />
+    <!--
+      Tela de carregamento da primeira pintura. Vive aqui, em CSS puro, porque
+      neste ponto nem o bundle nem a folha de estilos do app foram baixados —
+      sem isto o refresh começa por um branco cru. O React limpa o #root ao
+      montar, então o desenho abaixo precisa ser igual ao de
+      src/components/TelaCarregamento.tsx para a troca passar despercebida.
+    -->
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: hsl(240 20% 98%); }
+      #boot-loader {
+        display: flex;
+        min-height: 100vh;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+        font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+      }
+      #boot-loader .spinner {
+        width: 3rem;
+        height: 3rem;
+        border: 4px solid hsl(262 83% 58%);
+        border-top-color: transparent;
+        border-radius: 9999px;
+        animation: boot-spin 1s linear infinite;
+      }
+      #boot-loader p {
+        margin: 0;
+        font-size: 0.875rem;
+        color: hsl(240 5% 46%);
+      }
+      @keyframes boot-spin { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        #boot-loader .spinner { animation-duration: 3s; }
+      }
+    </style>
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="boot-loader" role="status" aria-live="polite">
+        <div class="spinner"></div>
+        <p>Carregando...</p>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { PageHeader } from '@/components/PageHeader';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2, Trash2 } from 'lucide-react';
 import { useAcordos, useCreateAcordo, useCancelAcordo, useHardDeleteAcordos, useParcelasAcordo, usePagarParcelaAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
@@ -15,7 +16,8 @@ import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { acordosFilterConfig } from '@/constants/filterConfigs';
 import { acordosPresets } from '@/constants/filterPresets';
 import { createAcordosFilterFunctions } from '@/utils/filterFunctions';
-import { formatCpfCnpj, formatData } from '@/utils/format';
+import { formatCpfCnpj, formatData, parseDataLocal } from '@/utils/format';
+import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import {
   Dialog,
   DialogContent,
@@ -41,6 +43,7 @@ import {
   type DatasManuais,
 } from '@/domain/acordos/cronograma';
 import { descontoPercentual, resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociacao';
+import { codigoAcordo } from '@/domain/acordos/identificacao';
 
 interface Acordo {
   id: string;
@@ -382,7 +385,10 @@ function statusExibicaoParcela(p: ParcelaAcordoRow): 'paga' | 'vencida' | 'pende
   if (p.status === 'paga' || p.data_pagamento) return 'paga';
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
-  return new Date(p.data_vencimento) < hoje ? 'vencida' : 'pendente';
+  // parseDataLocal, e não `new Date(...)`: a coluna é `date` pura e o construtor
+  // a lê como meia-noite UTC — no fuso do Brasil isso vira o dia anterior, e a
+  // parcela que vence HOJE aparecia como vencida.
+  return parseDataLocal(p.data_vencimento) < hoje ? 'vencida' : 'pendente';
 }
 
 interface ResumoParcelas {
@@ -633,7 +639,7 @@ function ParcelasAcordoSecao({ acordoId, open, acordoCancelado }: {
 
   const iniciar = (id: string) => {
     setPagandoId(id);
-    setDataPagamento(new Date().toISOString().split('T')[0]);
+    setDataPagamento(hojeIso());
   };
 
   const confirmar = async () => {
@@ -754,6 +760,10 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
               <div className="min-w-0">
                 <Label className="text-xs text-muted-foreground">Cliente</Label>
                 <p className="text-base font-semibold break-words">{acordo.cliente?.nome}</p>
+                {/* Código curto para citar o acordo + id completo para suporte. */}
+                <p className="mt-1 font-mono text-xs text-muted-foreground break-all select-all">
+                  Acordo {codigoAcordo(acordo.id)} · {acordo.id}
+                </p>
               </div>
               <StatusBadge domain="acordo" status={acordo.status} />
             </div>
@@ -839,8 +849,8 @@ export default function Acordos() {
     valor_acordo: 0,
     parcelas: 1,
     taxa_juros: 0,
-    data_inicio: new Date().toISOString().split('T')[0],
-    data_vencimento_primeira_parcela: new Date().toISOString().split('T')[0],
+    data_inicio: hojeIso(),
+    data_vencimento_primeira_parcela: hojeIso(),
     observacoes: ''
   });
 
@@ -1014,8 +1024,8 @@ export default function Acordos() {
         valor_acordo: 0,
         parcelas: 1,
         taxa_juros: 0,
-        data_inicio: new Date().toISOString().split('T')[0],
-        data_vencimento_primeira_parcela: new Date().toISOString().split('T')[0],
+        data_inicio: hojeIso(),
+        data_vencimento_primeira_parcela: hojeIso(),
         observacoes: '',
       });
 
@@ -1108,11 +1118,7 @@ export default function Acordos() {
   const pagination = usePagination(filteredAcordos, 25, JSON.stringify(filters) + mostrarCancelados);
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <CarregandoConteudo />;
   }
 
   return (
@@ -1235,6 +1241,7 @@ export default function Acordos() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Acordo</TableHead>
                   <TableHead>Cliente</TableHead>
                   <TableHead className="hidden sm:table-cell">N. Título</TableHead>
                   <TableHead className="hidden md:table-cell">Valor Original</TableHead>
@@ -1247,6 +1254,9 @@ export default function Acordos() {
               <TableBody>
                 {pagination.pageItems.map((acordo) => (
                   <TableRow key={acordo.id}>
+                    <TableCell className="font-mono text-sm font-medium whitespace-nowrap">
+                      {codigoAcordo(acordo.id)}
+                    </TableCell>
                     <TableCell>
                       <div>
                         <button
@@ -1318,7 +1328,7 @@ export default function Acordos() {
                 ))}
                 {filteredAcordos.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       Nenhum acordo encontrado
                     </TableCell>
                   </TableRow>

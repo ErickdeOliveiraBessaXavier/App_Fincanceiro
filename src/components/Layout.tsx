@@ -1,25 +1,17 @@
-import { ReactNode, memo } from 'react';
+import { ReactNode, Suspense, memo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/hooks/useCurrentCompany';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { NotificationBell } from '@/components/NotificationBell';
+import { TelaCarregamento, CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Button } from '@/components/ui/button';
 import { Clock, Ban } from 'lucide-react';
 
 interface LayoutProps {
   children: ReactNode;
 }
-
-const Spinner = () => (
-  <div className="flex min-h-screen items-center justify-center bg-background">
-    <div className="flex flex-col items-center gap-4">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-      <p className="text-sm text-muted-foreground">Carregando...</p>
-    </div>
-  </div>
-);
 
 // Tela exibida quando o cadastro por convite ainda aguarda autorização do admin.
 const AguardandoAutorizacao = ({ onSignOut }: { onSignOut: () => void }) => (
@@ -65,7 +57,9 @@ export const Layout = memo(({ children }: LayoutProps) => {
   const { user, loading, companyId, role, isSuperAdmin, signOut } = useAuth();
   const { company, isLoading: companyLoading } = useCurrentCompany();
 
-  if (loading) return <Spinner />;
+  // Mesma tela do #boot-loader do index.html: a passagem do HTML estático para
+  // o React acontece sem troca visível de indicador.
+  if (loading) return <TelaCarregamento />;
   if (!user) return <Navigate to="/auth" replace />;
   // super_admin tem área própria (administra a plataforma, não opera dentro de uma empresa).
   if (isSuperAdmin) return <Navigate to="/plataforma" replace />;
@@ -76,8 +70,9 @@ export const Layout = memo(({ children }: LayoutProps) => {
   // Tem empresa (vinculada no convite) mas nenhum papel atribuído => sem acesso.
   if (!role) return <AguardandoAutorizacao onSignOut={signOut} />;
 
-  // Aguarda os dados da empresa para decidir o gate de acesso.
-  if (companyLoading) return <Spinner />;
+  // Aguarda os dados da empresa para decidir o gate de acesso. Continua sendo
+  // a mesma tela da etapa anterior — para o usuário, uma espera só.
+  if (companyLoading) return <TelaCarregamento />;
 
   // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) para acessar.
   if (company && company.status !== 'ativa') {
@@ -105,7 +100,12 @@ export const Layout = memo(({ children }: LayoutProps) => {
           
           <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in overflow-y-auto">
             <div className="mx-auto max-w-7xl">
-              {children}
+              {/* Boundary da rota AQUI dentro: as páginas são lazy e, sem ele,
+                  o Suspense de App.tsx trocaria o app inteiro pelo fallback —
+                  a sidebar sumia e voltava a cada navegação. */}
+              <Suspense fallback={<CarregandoConteudo />}>
+                {children}
+              </Suspense>
             </div>
           </main>
         </div>

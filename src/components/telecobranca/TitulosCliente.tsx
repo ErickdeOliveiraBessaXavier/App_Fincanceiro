@@ -10,8 +10,9 @@ import { format, differenceInDays } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
-import { formatData } from '@/utils/format';
+import { formatData, parseDataLocal } from '@/utils/format';
 import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
+import { getStatusMeta, type StatusMeta } from '@/constants/statusConfig';
 
 interface Parcela {
   id: string;
@@ -38,6 +39,8 @@ interface TituloGrupo {
   valorEmAberto: number;
   parcelasAbertas: number;
   temVencido: boolean;
+  /** Status do acordo que segura este título (novação). Ausente = sem acordo. */
+  acordoStatus?: string;
 }
 
 interface TitulosClienteProps {
@@ -49,17 +52,33 @@ const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
 const calcularAtraso = (vencimento: string) => {
-  const dias = differenceInDays(new Date(), new Date(vencimento));
+  // parseDataLocal: `new Date('2026-08-05')` é meia-noite UTC e, no Brasil,
+  // representa o dia anterior — a parcela que vence hoje aparecia com 1 dia
+  // de atraso.
+  const dias = differenceInDays(new Date(), parseDataLocal(vencimento));
   return dias > 0 ? dias : 0;
 };
 
 const isAberta = (status: string) => status === 'a_vencer' || status === 'vencido';
 
-function situacaoTitulo(grupo: TituloGrupo): { label: string; variant: 'destructive' | 'secondary' | 'success' } {
+function situacaoTitulo(grupo: TituloGrupo): StatusMeta {
+  // O acordo tem precedência sobre o saldo. Criar o acordo liquida as parcelas
+  // originais (novação), então o título fica com saldo zero — sem esta regra
+  // ele apareceria como "Quitado", igual a uma dívida paga em dinheiro.
+  if (grupo.acordoStatus) return getStatusMeta('titulo_acordo', grupo.acordoStatus);
   if (grupo.temVencido) return { label: 'Vencido', variant: 'destructive' };
   // Verde para "resolvido", consistente com Título "Pago" e Cliente "Quitado".
   if (grupo.parcelasAbertas === 0) return { label: 'Quitado', variant: 'success' };
   return { label: 'Em dia', variant: 'secondary' };
+}
+
+// Texto do resumo. Um título com acordo ativo tem zero parcelas em aberto (a
+// novação as liquidou), mas "Sem pendências" seria enganoso: a dívida existe,
+// mudou de lugar.
+function descricaoSituacao(grupo: TituloGrupo): string {
+  if (grupo.acordoStatus === 'ativo') return 'Renegociado em acordo';
+  if (grupo.parcelasAbertas > 0) return `${grupo.parcelasAbertas} em aberto`;
+  return 'Sem pendências';
 }
 
 function ordenarGrupos(grupos: TituloGrupo[]): TituloGrupo[] {
@@ -69,8 +88,22 @@ function ordenarGrupos(grupos: TituloGrupo[]): TituloGrupo[] {
   });
 }
 
-// Agrupa as parcelas por título, mesclando os metadados do título (nº doc, qtd parcelas).
-function agruparPorTitulo(parcelas: Parcela[], meta: Map<string, TituloMeta>): TituloGrupo[] {
+// Quando mais de um acordo referencia o mesmo título, o mais "vivo" descreve a
+// situação atual: um acordo em andamento vale mais que um já encerrado.
+const ORDEM_ACORDO = ['ativo', 'quebrado', 'cumprido'];
+
+function precedenciaAcordo(status: string): number {
+  const posicao = ORDEM_ACORDO.indexOf(status);
+  return posicao === -1 ? ORDEM_ACORDO.length : posicao;
+}
+
+// Agrupa as parcelas por título, mesclando os metadados do título (nº doc, qtd
+// parcelas) e o acordo que o mantém liquidado, quando houver.
+function agruparPorTitulo(
+  parcelas: Parcela[],
+  meta: Map<string, TituloMeta>,
+  acordoPorTitulo: Map<string, string>,
+): TituloGrupo[] {
   const grupos = new Map<string, TituloGrupo>();
 
   for (const parcela of parcelas) {
@@ -86,6 +119,7 @@ function agruparPorTitulo(parcelas: Parcela[], meta: Map<string, TituloMeta>): T
         valorEmAberto: 0,
         parcelasAbertas: 0,
         temVencido: false,
+        acordoStatus: acordoPorTitulo.get(parcela.titulo_id),
       };
       grupos.set(parcela.titulo_id, grupo);
     }
@@ -100,6 +134,32 @@ function agruparPorTitulo(parcelas: Parcela[], meta: Map<string, TituloMeta>): T
   }
 
   return ordenarGrupos(Array.from(grupos.values()));
+}
+
+/**
+ * Acordos que ainda "seguram" os títulos do cliente, por título.
+ * Cancelado fica de fora: o cancelamento estorna a liquidação e o título volta
+ * a valer pelo próprio saldo.
+ */
+async function buscarAcordoPorTitulo(clienteId: string): Promise<Map<string, string>> {
+  const { data, error } = await supabase
+    .from('acordos')
+    .select('status, acordo_titulos(titulo_id)')
+    .eq('cliente_id', clienteId)
+    .neq('status', 'cancelado');
+
+  if (error) throw error;
+
+  const mapa = new Map<string, string>();
+  for (const acordo of data ?? []) {
+    for (const vinculo of acordo.acordo_titulos ?? []) {
+      const atual = mapa.get(vinculo.titulo_id);
+      if (!atual || precedenciaAcordo(acordo.status) < precedenciaAcordo(atual)) {
+        mapa.set(vinculo.titulo_id, acordo.status);
+      }
+    }
+  }
+  return mapa;
 }
 
 // ===================== Subcomponentes =====================
@@ -196,10 +256,7 @@ function TituloGrupoCard({ grupo, isExpanded, onToggle, onAcordo, onPagar }: Tit
               <ResumoItem label="Parcelas" valor={`${grupo.parcelasAbertas} de ${totalParcelas}`} />
               <ResumoItem label="Valor total" valor={formatCurrency(grupo.valorTotal)} />
               <ResumoItem label="Em aberto" valor={formatCurrency(grupo.valorEmAberto)} destaque />
-              <ResumoItem
-                label="Situação"
-                valor={grupo.parcelasAbertas > 0 ? `${grupo.parcelasAbertas} em aberto` : 'Sem pendências'}
-              />
+              <ResumoItem label="Situação" valor={descricaoSituacao(grupo)} />
             </div>
           </div>
         </button>
@@ -281,15 +338,18 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
         ])
       );
 
-      const { data: parcelasData, error: parcelasError } = await supabase
-        .from('vw_parcelas_consolidadas')
-        .select('*')
-        .in('titulo_id', Array.from(meta.keys()))
-        .order('numero_parcela', { ascending: true });
+      const [{ data: parcelasData, error: parcelasError }, acordoPorTitulo] = await Promise.all([
+        supabase
+          .from('vw_parcelas_consolidadas')
+          .select('*')
+          .in('titulo_id', Array.from(meta.keys()))
+          .order('numero_parcela', { ascending: true }),
+        buscarAcordoPorTitulo(clienteId),
+      ]);
 
       if (parcelasError) throw parcelasError;
 
-      setGrupos(agruparPorTitulo(parcelasData || [], meta));
+      setGrupos(agruparPorTitulo(parcelasData || [], meta, acordoPorTitulo));
     } catch (error) {
       console.error('Erro ao carregar parcelas:', error);
     } finally {

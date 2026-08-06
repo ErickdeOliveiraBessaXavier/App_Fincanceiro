@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatData, formatMoeda, parseMoeda } from './format';
+import { formatData, formatMoeda, isoDeData, parseDataLocal, parseMoeda } from './format';
 
 describe('formatData', () => {
   it('formata data pura sem deslocar por fuso horário', () => {
@@ -17,6 +17,25 @@ describe('formatData', () => {
 
   it('formata timestamp completo pelo caminho normal', () => {
     expect(formatData('2026-08-15T13:45:00-03:00')).toBe('15/08/2026');
+  });
+});
+
+describe('isoDeData', () => {
+  it('usa os componentes locais, sem passar por UTC', () => {
+    // 23h no Brasil (UTC-3) já é o dia seguinte em UTC: o toISOString devolveria
+    // '2026-08-06' e a sugestão de vencimento saía como amanhã.
+    expect(isoDeData(new Date(2026, 7, 5, 23, 30))).toBe('2026-08-05');
+    expect(isoDeData(new Date(2026, 7, 5, 0, 1))).toBe('2026-08-05');
+  });
+
+  it('zera à esquerda mês e dia', () => {
+    expect(isoDeData(new Date(2026, 0, 9))).toBe('2026-01-09');
+  });
+
+  it('é o inverso de parseDataLocal', () => {
+    for (const iso of ['2026-01-01', '2026-08-05', '2026-12-31']) {
+      expect(isoDeData(parseDataLocal(iso))).toBe(iso);
+    }
   });
 });
 

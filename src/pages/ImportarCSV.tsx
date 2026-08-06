@@ -12,6 +12,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { PageHeader } from '@/components/PageHeader';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { soDigitos } from '@/utils/format';
 import { cn } from '@/lib/utils';
 
@@ -613,11 +614,7 @@ export default function ImportarCSV() {
   };
 
   if (roleLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <CarregandoConteudo />;
   }
   if (!isAdmin) {
     return (

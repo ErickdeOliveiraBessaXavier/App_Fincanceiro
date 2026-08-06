@@ -218,8 +218,12 @@ export const createClientesFilterFunctions = () => ({
 });
 
 export const createAcordosFilterFunctions = () => ({
-  search: (item: any, value: string) => 
-    commonFilterFunctions.search(item, value, ['cliente.nome', 'cliente.cpf_cnpj', 'observacoes']),
+  // O '#' do código exibido (`#A1B2C3`) é enfeite: some antes da busca, senão
+  // digitar o código como aparece na tela nunca casaria com o id cru.
+  search: (item: any, value: string) =>
+    commonFilterFunctions.search(item, value.replace('#', ''), [
+      'cliente.nome', 'cliente.cpf_cnpj', 'observacoes', 'id', 'titulo.numero_documento',
+    ]),
   status: (item: any, value: string) => 
     commonFilterFunctions.exactMatch(item, value, 'status'),
   data_acordo_de: (item: any, value: string) => 

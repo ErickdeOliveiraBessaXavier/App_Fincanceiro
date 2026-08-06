@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Plus, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -159,11 +160,7 @@ export default function Campanhas() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <CarregandoConteudo />;
   }
 
   return (

@@ -38,6 +38,19 @@ export function parseDataLocal(value: string): Date {
   return new Date(value);
 }
 
+/**
+ * `Date` -> 'YYYY-MM-DD' pelos componentes LOCAIS (formato do `<input type="date">`).
+ *
+ * Inverso de `parseDataLocal`. Use no lugar de `toISOString().split('T')[0]`:
+ * o ISO converte para UTC, então à noite no Brasil (UTC-3) ele devolve o dia
+ * SEGUINTE — era assim que a data sugerida saía como "amanhã".
+ */
+export function isoDeData(data: Date): string {
+  const mes = String(data.getMonth() + 1).padStart(2, '0');
+  const dia = String(data.getDate()).padStart(2, '0');
+  return `${data.getFullYear()}-${mes}-${dia}`;
+}
+
 export function formatData(value?: string | null): string {
   if (!value) return '';
   const dataPura = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);

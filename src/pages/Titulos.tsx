@@ -1,4 +1,5 @@
 import { PageHeader } from '@/components/PageHeader';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -33,6 +34,7 @@ import { createClienteAgrupadoFilterFunctions } from '@/utils/filterFunctions';
 import { useCobradores } from '@/lib/queries/cobradores';
 import { useVendedores } from '@/lib/queries/vendedores';
 import { formatCpfCnpj, soDigitos } from '@/utils/format';
+import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import {
   Dialog,
   DialogContent,
@@ -941,7 +943,7 @@ export default function Titulos() {
   const [newTitulo, setNewTitulo] = useState({
     cliente_id: '',
     valor_original: 0,
-    vencimento_original: new Date().toISOString().split('T')[0],
+    vencimento_original: hojeIso(),
     descricao: '',
     numero_documento: '',
     numero_parcelas: 1,
@@ -1012,7 +1014,7 @@ export default function Titulos() {
       setNewTitulo({
         cliente_id: '',
         valor_original: 0,
-        vencimento_original: new Date().toISOString().split('T')[0],
+        vencimento_original: hojeIso(),
         descricao: '',
         numero_documento: '',
         numero_parcelas: 1,
@@ -1257,11 +1259,7 @@ export default function Titulos() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <CarregandoConteudo />;
   }
 
   return (

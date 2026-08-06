@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/PageHeader';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Search, Edit, Shield, User, UserCog, Clock, Check, X, Trash2, Store } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -309,11 +310,7 @@ export default function Usuarios() {
   );
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
+    return <CarregandoConteudo />;
   }
 
   const count = (r: AppRole) => usuarios.filter(u => u.role === r).length;

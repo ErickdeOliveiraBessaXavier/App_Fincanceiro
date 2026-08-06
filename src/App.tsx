@@ -8,6 +8,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { AdminRoute } from "@/components/AdminRoute";
 import { BlockVendedorRoute } from "@/components/BlockVendedorRoute";
+import { TelaCarregamento, CarregandoConteudo } from "@/components/TelaCarregamento";
 import { useUserRole } from "@/hooks/useUserRole";
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard"));
@@ -35,13 +36,9 @@ const queryClient = new QueryClient();
 // (read-only, escopo só da carteira), então ele cai direto nos clientes.
 function HomeRoute() {
   const { isVendedor, isLoading } = useUserRole();
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  // Fica dentro do Layout: o shell já está na tela, então o indicador é o de
+  // conteúdo — nunca o de tela cheia, que apagaria a sidebar recém-desenhada.
+  if (isLoading) return <CarregandoConteudo />;
   if (isVendedor) return <Navigate to="/clientes" replace />;
   return <Dashboard />;
 }
@@ -53,7 +50,10 @@ const App = () => (
       <Sonner />
       <AuthProvider>
         <BrowserRouter future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
-          <React.Suspense fallback={<div>Loading...</div>}>
+          {/* Rede de segurança para as rotas sem Layout (login, convite,
+              plataforma). As rotas com Layout suspendem no boundary interno
+              dele, preservando o shell. */}
+          <React.Suspense fallback={<TelaCarregamento />}>
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/convite" element={<Convite />} />

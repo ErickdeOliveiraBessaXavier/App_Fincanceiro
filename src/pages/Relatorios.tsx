@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { PageHeader } from '@/components/PageHeader';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Calendar, Download, TrendingUp, TrendingDown, DollarSign, FileText, FileSpreadsheet, FileIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
 import { getStatusLabel } from '@/constants/statusConfig';
 import { formatCpfCnpj, formatData } from '@/utils/format';
+import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 
 type ExportOptions = Parameters<typeof exportToCSV>[0];
 
@@ -207,7 +209,7 @@ export default function Relatorios() {
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
     if (!reportData) return;
 
-    const today = new Date().toISOString().split('T')[0];
+    const today = hojeIso();
     const filename = `relatorio_${reportType}_${today}`;
     const subtitle = dateRange
       ? `Período: ${formatDate(dateRange.from.toISOString())} a ${formatDate(dateRange.to.toISOString())}`
@@ -295,11 +297,7 @@ export default function Relatorios() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <CarregandoConteudo />;
   }
 
   return (

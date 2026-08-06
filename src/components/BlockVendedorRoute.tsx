@@ -1,6 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useToast } from '@/hooks/use-toast';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { useEffect } from 'react';
 
 // Vendedor é read-only e restrito à própria carteira: bloqueia o acesso direto
@@ -19,13 +20,9 @@ export function BlockVendedorRoute({ children }: { children: React.ReactNode }) 
     }
   }, [isLoading, isVendedor, toast]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
+  // Mesmo indicador do restante da área de conteúdo — o gate de papel é só mais
+  // uma etapa da mesma espera, não um estado visualmente diferente.
+  if (isLoading) return <CarregandoConteudo />;
 
   if (isVendedor) return <Navigate to="/clientes" replace />;
   return <>{children}</>;

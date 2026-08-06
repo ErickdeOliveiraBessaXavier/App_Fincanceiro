@@ -25,8 +25,10 @@ import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
 import { RegistrarResultadoModal } from '@/components/telecobranca/RegistrarResultadoModal';
 import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { formatCpfCnpj, formatTelefone } from '@/utils/format';
 import { resumoNegociacao } from '@/domain/acordos/negociacao';
+import { codigoAcordo } from '@/domain/acordos/identificacao';
 import { cn } from '@/lib/utils';
 
 interface Cliente {
@@ -99,13 +101,7 @@ export default function Telecobranca() {
       .toUpperCase();
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
-  }
+  if (loading) return <CarregandoConteudo />;
 
   if (!cliente) {
     return (
@@ -342,7 +338,7 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <Handshake className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">Acordo #{acordo.id.slice(-6)}</span>
+              <span className="font-medium">Acordo <span className="font-mono">{codigoAcordo(acordo.id)}</span></span>
             </div>
             <StatusBadge domain="acordo" status={acordo.status} />
           </div>
