@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
-import { Plus, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone } from 'lucide-react';
+import { Plus, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ResumoNumeros } from '@/components/ResumoNumeros';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
@@ -13,12 +14,14 @@ import CampanhaForm from '@/components/campanhas/CampanhaForm';
 import CampanhaDetails from '@/components/campanhas/CampanhaDetails';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
-import { usePagination } from '@/hooks/usePagination';
+import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { campanhasFilterConfig } from '@/constants/filterConfigs';
 import { campanhasPresets } from '@/constants/filterPresets';
 import { createCampanhasFilterFunctions } from '@/utils/filterFunctions';
 import { useUserRole } from '@/hooks/useUserRole';
+import { IntegracaoWhatsApp } from '@/components/campanhas/IntegracaoWhatsApp';
+import { useIntegracaoWhatsApp, useDispararCampanha } from '@/lib/queries/integracoes';
 
 interface Campanha {
   id: string;
@@ -31,11 +34,38 @@ interface Campanha {
   updated_at: string;
 }
 
+/**
+ * Disparo de campanha + situação do canal.
+ *
+ * Fora do componente da página para ele não acumular a lógica de envio junto da
+ * de listagem — o limite de complexidade do projeto é por função.
+ */
+function useDisparoCampanha() {
+  const { data: integracao } = useIntegracaoWhatsApp();
+  const mutation = useDispararCampanha();
+
+  // Sem canal conectado o disparo nem aparece habilitado: o botão explica o
+  // que falta em vez de falhar depois do clique.
+  const canalPronto = !!integracao?.ativo && !!integracao.instance_id && integracao.token_configurado;
+
+  const disparar = async (campanhaId: string) => {
+    try {
+      const r = await mutation.mutateAsync(campanhaId);
+      toast.success(`Campanha disparada: ${r.enviados} enviados, ${r.falhas} falhas.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Não foi possível disparar a campanha');
+    }
+  };
+
+  return { canalPronto, disparando: mutation.isPending, disparar };
+}
+
 export default function Campanhas() {
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [loading, setLoading] = useState(true);
   // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
-  const { isOperador } = useUserRole();
+  const { isOperador, isAdmin } = useUserRole();
+  const { canalPronto, disparando, disparar } = useDisparoCampanha();
   
   // Modais
   const [formOpen, setFormOpen] = useState(false);
@@ -93,7 +123,7 @@ export default function Campanhas() {
     totalCount
   } = useGlobalFilter(campanhas, filterFunctions);
 
-  const pagination = usePagination(filteredCampanhas, 25, JSON.stringify(filters));
+  const pagination = usePagination(filteredCampanhas, 25, JSON.stringify(filters), PARAM_PAGINA);
 
   const toggleCampanhaStatus = async (id: string, currentStatus: string) => {
     try {
@@ -177,53 +207,16 @@ export default function Campanhas() {
         )}
       </PageHeader>
 
-      <div className="grid gap-6 grid-cols-2 md:grid-cols-4">
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</CardTitle>
-            <MessageSquare className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black tracking-tighter">{campanhas.length}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ativas</CardTitle>
-            <Play className="h-4 w-4 text-success group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-2xl font-black tracking-tighter text-success">
-              {campanhas.filter(c => c.status === 'ativa').length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-warning/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Pausadas</CardTitle>
-            <Pause className="h-4 w-4 text-warning group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-2xl font-black tracking-tighter text-warning">
-              {campanhas.filter(c => c.status === 'pausada').length}
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Rascunhos</CardTitle>
-            <Edit className="h-4 w-4 text-blue-500 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-2xl font-black tracking-tighter text-blue-500">
-              {campanhas.filter(c => c.status === 'rascunho').length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <ResumoNumeros
+        itens={[
+          { rotulo: 'Total', valor: campanhas.length, icone: MessageSquare },
+          { rotulo: 'Ativas', valor: campanhas.filter(c => c.status === 'ativa').length, icone: Play, cor: 'text-success' },
+          { rotulo: 'Pausadas', valor: campanhas.filter(c => c.status === 'pausada').length, icone: Pause, cor: 'text-warning' },
+          { rotulo: 'Rascunhos', valor: campanhas.filter(c => c.status === 'rascunho').length, icone: Edit, cor: 'text-blue-500' },
+        ]}
+      />
+
+      {isAdmin && <IntegracaoWhatsApp />}
 
       <Card className="border-none shadow-card rounded-2xl overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
@@ -299,6 +292,18 @@ export default function Campanhas() {
                       <TableCell className="hidden sm:table-cell text-xs font-medium text-muted-foreground">{formatDate(campanha.created_at)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-1">
+                          {isOperador && campanha.canal === 'whatsapp' && campanha.status === 'ativa' && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => disparar(campanha.id)}
+                              disabled={!canalPronto || disparando}
+                              title={canalPronto ? 'Disparar campanha' : 'Conecte o canal de WhatsApp para disparar'}
+                              className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"
+                            >
+                              <Send className="h-4 w-4" />
+                            </Button>
+                          )}
                           {isOperador && (
                             <Button
                               variant="ghost"
