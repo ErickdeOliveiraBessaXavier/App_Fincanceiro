@@ -177,7 +177,12 @@ function NovoAdminDialog({ open, onOpenChange, novoUser, setNovoUser, creating, 
   );
 }
 
-export default function Usuarios() {
+interface UsuariosProps {
+  /** Renderizado como aba dentro da tela de Equipe: sem cabeçalho próprio. */
+  embutido?: boolean;
+}
+
+export default function Usuarios({ embutido = false }: UsuariosProps) {
   const [usuarios, setUsuarios] = useState<Usuario[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -316,19 +321,29 @@ export default function Usuarios() {
   const count = (r: AppRole) => usuarios.filter(u => u.role === r).length;
 
   return (
-    <div className="space-y-10 animate-fade-in pb-10">
-      <PageHeader
-        title="Usuários"
-        description="Gestão de acessos, papéis e autorizações da plataforma."
-      >
-        {isAdmin && (
-          <Button 
-            onClick={() => setCreateOpen(true)}
-          >
-            <Plus className="mr-2 h-4 w-4" /> Novo Administrador
-          </Button>
-        )}
-      </PageHeader>
+    <div className={embutido ? 'space-y-6' : 'space-y-10 animate-fade-in pb-10'}>
+      {embutido ? (
+        // Dentro da tela de Equipe o título é da aba; repetir o cabeçalho da
+        // página empilharia dois títulos.
+        isAdmin && (
+          <div className="flex justify-end">
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Novo Administrador
+            </Button>
+          </div>
+        )
+      ) : (
+        <PageHeader
+          title="Usuários"
+          description="Gestão de acessos, papéis e autorizações da plataforma."
+        >
+          {isAdmin && (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" /> Novo Administrador
+            </Button>
+          )}
+        </PageHeader>
+      )}
 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
         <Card className="border-none shadow-card rounded-2xl overflow-hidden group">

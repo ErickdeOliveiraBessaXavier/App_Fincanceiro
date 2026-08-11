@@ -1,8 +1,29 @@
 import { hojeNegocio, addDiasCorridos } from '@/domain/telecobranca/statusCobranca';
+import { soDigitos } from '@/utils/format';
 
 // Utility function to get nested values from an object
 export const getNestedValue = (obj: any, path: string): any => {
   return path.split('.').reduce((acc, part) => acc?.[part], obj);
+};
+
+/**
+ * Casamento de texto tolerante à máscara.
+ *
+ * As telas exibem CPF/CNPJ e telefone formatados (`123.456.789-00`) mas o banco
+ * guarda só dígitos. Sem esta normalização, copiar o número da própria tela e
+ * colar na busca não encontrava nada. Quando o termo tem dígitos, comparamos
+ * também dígito a dígito — para nome/e-mail `soDigitos` devolve '' e o caminho
+ * extra é ignorado.
+ */
+export const casaTexto = (campo: unknown, busca: string): boolean => {
+  if (campo === null || campo === undefined) return false;
+  const alvo = String(campo).toLowerCase();
+  const termo = busca.toLowerCase().trim();
+  if (alvo.includes(termo)) return true;
+
+  const termoDigitos = soDigitos(termo);
+  if (!termoDigitos) return false;
+  return soDigitos(alvo).includes(termoDigitos);
 };
 
 // ===== Filtro "próximo retorno" (agenda de cobrança) — data-driven =====
@@ -41,17 +62,12 @@ export const filtrarPorRetorno = (
 export const commonFilterFunctions = {
   // Search across multiple fields
   search: <T extends Record<string, any>>(
-    item: T, 
-    value: string, 
+    item: T,
+    value: string,
     fields: string[]
   ): boolean => {
     if (!value || value.trim() === '') return true;
-    
-    const searchLower = value.toLowerCase().trim();
-    return fields.some(field => {
-      const fieldValue = getNestedValue(item, field);
-      return fieldValue?.toString().toLowerCase().includes(searchLower);
-    });
+    return fields.some(field => casaTexto(getNestedValue(item, field), value));
   },
 
   // Exact match filter (for status, type, etc.)
@@ -226,6 +242,8 @@ export const createAcordosFilterFunctions = () => ({
     ]),
   status: (item: any, value: string) => 
     commonFilterFunctions.exactMatch(item, value, 'status'),
+  // Só 'incluir' libera os cancelados; qualquer outro valor (ou nenhum) oculta.
+  cancelados: (item: any, value: string) => value === 'incluir' || item.status !== 'cancelado',
   data_acordo_de: (item: any, value: string) => 
     commonFilterFunctions.dateAfter(item, value, 'data_acordo'),
   data_acordo_ate: (item: any, value: string) => 
@@ -279,22 +297,16 @@ export const createAtribuicaoFilterFunctions = () => ({
 export const createClienteAgrupadoFilterFunctions = () => ({
   search: (item: any, value: string) => {
     if (!value || value.trim() === '') return true;
-    
-    const searchLower = value.toLowerCase().trim();
-    
-    // Busca no cliente
-    if (item.nome?.toLowerCase().includes(searchLower)) return true;
-    if (item.cpf_cnpj?.toLowerCase().includes(searchLower)) return true;
-    
+
+    // Busca no cliente (casaTexto cobre CPF/CNPJ digitado com máscara)
+    if (casaTexto(item.nome, value) || casaTexto(item.cpf_cnpj, value)) return true;
+
     // Busca nos títulos (numero_documento, descricao, id)
-    if (item.titulos?.some((t: any) => {
-      if (t.numero_documento?.toLowerCase().includes(searchLower)) return true;
-      if (t.descricao?.toLowerCase().includes(searchLower)) return true;
-      if (t.id?.toLowerCase().includes(searchLower)) return true;
-      return false;
-    })) return true;
-    
-    return false;
+    return item.titulos?.some((t: any) =>
+      casaTexto(t.numero_documento, value)
+      || casaTexto(t.descricao, value)
+      || casaTexto(t.id, value)
+    ) ?? false;
   },
   status: (item: any, value: string) => {
     if (!value || value === '') return true;

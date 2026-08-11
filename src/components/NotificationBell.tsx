@@ -1,5 +1,6 @@
 import { useState, useEffect, memo } from 'react';
-import { Bell, X } from 'lucide-react';
+import { Bell } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,20 @@ interface Notificacao {
   prioridade: string;
   lida: boolean;
   created_at: string;
+  metadata: unknown;
+}
+
+/**
+ * Para onde a notificação leva, se souber.
+ *
+ * Clicar só marcava como lida: a notificação avisava que algo aconteceu e não
+ * dava caminho para o registro. Quando o `metadata` traz `cliente_id`, ela vira
+ * um atalho para a ficha; sem isso, segue apenas informativa.
+ */
+function destinoDaNotificacao(metadata: unknown): string | null {
+  if (!metadata || typeof metadata !== 'object') return null;
+  const clienteId = (metadata as { cliente_id?: unknown }).cliente_id;
+  return typeof clienteId === 'string' && clienteId ? `/clientes/${clienteId}` : null;
 }
 
 export const NotificationBell = memo(() => {
@@ -23,6 +38,7 @@ export const NotificationBell = memo(() => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
@@ -108,6 +124,14 @@ export const NotificationBell = memo(() => {
     }
   };
 
+  const abrirNotificacao = (notificacao: Notificacao) => {
+    if (!notificacao.lida) markAsRead(notificacao.id);
+    const destino = destinoDaNotificacao(notificacao.metadata);
+    if (!destino) return;
+    setOpen(false);
+    navigate(destino);
+  };
+
   const getPriorityColor = (prioridade: string) => {
     switch (prioridade) {
       case 'urgente': return 'bg-red-100 text-red-800 border-red-200';
@@ -187,7 +211,7 @@ export const NotificationBell = memo(() => {
                       className={`p-4 hover:bg-muted/50 cursor-pointer ${
                         !notificacao.lida ? 'bg-muted/30' : ''
                       }`}
-                      onClick={() => !notificacao.lida && markAsRead(notificacao.id)}
+                      onClick={() => abrirNotificacao(notificacao)}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1 min-w-0">

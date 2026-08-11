@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +19,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { CalendarIcon, Clock } from 'lucide-react';
+import { CalendarIcon, Clock, Info } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { formatData } from '@/utils/format';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
@@ -32,6 +34,36 @@ interface AgendamentoModalProps {
   tituloId?: string;
   acordoId?: string;
   onSuccess: () => void;
+}
+
+/**
+ * Retorno pendente que o cliente já tem, se houver.
+ *
+ * "Registrar contato" também cria agendamento (o próximo contato), então sem
+ * este aviso o mesmo cliente terminava com dois retornos em datas diferentes —
+ * e as listagens mostram só o mais próximo, escondendo o outro.
+ */
+function useRetornoPendente(clienteId: string, ativo: boolean) {
+  const [retorno, setRetorno] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ativo) return;
+    let vivo = true;
+    (async () => {
+      const { data } = await supabase
+        .from('agendamentos')
+        .select('data_agendamento')
+        .eq('cliente_id', clienteId)
+        .eq('status', 'pendente')
+        .is('deleted_at', null)
+        .order('data_agendamento', { ascending: true })
+        .limit(1);
+      if (vivo) setRetorno(data?.[0]?.data_agendamento ?? null);
+    })();
+    return () => { vivo = false; };
+  }, [clienteId, ativo]);
+
+  return retorno;
 }
 
 export function AgendamentoModal({
@@ -51,6 +83,7 @@ export function AgendamentoModal({
   const { toast } = useToast();
   const { user, companyId } = useAuth();
   const { isOperador } = useUserRole();
+  const retornoPendente = useRetornoPendente(clienteId, isOpen);
 
   const resetForm = () => {
     setTipoEvento('agendamento');
@@ -114,6 +147,17 @@ export function AgendamentoModal({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
+          {retornoPendente && (
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription>
+                Este cliente já tem um retorno pendente para{' '}
+                <strong>{formatData(retornoPendente)}</strong>. Um novo agendamento não
+                substitui o anterior — os dois vão coexistir.
+              </AlertDescription>
+            </Alert>
+          )}
+
           <div className="space-y-2">
             <Label>Tipo de Evento</Label>
             <Select value={tipoEvento} onValueChange={setTipoEvento}>

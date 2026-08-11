@@ -183,13 +183,12 @@ export function listarItensVencidos(base: BaseMetricas, hoje: string = hojeIso()
 // ============== Próximos vencimentos ==============
 
 /**
- * O que vence nos próximos `dias`, das duas origens. Antes saía de
+ * TUDO que ainda vai vencer, das duas origens. Antes saía de
  * `vw_titulos_completos.proximo_vencimento`, então uma parcela de acordo a
  * vencer nunca aparecia — o título renegociado tem saldo zerado e some da lista.
  */
-export function listarProximosVencimentos(
+export function listarAVencer(
   base: BaseMetricas,
-  dias = 7,
   hoje: string = hojeIso(),
 ): ProximoVencimento[] {
   const porTitulo = new Map(base.titulos.map((t) => [t.id, t]));
@@ -199,6 +198,7 @@ export function listarProximosVencimentos(
     .filter((p) => p.status === 'a_vencer')
     .map((p) => ({
       id: p.id,
+      clienteId: porTitulo.get(p.titulo_id)?.cliente_id ?? null,
       clienteNome: porTitulo.get(p.titulo_id)?.cliente_nome || 'Desconhecido',
       valor: Number(p.saldo_atual),
       vencimento: p.vencimento,
@@ -209,6 +209,7 @@ export function listarProximosVencimentos(
     .filter((p) => p.status !== 'paga' && p.data_vencimento >= hoje)
     .map((p) => ({
       id: p.id,
+      clienteId: porAcordo.get(p.acordo_id)?.cliente_id ?? null,
       clienteNome: porAcordo.get(p.acordo_id)?.cliente_nome || 'Desconhecido',
       valor: Number(p.valor_total),
       vencimento: p.data_vencimento,
@@ -217,8 +218,68 @@ export function listarProximosVencimentos(
 
   return [...deTitulos, ...deAcordos]
     .map((item) => ({ ...item, diasRestantes: -diasDeAtraso(item.vencimento, hoje) }))
-    .filter((item) => item.diasRestantes >= 0 && item.diasRestantes <= dias)
+    .filter((item) => item.diasRestantes >= 0)
     .sort((a, b) => a.diasRestantes - b.diasRestantes);
+}
+
+/** Recorte de `listarAVencer` para a janela do Dashboard. */
+export function listarProximosVencimentos(
+  base: BaseMetricas,
+  dias = 7,
+  hoje: string = hojeIso(),
+): ProximoVencimento[] {
+  return listarAVencer(base, hoje).filter((item) => item.diasRestantes <= dias);
+}
+
+// ============== Situação financeira de UM cliente ==============
+
+export interface SituacaoFinanceiraCliente {
+  /** Dívida viva: vencido + a vencer, somando título e acordo. */
+  emAberto: number;
+  vencido: number;
+  aVencer: number;
+  /** Quantidade de parcelas em atraso (título + acordo). */
+  parcelasVencidas: number;
+  /** Maior atraso em dias entre as parcelas vencidas; 0 se não houver. */
+  maiorAtraso: number;
+}
+
+/**
+ * A dívida de um cliente pela MESMA regra do Dashboard.
+ *
+ * A ficha calculava isso em dois lugares independentes ("Dívida Total" no card e
+ * "Total em Aberto" na lista de títulos), nenhum dos dois enxergando parcela de
+ * acordo em atraso — um cliente com acordo quebrado aparecia devendo zero.
+ * Passe uma base já restrita ao cliente (useBaseMetricasCliente).
+ */
+export function situacaoFinanceiraCliente(
+  base: BaseMetricas,
+  clienteId: string,
+  hoje: string = hojeIso(),
+): SituacaoFinanceiraCliente {
+  const doCliente = <T extends { clienteId: string | null }>(itens: T[]) =>
+    itens.filter((i) => i.clienteId === clienteId);
+
+  const vencidos = doCliente(listarItensVencidos(base, hoje));
+  const aVencerItens = doCliente(listarAVencer(base, hoje));
+
+  const somar = (itens: Array<{ valor: number }>) =>
+    itens.reduce((total, i) => total + i.valor, 0);
+
+  const vencido = somar(vencidos);
+  const aVencer = somar(aVencerItens);
+  const maiorAtraso = vencidos.reduce(
+    (maior, i) => Math.max(maior, diasDeAtraso(i.vencimento, hoje)),
+    0,
+  );
+
+  return {
+    emAberto: vencido + aVencer,
+    vencido,
+    aVencer,
+    parcelasVencidas: vencidos.length,
+    maiorAtraso,
+  };
 }
 
 // ============== Aging ==============

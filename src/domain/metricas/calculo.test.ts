@@ -10,6 +10,7 @@ import {
   recortarPorVencimento,
   restringirAoUniverso,
   serieRecuperacaoMensal,
+  situacaoFinanceiraCliente,
 } from './calculo';
 import type { BaseMetricas, TituloMetrica } from './tipos';
 
@@ -244,5 +245,58 @@ describe('prepararBase', () => {
     };
     const r = prepararBase(base, { de: '2026-08-01', ate: '2026-08-31' });
     expect(r.parcelas.map((p) => p.id)).toEqual(['p1']);
+  });
+});
+
+describe('situacaoFinanceiraCliente', () => {
+  // Base com DOIS clientes: um com título vencido, outro com acordo em atraso.
+  function baseDoisClientes(): BaseMetricas {
+    return {
+      ...baseVazia(),
+      titulos: [
+        titulo({ id: 't1', cliente_id: 'cli-1', cliente_nome: 'Cliente 1', status: 'vencido' }),
+        // Renegociado: a novação zerou o saldo, a dívida vive no acordo.
+        titulo({ id: 't2', cliente_id: 'cli-2', cliente_nome: 'Cliente 2', status: 'renegociado', acordo_status: 'quebrado', saldo_devedor: 0 }),
+      ],
+      parcelas: [
+        { id: 'p1', titulo_id: 't1', vencimento: '2026-07-07', valor_nominal: 300, saldo_atual: 300, status: 'vencido' },
+        { id: 'p2', titulo_id: 't1', vencimento: '2026-09-07', valor_nominal: 200, saldo_atual: 200, status: 'a_vencer' },
+      ],
+      acordos: [
+        { id: 'a1', status: 'quebrado', valor_acordo: 800, valor_original: 1000, data_acordo: '2026-05-01', created_at: '2026-05-01', cliente_id: 'cli-2', cliente_nome: 'Cliente 2' },
+      ],
+      parcelasAcordo: [
+        { id: 'pa1', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-06-06', status: 'pendente' },
+        { id: 'pa2', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-10-06', status: 'pendente' },
+      ],
+    };
+  }
+
+  it('soma vencido e a vencer só do cliente pedido', () => {
+    const situacao = situacaoFinanceiraCliente(prepararBase(baseDoisClientes()), 'cli-1', HOJE);
+    expect(situacao.vencido).toBe(300);
+    expect(situacao.aVencer).toBe(200);
+    expect(situacao.emAberto).toBe(500);
+    expect(situacao.parcelasVencidas).toBe(1);
+  });
+
+  it('enxerga a dívida que vive no acordo, não no título', () => {
+    // Era o furo da ficha: o título renegociado tem saldo zero, então somar as
+    // parcelas do título dava R$ 0 para um cliente que deve de verdade.
+    const situacao = situacaoFinanceiraCliente(prepararBase(baseDoisClientes()), 'cli-2', HOJE);
+    expect(situacao.vencido).toBe(400);
+    expect(situacao.aVencer).toBe(400);
+    expect(situacao.emAberto).toBe(800);
+    expect(situacao.parcelasVencidas).toBe(1);
+  });
+
+  it('reporta o maior atraso entre as parcelas vencidas', () => {
+    const situacao = situacaoFinanceiraCliente(prepararBase(baseDoisClientes()), 'cli-1', HOJE);
+    expect(situacao.maiorAtraso).toBe(diasDeAtraso('2026-07-07', HOJE));
+  });
+
+  it('cliente sem dívida devolve zeros', () => {
+    const situacao = situacaoFinanceiraCliente(prepararBase(baseDoisClientes()), 'cli-999', HOJE);
+    expect(situacao).toEqual({ emAberto: 0, vencido: 0, aVencer: 0, parcelasVencidas: 0, maiorAtraso: 0 });
   });
 });

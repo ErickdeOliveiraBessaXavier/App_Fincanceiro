@@ -1,10 +1,11 @@
-import { ReactNode, Suspense, memo } from 'react';
+import { type ReactNode, Suspense, memo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCurrentCompany } from '@/hooks/useCurrentCompany';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { AppSidebar } from '@/components/AppSidebar';
 import { NotificationBell } from '@/components/NotificationBell';
+import { UsuarioMenu } from '@/components/UsuarioMenu';
 import { TelaCarregamento, CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Button } from '@/components/ui/button';
 import { Clock, Ban } from 'lucide-react';
@@ -53,31 +54,57 @@ const EmpresaInativa = ({ status, nome, onSignOut }: { status: string; nome: str
   );
 };
 
+interface ContextoAcesso {
+  loading: boolean;
+  user: unknown;
+  isSuperAdmin: boolean;
+  companyId: string | null;
+  role: string | null;
+  companyLoading: boolean;
+  company: { status: string; nome: string } | null;
+  signOut: () => void;
+}
+
+/**
+ * Portões de entrada no shell, em ordem. Devolve o que renderizar no lugar do
+ * app, ou null quando o acesso está liberado.
+ *
+ * Vive fora do componente para o Layout ficar com uma decisão só — a cadeia de
+ * sete `if` somada ao JSX estourava o limite de complexidade do projeto.
+ */
+function bloqueioDeAcesso(ctx: ContextoAcesso): ReactNode | null {
+  // Mesma tela do #boot-loader do index.html: a passagem do HTML estático para
+  // o React acontece sem troca visível de indicador.
+  if (ctx.loading) return <TelaCarregamento />;
+  if (!ctx.user) return <Navigate to="/auth" replace />;
+  // super_admin tem área própria (administra a plataforma, não opera dentro de uma empresa).
+  if (ctx.isSuperAdmin) return <Navigate to="/plataforma" replace />;
+  // Usuário sem empresa precisa configurá-la.
+  if (!ctx.companyId) return <Navigate to="/setup-empresa" replace />;
+
+  // Gate: cadastro por convite que ainda não foi autorizado pelo admin.
+  // Tem empresa (vinculada no convite) mas nenhum papel atribuído => sem acesso.
+  if (!ctx.role) return <AguardandoAutorizacao onSignOut={ctx.signOut} />;
+
+  // Aguarda os dados da empresa para decidir o gate de acesso. Continua sendo
+  // a mesma tela da etapa anterior — para o usuário, uma espera só.
+  if (ctx.companyLoading) return <TelaCarregamento />;
+
+  // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) para acessar.
+  if (ctx.company && ctx.company.status !== 'ativa') {
+    return <EmpresaInativa status={ctx.company.status} nome={ctx.company.nome} onSignOut={ctx.signOut} />;
+  }
+  return null;
+}
+
 export const Layout = memo(({ children }: LayoutProps) => {
   const { user, loading, companyId, role, isSuperAdmin, signOut } = useAuth();
   const { company, isLoading: companyLoading } = useCurrentCompany();
 
-  // Mesma tela do #boot-loader do index.html: a passagem do HTML estático para
-  // o React acontece sem troca visível de indicador.
-  if (loading) return <TelaCarregamento />;
-  if (!user) return <Navigate to="/auth" replace />;
-  // super_admin tem área própria (administra a plataforma, não opera dentro de uma empresa).
-  if (isSuperAdmin) return <Navigate to="/plataforma" replace />;
-  // Usuário sem empresa precisa configurá-la.
-  if (!companyId) return <Navigate to="/setup-empresa" replace />;
-
-  // Gate: cadastro por convite que ainda não foi autorizado pelo admin.
-  // Tem empresa (vinculada no convite) mas nenhum papel atribuído => sem acesso.
-  if (!role) return <AguardandoAutorizacao onSignOut={signOut} />;
-
-  // Aguarda os dados da empresa para decidir o gate de acesso. Continua sendo
-  // a mesma tela da etapa anterior — para o usuário, uma espera só.
-  if (companyLoading) return <TelaCarregamento />;
-
-  // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) para acessar.
-  if (company && company.status !== 'ativa') {
-    return <EmpresaInativa status={company.status} nome={company.nome} onSignOut={signOut} />;
-  }
+  const bloqueio = bloqueioDeAcesso({
+    loading, user, isSuperAdmin, companyId, role, companyLoading, company, signOut,
+  });
+  if (bloqueio) return <>{bloqueio}</>;
 
   return (
     <SidebarProvider>
@@ -87,14 +114,20 @@ export const Layout = memo(({ children }: LayoutProps) => {
         {/* Main content area with inset effect */}
         <div className="flex-1 flex flex-col sm:m-3 sm:ml-0 sm:rounded-3xl bg-background overflow-hidden animate-scale-in">
           <header className="shrink-0 h-16 flex items-center justify-between bg-card/80 backdrop-blur-md px-4 sm:px-6 border-b border-border/50">
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-4">
               <SidebarTrigger className="h-9 w-9 rounded-xl hover:bg-muted" />
-              <div className="hidden sm:block">
-                <h1 className="text-lg font-semibold text-foreground">Sistema de Cobrança</h1>
+              {/* Num produto multi-tenant o cabeçalho trazia um título fixo: o
+                  operador não via em qual empresa estava lançando. */}
+              <div className="hidden min-w-0 sm:block">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Empresa</p>
+                <h1 className="truncate text-base font-semibold leading-tight text-foreground">
+                  {company?.nome ?? '—'}
+                </h1>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1 sm:gap-3">
               <NotificationBell />
+              <UsuarioMenu />
             </div>
           </header>
           

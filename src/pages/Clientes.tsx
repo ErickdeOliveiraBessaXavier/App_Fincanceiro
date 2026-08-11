@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, type ChangeEvent } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Eye, Edit, Phone, Mail, FileText, User, Trash2, MoreHorizontal, CheckCircle, AlertTriangle } from 'lucide-react';
 import {
   useClientes,
@@ -21,9 +21,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ResumoNumeros } from '@/components/ResumoNumeros';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
-import { usePagination } from '@/hooks/usePagination';
+import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { clientesFilterConfig } from '@/constants/filterConfigs';
 import { clientesPresets } from '@/constants/filterPresets';
@@ -109,14 +110,12 @@ function RetornoCell({ cliente }: { cliente: ClienteRow }) {
 interface ClienteItemProps {
   cliente: ClienteRow;
   isOperador: boolean;
-  isVendedor: boolean;
-  onTelecobranca: (c: ClienteRow) => void;
   onDetails: (c: ClienteRow) => void;
   onEdit: (c: ClienteRow) => void;
   onDelete: (c: ClienteRow) => void;
 }
 
-function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
+function ClienteCard({ cliente, isOperador, onDetails, onEdit, onDelete }: ClienteItemProps) {
   return (
     <div className="p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all shadow-sm group">
       <div className="flex justify-between items-start mb-4">
@@ -162,10 +161,7 @@ function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetail
           <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
             <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-3 py-2">Ações</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {!isVendedor && (
-              <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onTelecobranca(cliente)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
+            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Abrir ficha</DropdownMenuItem>
             {isOperador && (
               <>
                 <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onEdit(cliente)}><Edit className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
@@ -180,7 +176,7 @@ function ClienteCard({ cliente, isOperador, isVendedor, onTelecobranca, onDetail
   );
 }
 
-function ClienteTableRow({ cliente, isOperador, isVendedor, onTelecobranca, onDetails, onEdit, onDelete }: ClienteItemProps) {
+function ClienteTableRow({ cliente, isOperador, onDetails, onEdit, onDelete }: ClienteItemProps) {
   return (
     <TableRow className="hover:bg-muted/10 transition-colors">
       {/* Cliente: nome + CPF/CNPJ empilhados (antes eram 2 colunas) */}
@@ -219,10 +215,7 @@ function ClienteTableRow({ cliente, isOperador, isVendedor, onTelecobranca, onDe
         <DropdownMenu>
           <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/5"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
-            {!isVendedor && (
-            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onTelecobranca(cliente)}><Phone className="h-4 w-4 mr-2" />Telecobrança</DropdownMenuItem>
-            )}
-            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Ver Detalhes</DropdownMenuItem>
+            <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Abrir ficha</DropdownMenuItem>
             {isOperador && (
             <>
             <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onEdit(cliente)}><Edit className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
@@ -279,6 +272,87 @@ function CarteiraFields({ cobradorId, vendedorId, cobradores, vendedores, onCobr
   );
 }
 
+type EditClienteForm = NovoClienteForm & { id: string; status: string };
+
+/**
+ * Campos do cliente — os MESMOS em cadastrar e editar.
+ *
+ * O formulário de criação não tinha CEP, cidade, estado e observações: quem
+ * cadastrava completo precisava salvar e reabrir em modo edição, dois modais
+ * para uma tarefa. Agora existe um conjunto de campos só.
+ */
+interface ClienteCamposProps<T extends NovoClienteForm> {
+  prefixo: string;
+  valores: T;
+  onChange: (valores: T) => void;
+  formErrors: FormErrors;
+  cobradores: CobradorRow[];
+  vendedores: VendedorRow[];
+}
+function ClienteCampos<T extends NovoClienteForm>({
+  prefixo, valores, onChange, formErrors, cobradores, vendedores,
+}: ClienteCamposProps<T>) {
+  const campo = (chave: keyof NovoClienteForm) => ({
+    id: `${prefixo}-${String(chave)}`,
+    value: valores[chave] as string,
+    onChange: (e: ChangeEvent<HTMLInputElement>) =>
+      onChange({ ...valores, [chave]: e.target.value }),
+  });
+
+  return (
+    <div className="grid gap-4 py-4">
+      <div className="grid grid-cols-1 gap-2">
+        <Label htmlFor={`${prefixo}-nome`}>Nome*</Label>
+        <Input {...campo('nome')} className={formErrors.nome ? 'border-red-500' : ''} />
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        <Label htmlFor={`${prefixo}-cpf_cnpj`}>CPF/CNPJ*</Label>
+        <Input {...campo('cpf_cnpj')} className={formErrors.cpf_cnpj ? 'border-red-500' : ''} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor={`${prefixo}-telefone`}>Telefone</Label>
+          <Input {...campo('telefone')} />
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor={`${prefixo}-email`}>Email</Label>
+          <Input type="email" {...campo('email')} />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        <Label htmlFor={`${prefixo}-endereco_completo`}>Endereço</Label>
+        <Input {...campo('endereco_completo')} />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor={`${prefixo}-cep`}>CEP</Label>
+          <Input {...campo('cep')} />
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor={`${prefixo}-cidade`}>Cidade</Label>
+          <Input {...campo('cidade')} />
+        </div>
+        <div className="grid grid-cols-1 gap-2">
+          <Label htmlFor={`${prefixo}-estado`}>Estado</Label>
+          <Input {...campo('estado')} />
+        </div>
+      </div>
+      <div className="grid grid-cols-1 gap-2">
+        <Label htmlFor={`${prefixo}-observacoes`}>Observações</Label>
+        <Input {...campo('observacoes')} />
+      </div>
+      <CarteiraFields
+        cobradorId={valores.cobrador_id}
+        vendedorId={valores.vendedor_id}
+        cobradores={cobradores}
+        vendedores={vendedores}
+        onCobrador={(id) => onChange({ ...valores, cobrador_id: id })}
+        onVendedor={(id) => onChange({ ...valores, vendedor_id: id })}
+      />
+    </div>
+  );
+}
+
 interface NovoClienteDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
@@ -293,31 +367,23 @@ function NovoClienteDialog({ open, onOpenChange, novoCliente, setNovoCliente, fo
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Novo Cliente</DialogTitle><DialogDescription>Preencha os dados do novo cliente.</DialogDescription></DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="name">Nome*</Label><Input id="name" value={novoCliente.nome} onChange={(e) => setNovoCliente({ ...novoCliente, nome: e.target.value })} className={formErrors.nome ? "border-red-500" : ""} /></div>
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="cpf_cnpj">CPF/CNPJ*</Label><Input id="cpf_cnpj" value={novoCliente.cpf_cnpj} onChange={(e) => setNovoCliente({ ...novoCliente, cpf_cnpj: e.target.value })} className={formErrors.cpf_cnpj ? "border-red-500" : ""} /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="telefone">Telefone</Label><Input id="telefone" value={novoCliente.telefone} onChange={(e) => setNovoCliente({ ...novoCliente, telefone: e.target.value })} /></div>
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="email">Email</Label><Input id="email" type="email" value={novoCliente.email} onChange={(e) => setNovoCliente({ ...novoCliente, email: e.target.value })} /></div>
-          </div>
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="endereco">Endereço</Label><Input id="endereco" value={novoCliente.endereco_completo} onChange={(e) => setNovoCliente({ ...novoCliente, endereco_completo: e.target.value })} /></div>
-          <CarteiraFields
-            cobradorId={novoCliente.cobrador_id}
-            vendedorId={novoCliente.vendedor_id}
-            cobradores={cobradores}
-            vendedores={vendedores}
-            onCobrador={(id) => setNovoCliente({ ...novoCliente, cobrador_id: id })}
-            onVendedor={(id) => setNovoCliente({ ...novoCliente, vendedor_id: id })}
-          />
-        </div>
+        <DialogHeader>
+          <DialogTitle>Novo Cliente</DialogTitle>
+          <DialogDescription>Preencha os dados do novo cliente.</DialogDescription>
+        </DialogHeader>
+        <ClienteCampos
+          prefixo="novo"
+          valores={novoCliente}
+          onChange={setNovoCliente}
+          formErrors={formErrors}
+          cobradores={cobradores}
+          vendedores={vendedores}
+        />
         <DialogFooter><Button onClick={onSave}>Salvar</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
-
-type EditClienteForm = NovoClienteForm & { id: string; status: string };
 
 interface EditClienteDialogProps {
   open: boolean;
@@ -333,30 +399,18 @@ function EditClienteDialog({ open, onOpenChange, editingCliente, setEditingClien
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[75vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Editar Cliente</DialogTitle><DialogDescription>Atualize os dados do cliente.</DialogDescription></DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-name">Nome*</Label><Input id="edit-name" value={editingCliente.nome} onChange={(e) => setEditingCliente({ ...editingCliente, nome: e.target.value })} className={formErrors.nome ? "border-red-500" : ""} /></div>
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-cpf_cnpj">CPF/CNPJ*</Label><Input id="edit-cpf_cnpj" value={editingCliente.cpf_cnpj} onChange={(e) => setEditingCliente({ ...editingCliente, cpf_cnpj: e.target.value })} className={formErrors.cpf_cnpj ? "border-red-500" : ""} /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-telefone">Telefone</Label><Input id="edit-telefone" value={editingCliente.telefone} onChange={(e) => setEditingCliente({ ...editingCliente, telefone: e.target.value })} /></div>
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-email">Email</Label><Input id="edit-email" type="email" value={editingCliente.email} onChange={(e) => setEditingCliente({ ...editingCliente, email: e.target.value })} /></div>
-          </div>
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-endereco">Endereço</Label><Input id="edit-endereco" value={editingCliente.endereco_completo} onChange={(e) => setEditingCliente({ ...editingCliente, endereco_completo: e.target.value })} /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-cep">CEP</Label><Input id="edit-cep" value={editingCliente.cep} onChange={(e) => setEditingCliente({ ...editingCliente, cep: e.target.value })} /></div>
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-cidade">Cidade</Label><Input id="edit-cidade" value={editingCliente.cidade} onChange={(e) => setEditingCliente({ ...editingCliente, cidade: e.target.value })} /></div>
-            <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-estado">Estado</Label><Input id="edit-estado" value={editingCliente.estado} onChange={(e) => setEditingCliente({ ...editingCliente, estado: e.target.value })} /></div>
-          </div>
-          <div className="grid grid-cols-1 gap-2"><Label htmlFor="edit-observacoes">Observações</Label><Input id="edit-observacoes" value={editingCliente.observacoes} onChange={(e) => setEditingCliente({ ...editingCliente, observacoes: e.target.value })} /></div>
-          <CarteiraFields
-            cobradorId={editingCliente.cobrador_id}
-            vendedorId={editingCliente.vendedor_id}
-            cobradores={cobradores}
-            vendedores={vendedores}
-            onCobrador={(id) => setEditingCliente({ ...editingCliente, cobrador_id: id })}
-            onVendedor={(id) => setEditingCliente({ ...editingCliente, vendedor_id: id })}
-          />
-        </div>
+        <DialogHeader>
+          <DialogTitle>Editar Cliente</DialogTitle>
+          <DialogDescription>Atualize os dados do cliente.</DialogDescription>
+        </DialogHeader>
+        <ClienteCampos
+          prefixo="edit"
+          valores={editingCliente}
+          onChange={setEditingCliente}
+          formErrors={formErrors}
+          cobradores={cobradores}
+          vendedores={vendedores}
+        />
         <DialogFooter><Button onClick={onSave}>Salvar</Button></DialogFooter>
       </DialogContent>
     </Dialog>
@@ -397,7 +451,7 @@ function DeleteClienteDialog({ open, onOpenChange, cliente, onCancel, onConfirm 
 
 export default function Clientes() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const location = useLocation();
   const { toast } = useToast();
 
   // === Data via React Query ===
@@ -513,8 +567,10 @@ export default function Clientes() {
     }
   };
 
-  const goTelecobranca = (c: ClienteRow) => navigate(`/telecobranca/${c.id}`);
-  const openDetails = (c: ClienteRow) => navigate(`/clientes/${c.id}`);
+  // Leva a origem junto: o breadcrumb da ficha volta para esta lista com os
+  // filtros e a página que estavam valendo, em vez de um /clientes limpo.
+  const openDetails = (c: ClienteRow) =>
+    navigate(`/clientes/${c.id}`, { state: { from: location.pathname + location.search } });
   const openDelete = (c: ClienteRow) => { setClienteToDelete(c); setIsDeleteModalOpen(true); };
   const openEdit = (c: ClienteRow) => {
     setEditingCliente({
@@ -547,13 +603,8 @@ export default function Clientes() {
     },
   ], [cobradores, vendedores]);
 
-  // Carteira pré-filtrada via ?vendedor=<id> (link vindo da tela de Vendedores).
-  const vendedorParam = searchParams.get('vendedor');
-  const initialFilters = useMemo(
-    () => (vendedorParam ? { vendedor: vendedorParam } : undefined),
-    [vendedorParam]
-  );
-
+  // ?vendedor=<id> (link vindo da tela de Vendedores) não precisa mais de
+  // tratamento especial: o useGlobalFilter lê da URL toda chave que é filtro.
   const {
     filteredData: filteredClientes,
     filters,
@@ -565,7 +616,7 @@ export default function Clientes() {
     activeFiltersCount,
     resultCount,
     totalCount
-  } = useGlobalFilter(clientes, filterFunctions, { initialFilters });
+  } = useGlobalFilter(clientes, filterFunctions);
 
   // Com filtro de retorno ativo, ordena por data do próximo retorno (mais
   // urgentes/atrasados primeiro) para o cobrador enxergar o dia organizado.
@@ -578,7 +629,7 @@ export default function Clientes() {
     });
   }, [filteredClientes, filters.retorno]);
 
-  const pagination = usePagination(orderedClientes, 25, JSON.stringify(filters));
+  const pagination = usePagination(orderedClientes, 25, JSON.stringify(filters), PARAM_PAGINA);
 
   const statusCounts = {
     total: clientes.length,
@@ -608,62 +659,15 @@ export default function Clientes() {
         )}
       </PageHeader>
 
-      <div className="grid gap-6 grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</CardTitle>
-            <User className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black tracking-tighter">{statusCounts.total}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Ativos</CardTitle>
-            <div className="h-6 w-6 rounded-lg bg-success/10 flex items-center justify-center text-success group-hover:scale-110 transition-transform">
-              <CheckCircle className="h-3 w-3" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-2xl font-black tracking-tighter text-success">{statusCounts.ativo}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-destructive/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Inadimplentes</CardTitle>
-            <div className="h-6 w-6 rounded-lg bg-destructive/10 flex items-center justify-center text-destructive group-hover:scale-110 transition-transform">
-              <AlertTriangle className="h-3 w-3" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-2xl font-black tracking-tighter text-destructive">{statusCounts.inadimplente}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Em Acordo</CardTitle>
-            <div className="h-6 w-6 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-              <FileText className="h-3 w-3" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-2xl font-black tracking-tighter text-blue-600">{statusCounts.em_acordo}</div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Quitados</CardTitle>
-            <CheckCircle className="h-4 w-4 text-gray-400 group-hover:scale-110 transition-transform" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-black tracking-tighter text-gray-500">{statusCounts.quitado}</div>
-          </CardContent>
-        </Card>
-      </div>
+      <ResumoNumeros
+        itens={[
+          { rotulo: 'Total', valor: statusCounts.total, icone: User },
+          { rotulo: 'Ativos', valor: statusCounts.ativo, icone: CheckCircle, cor: 'text-success' },
+          { rotulo: 'Inadimplentes', valor: statusCounts.inadimplente, icone: AlertTriangle, cor: 'text-destructive' },
+          { rotulo: 'Em acordo', valor: statusCounts.em_acordo, icone: FileText, cor: 'text-blue-600' },
+          { rotulo: 'Quitados', valor: statusCounts.quitado, icone: CheckCircle },
+        ]}
+      />
 
       <div className="space-y-10">
         <Card className="border-none shadow-card rounded-2xl overflow-hidden">
@@ -691,7 +695,6 @@ export default function Clientes() {
               presets={clientesPresets}
               onPresetSelect={(preset) => setFilters(preset.filters)}
               collapsible={true}
-              defaultOpen={!!initialFilters}
             />
 
             {/* Mobile Card View */}
@@ -701,8 +704,6 @@ export default function Clientes() {
                   key={cliente.id}
                   cliente={cliente}
                   isOperador={isOperador}
-                  isVendedor={isVendedor}
-                  onTelecobranca={goTelecobranca}
                   onDetails={openDetails}
                   onEdit={openEdit}
                   onDelete={openDelete}
@@ -729,8 +730,6 @@ export default function Clientes() {
                       key={cliente.id}
                       cliente={cliente}
                       isOperador={isOperador}
-                      isVendedor={isVendedor}
-                      onTelecobranca={goTelecobranca}
                       onDetails={openDetails}
                       onEdit={openEdit}
                       onDelete={openDelete}

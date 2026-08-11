@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
@@ -20,9 +20,8 @@ import { TitulosCliente } from '@/components/telecobranca/TitulosCliente';
 import { AcoesRapidas } from '@/components/telecobranca/AcoesRapidas';
 import { EventoTimeline } from '@/components/telecobranca/EventoTimeline';
 import { MetricasCliente } from '@/components/telecobranca/MetricasCliente';
-import { RegistroEventoModal } from '@/components/telecobranca/RegistroEventoModal';
 import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
-import { RegistrarResultadoModal } from '@/components/telecobranca/RegistrarResultadoModal';
+import { RegistrarContatoModal } from '@/components/telecobranca/RegistrarContatoModal';
 import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
@@ -47,15 +46,18 @@ interface Cliente {
 export default function Telecobranca() {
   const { clienteId } = useParams<{ clienteId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  // Quem abriu a ficha manda a URL de origem (com filtros e página). Sem ela —
+  // link direto, recarregar — o breadcrumb cai na lista limpa.
+  const voltarPara = (location.state as { from?: string } | null)?.from ?? '/clientes';
   // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
   const { isOperador } = useUserRole();
 
   const [cliente, setCliente] = useState<Cliente | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isEventoModalOpen, setIsEventoModalOpen] = useState(false);
+  const [isContatoModalOpen, setIsContatoModalOpen] = useState(false);
   const [isAgendamentoModalOpen, setIsAgendamentoModalOpen] = useState(false);
-  const [isResultadoModalOpen, setIsResultadoModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   useEffect(() => {
@@ -121,7 +123,7 @@ export default function Telecobranca() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/clientes">Clientes</Link>
+              <Link to={voltarPara}>Clientes</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -165,24 +167,27 @@ export default function Telecobranca() {
       {/* Cards de Métricas */}
       <MetricasCliente clienteId={cliente.id} refreshTrigger={refreshTrigger} />
 
+      {/* Sem ações de escrita (vendedor/leitura), a coluna lateral ficava com um
+          card só e metade do espaço nobre vazia ao lado das abas de cobrança.
+          Nesse caso os dados do cliente viram uma faixa de largura inteira. */}
+      {!isOperador && <ClienteResumo cliente={cliente} />}
+
       {/* Layout Principal */}
-      <div className="grid gap-6 lg:grid-cols-4">
-        {/* Coluna Esquerda - Sticky Sidebar */}
-        <div className="lg:sticky lg:top-6 space-y-4 lg:self-start order-2 lg:order-1">
-          {isOperador && (
+      <div className={cn('grid gap-6', isOperador && 'lg:grid-cols-4')}>
+        {isOperador && (
+          <div className="lg:sticky lg:top-6 space-y-4 lg:self-start order-2 lg:order-1">
             <AcoesRapidas
-              onRegistrarResultado={() => setIsResultadoModalOpen(true)}
-              onNovoEvento={() => setIsEventoModalOpen(true)}
+              onRegistrarContato={() => setIsContatoModalOpen(true)}
               onAgendarRetorno={() => setIsAgendamentoModalOpen(true)}
               telefone={cliente.telefone}
               email={cliente.email}
             />
-          )}
-          <ClienteResumo cliente={cliente} />
-        </div>
+            <ClienteResumo cliente={cliente} />
+          </div>
+        )}
 
         {/* Coluna Principal com Tabs */}
-        <div className="lg:col-span-3 order-1 lg:order-2">
+        <div className={cn(isOperador && 'lg:col-span-3 order-1 lg:order-2')}>
           <Tabs defaultValue="parcelas" className="w-full">
             <TabsList className="w-full justify-start mb-4 h-auto flex-wrap">
               <TabsTrigger value="parcelas" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
@@ -215,25 +220,17 @@ export default function Telecobranca() {
       </div>
 
       {/* Modais */}
-      <RegistroEventoModal
-        isOpen={isEventoModalOpen}
-        onClose={() => setIsEventoModalOpen(false)}
+      <RegistrarContatoModal
+        aberto={isContatoModalOpen}
+        onFechar={() => setIsContatoModalOpen(false)}
         clienteId={cliente.id}
         clienteNome={cliente.nome}
-        onSuccess={handleEventoSuccess}
+        onSucesso={handleEventoSuccess}
       />
 
       <AgendamentoModal
         isOpen={isAgendamentoModalOpen}
         onClose={() => setIsAgendamentoModalOpen(false)}
-        clienteId={cliente.id}
-        clienteNome={cliente.nome}
-        onSuccess={handleEventoSuccess}
-      />
-
-      <RegistrarResultadoModal
-        isOpen={isResultadoModalOpen}
-        onClose={() => setIsResultadoModalOpen(false)}
         clienteId={cliente.id}
         clienteNome={cliente.nome}
         onSuccess={handleEventoSuccess}

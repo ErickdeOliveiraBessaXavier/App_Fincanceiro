@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { hojeNegocio } from '@/domain/telecobranca/statusCobranca';
 import { soDigitos } from '@/utils/format';
+import { derivarStatusCliente } from '@/domain/clientes/situacao';
 import { titulosKeys } from './titulos';
 
 // Chaves literais das carteiras (evita import circular com cobradores/vendedores,
@@ -60,18 +61,6 @@ export const clientesKeys = {
 };
 
 // ============== Queries ==============
-
-/**
- * Deriva o status do cliente a partir dos status (computados) dos seus títulos.
- * Precedência: inadimplente > em_acordo > quitado > ativo.
- */
-function derivarStatusCliente(statuses: string[]): string {
-  if (statuses.length === 0) return 'ativo';
-  if (statuses.includes('vencido')) return 'inadimplente';
-  if (statuses.includes('renegociado')) return 'em_acordo';
-  if (statuses.every((s) => s === 'pago')) return 'quitado';
-  return 'ativo';
-}
 
 interface ProximoRetorno {
   data: string | null;

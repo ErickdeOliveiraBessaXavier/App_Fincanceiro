@@ -108,6 +108,7 @@ export interface ItemVencido {
 /** Item a vencer normalizado — parcela de título ou parcela de acordo. */
 export interface ProximoVencimento {
   id: string;
+  clienteId: string | null;
   clienteNome: string;
   valor: number;
   vencimento: string;

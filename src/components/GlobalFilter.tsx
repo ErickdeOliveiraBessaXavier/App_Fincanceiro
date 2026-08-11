@@ -118,33 +118,43 @@ interface FilterContentProps {
   hasActiveFilters: boolean;
   resultCount?: number;
   totalCount?: number;
-  presets?: FilterPreset[];
-  onPresetSelect?: (preset: FilterPreset) => void;
 }
-function FilterContent({
-  configs, filters, onFilterChange, onClearFilter, onClearAll,
-  hasActiveFilters, resultCount, totalCount, presets, onPresetSelect,
-}: FilterContentProps) {
+/**
+ * Faixa de presets. Fica FORA do painel recolhível: eles são o atalho para as
+ * visões do dia a dia ("Retornos hoje", "Vencidos") e ficavam invisíveis dentro
+ * de um painel que abre fechado — o usuário precisava descobrir um filtro para
+ * chegar no atalho que existia justamente para evitar filtrar.
+ */
+function PresetBar({ presets, filters, onPresetSelect }: {
+  presets?: FilterPreset[];
+  filters: FilterValues;
+  onPresetSelect?: (preset: FilterPreset) => void;
+}) {
+  if (!presets || presets.length === 0) return null;
   const activePresetId = computeActivePresetId(presets, filters);
   return (
-    <div className="space-y-4">
-      {/* Presets */}
-      {presets && presets.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {presets.map((preset) => (
-            <Button
-              key={preset.id}
-              variant={activePresetId === preset.id ? "default" : "outline"}
-              size="sm"
-              onClick={() => onPresetSelect?.(preset)}
-              className="h-7 text-xs"
-            >
-              {preset.label}
-            </Button>
-          ))}
-        </div>
-      )}
+    <div className="flex flex-wrap gap-2 mb-3">
+      {presets.map((preset) => (
+        <Button
+          key={preset.id}
+          variant={activePresetId === preset.id ? "default" : "outline"}
+          size="sm"
+          onClick={() => onPresetSelect?.(preset)}
+          className="h-7 text-xs"
+        >
+          {preset.label}
+        </Button>
+      ))}
+    </div>
+  );
+}
 
+function FilterContent({
+  configs, filters, onFilterChange, onClearFilter, onClearAll,
+  hasActiveFilters, resultCount, totalCount,
+}: FilterContentProps) {
+  return (
+    <div className="space-y-4">
       {/* Filter Fields */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {configs.map((config) => (
@@ -276,7 +286,9 @@ export function GlobalFilter({
   presets,
   onPresetSelect,
   collapsible = true,
-  defaultOpen = true
+  // Padrão único em todas as telas: o painel detalhado começa recolhido e os
+  // presets (agora fora dele) cobrem o uso comum.
+  defaultOpen = false
 }: GlobalFilterProps) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
 
@@ -290,21 +302,25 @@ export function GlobalFilter({
       hasActiveFilters={hasActiveFilters}
       resultCount={resultCount}
       totalCount={totalCount}
-      presets={presets}
-      onPresetSelect={onPresetSelect}
     />
+  );
+
+  const presetBar = (
+    <PresetBar presets={presets} filters={filters} onPresetSelect={onPresetSelect} />
   );
 
   if (!collapsible) {
     return (
-      <div className="p-4 border rounded-lg bg-card mb-4">
-        {filterContent}
+      <div className="mb-4">
+        {presetBar}
+        <div className="p-4 border rounded-lg bg-card">{filterContent}</div>
       </div>
     );
   }
 
   return (
     <div className="mb-4">
+      {presetBar}
       <Collapsible open={isOpen} onOpenChange={setIsOpen}>
         <div className="border rounded-lg bg-card overflow-hidden">
           <CollapsibleTrigger asChild>

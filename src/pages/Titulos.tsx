@@ -1,9 +1,9 @@
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useMemo } from 'react';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, Phone, XCircle } from 'lucide-react';
+import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   useTitulos,
@@ -26,11 +26,11 @@ import { useToast } from '@/hooks/use-toast';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
-import { usePagination } from '@/hooks/usePagination';
+import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { titulosFilterConfig } from '@/constants/filterConfigs';
 import { titulosPresets } from '@/constants/filterPresets';
-import { createClienteAgrupadoFilterFunctions } from '@/utils/filterFunctions';
+import { createClienteAgrupadoFilterFunctions, casaTexto } from '@/utils/filterFunctions';
 import { useCobradores } from '@/lib/queries/cobradores';
 import { useVendedores } from '@/lib/queries/vendedores';
 import { formatCpfCnpj, soDigitos } from '@/utils/format';
@@ -55,6 +55,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils } from '@/utils/titulo';
 import { StatusBadge } from '@/components/StatusBadge';
+import { SelecionarCliente } from '@/components/SelecionarCliente';
+import { derivarStatusCliente, type SituacaoCliente } from '@/domain/clientes/situacao';
 import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
 import { AplicarEncargoModal } from '@/components/titulos/AplicarEncargoModal';
 import { ConcederDescontoModal } from '@/components/titulos/ConcederDescontoModal';
@@ -78,6 +80,8 @@ interface ClienteAgrupado {
   totalOriginal: number;
   qtdTitulos: number;
   temInadimplente: boolean;
+  /** Mesma regra da tela de Clientes (domain/clientes/situacao). */
+  situacao: SituacaoCliente;
 }
 
 // ===================== Agrupamento por cliente =====================
@@ -95,6 +99,7 @@ function criarClienteAgrupado(titulo: TituloConsolidado, clienteId: string): Cli
     totalOriginal: 0,
     qtdTitulos: 0,
     temInadimplente: false,
+    situacao: 'ativo',
   };
 }
 
@@ -110,6 +115,11 @@ function agruparTitulosPorCliente(titulos: TituloConsolidado[]): ClienteAgrupado
     cliente.totalOriginal += titulo.valor_original || 0;
     cliente.qtdTitulos++;
     if (titulo.status === 'vencido') cliente.temInadimplente = true;
+  }
+  // A situação sai da MESMA regra da tela de Clientes: antes esta tela decidia
+  // só entre inadimplente/ativo e o cliente "Em Acordo" aparecia como "Ativo".
+  for (const cliente of map.values()) {
+    cliente.situacao = derivarStatusCliente(cliente.titulos.map((t) => t.status || ''));
   }
   return Array.from(map.values()).sort((a, b) => b.totalSaldo - a.totalSaldo);
 }
@@ -223,6 +233,19 @@ function ParcelaRow({ parcela, isOperador, isAdmin, onPagamento, onEncargo, onDe
   );
 }
 
+/**
+ * Nomeia a parcela que a ação do TÍTULO vai atingir.
+ *
+ * O menu do título opera sobre a primeira parcela em aberto. Antes ele dizia só
+ * "Registrar Pagamento" e escolhia a parcela em silêncio — origem provável de
+ * baixa lançada no lugar errado, o mesmo erro que o estorno existe para desfazer.
+ */
+function rotuloParcela(parcela: Parcela, titulo: TituloConsolidado): string {
+  const total = titulo.quantidade_parcelas || 1;
+  const posicao = total > 1 ? `${parcela.numero_parcela}/${total}` : `${parcela.numero_parcela}`;
+  return `parcela ${posicao} · venc. ${FormatUtils.date(parcela.vencimento)}`;
+}
+
 // Itens do menu de ação de um título quando há (ou não) parcela pendente.
 function TituloPendenteItens({ titulo, actions }: { titulo: TituloConsolidado; actions: TituloRowActions }) {
   const firstParcela = actions.parcelasTitulo.find(p => p.titulo_id === titulo.id && p.status !== 'pago');
@@ -237,25 +260,32 @@ function TituloPendenteItens({ titulo, actions }: { titulo: TituloConsolidado; a
     }
     return null;
   }
+  const alvo = rotuloParcela(firstParcela, titulo);
   return (
     <>
       {actions.isOperador && (
         <DropdownMenuItem onClick={() => actions.onPagamento(firstParcela)}>
           <DollarSign className="h-4 w-4 mr-2" />
-          Registrar Pagamento
+          Baixar {alvo}
         </DropdownMenuItem>
       )}
       {actions.isAdmin && (
         <>
           <DropdownMenuItem onClick={() => actions.onEncargo(firstParcela)}>
             <Percent className="h-4 w-4 mr-2" />
-            Adicionar Encargo
+            Encargo na {alvo}
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => actions.onDesconto(firstParcela)}>
             <Tag className="h-4 w-4 mr-2" />
-            Conceder Desconto
+            Desconto na {alvo}
           </DropdownMenuItem>
         </>
+      )}
+      {(titulo.quantidade_parcelas || 1) > 1 && !actions.expandedTitulos.has(titulo.id) && (
+        <DropdownMenuItem onClick={() => actions.onToggleTitulo(titulo.id)}>
+          <ChevronDown className="h-4 w-4 mr-2" />
+          Escolher outra parcela
+        </DropdownMenuItem>
       )}
     </>
   );
@@ -388,12 +418,11 @@ interface ClienteRowProps {
   expanded: boolean;
   onToggleCliente: (id: string) => void;
   onOpenFicha: (id: string) => void;
-  onTelecobranca: (id: string) => void;
   onWhatsApp: (telefone: string | null, nome: string) => void;
   onEmail: (email: string | null, nome: string) => void;
   actions: TituloRowActions;
 }
-function ClienteRow({ cliente, expanded, onToggleCliente, onOpenFicha, onTelecobranca, onWhatsApp, onEmail, actions }: ClienteRowProps) {
+function ClienteRow({ cliente, expanded, onToggleCliente, onOpenFicha, onWhatsApp, onEmail, actions }: ClienteRowProps) {
   return (
     <React.Fragment>
       <TableRow className="bg-muted/30 hover:bg-muted/50">
@@ -443,11 +472,7 @@ function ClienteRow({ cliente, expanded, onToggleCliente, onOpenFicha, onTelecob
           <Badge variant="outline">{cliente.qtdTitulos} título(s)</Badge>
         </TableCell>
         <TableCell>
-          {cliente.temInadimplente ? (
-            <StatusBadge domain="cliente" status="inadimplente" />
-          ) : (
-            <StatusBadge domain="cliente" status="ativo" />
-          )}
+          <StatusBadge domain="cliente" status={cliente.situacao} />
         </TableCell>
         <TableCell>
           <DropdownMenu>
@@ -459,9 +484,9 @@ function ClienteRow({ cliente, expanded, onToggleCliente, onOpenFicha, onTelecob
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Ações do Cliente</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => onTelecobranca(cliente.id)}>
-                <Phone className="h-4 w-4 mr-2" />
-                Telecobrança
+              <DropdownMenuItem onClick={() => onOpenFicha(cliente.id)}>
+                <Eye className="h-4 w-4 mr-2" />
+                Abrir ficha
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => onWhatsApp(cliente.telefone, cliente.nome)}>
                 <MessageSquare className="h-4 w-4 mr-2" />
@@ -509,16 +534,11 @@ function NovoTituloDialog({ open, onOpenChange, novoTitulo, setNovoTitulo, clien
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Cliente</Label>
-            <select
+            <SelecionarCliente
+              clientes={clientes}
               value={novoTitulo.cliente_id}
-              onChange={(e) => setNovoTitulo(prev => ({ ...prev, cliente_id: e.target.value }))}
-              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
-            >
-              <option value="">Selecione um cliente</option>
-              {clientes.map(c => (
-                <option key={c.id} value={c.id}>{c.nome} - {formatCpfCnpj(c.cpf_cnpj)}</option>
-              ))}
-            </select>
+              onChange={(id) => setNovoTitulo(prev => ({ ...prev, cliente_id: id }))}
+            />
           </div>
           <div className="space-y-2">
             <Label>Código do Documento</Label>
@@ -888,8 +908,13 @@ function CancelarTituloDialog({ titulo, isPending, motivo, onMotivoChange, onCan
   );
 }
 
+/** Parâmetro de URL que abre os detalhes de um título. */
+const PARAM_TITULO = 'titulo';
+
 export default function Titulos() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
@@ -1031,6 +1056,7 @@ export default function Titulos() {
   };
 
   const toggleClienteExpanded = (clienteId: string) => {
+    const abrindo = !expandedClientes.has(clienteId);
     setExpandedClientes(prev => {
       const next = new Set(prev);
       if (next.has(clienteId)) {
@@ -1040,6 +1066,14 @@ export default function Titulos() {
       }
       return next;
     });
+
+    // Cliente com um título só: abrir o cliente já mostra as parcelas. Eram três
+    // níveis de expansão antes de qualquer ação, e o nível do meio não oferecia
+    // escolha nenhuma quando existia um título apenas.
+    if (!abrindo) return;
+    const cliente = clientesAgrupados.find((c) => c.id === clienteId);
+    const unico = cliente?.titulos.length === 1 ? cliente.titulos[0] : null;
+    if (unico && !expandedTitulos.has(unico.id)) toggleTituloExpanded(unico.id);
   };
 
   const toggleTituloExpanded = (tituloId: string) => {
@@ -1059,9 +1093,27 @@ export default function Titulos() {
   };
 
   const openDetails = async (titulo: TituloConsolidado) => {
+    // O id vai para a URL: os detalhes viram um endereço que dá para mandar
+    // para outra pessoa, abrir em aba nova e recarregar sem perder o lugar —
+    // o mesmo que Acordos já fazia com ?id=.
+    setSearchParams((atual) => {
+      const proximo = new URLSearchParams(atual);
+      proximo.set(PARAM_TITULO, titulo.id);
+      return proximo;
+    }, { replace: true });
     setSelectedTitulo(titulo);
     await fetchParcelasTitulo(titulo.id);
     setIsDetailsModalOpen(true);
+  };
+
+  const fecharDetalhes = (aberto: boolean) => {
+    setIsDetailsModalOpen(aberto);
+    if (aberto) return;
+    setSearchParams((atual) => {
+      const proximo = new URLSearchParams(atual);
+      proximo.delete(PARAM_TITULO);
+      return proximo;
+    }, { replace: true });
   };
 
   // Cancelamento (admin): soft delete reversível, preserva o histórico.
@@ -1102,6 +1154,19 @@ export default function Titulos() {
   // Agrupar títulos por cliente
   const clientesAgrupados = useMemo(() => agruparTitulosPorCliente(titulos), [titulos]);
 
+  // Deep link ?titulo=<id>: abre os detalhes direto, sem precisar reencontrar
+  // o título na árvore cliente > título.
+  const tituloParam = searchParams.get(PARAM_TITULO);
+  useEffect(() => {
+    if (!tituloParam || titulos.length === 0 || selectedTitulo?.id === tituloParam) return;
+    const alvo = titulos.find((t) => t.id === tituloParam);
+    if (!alvo) return;
+    setSelectedTitulo(alvo);
+    void fetchParcelasTitulo(alvo.id);
+    setIsDetailsModalOpen(true);
+    // fetchParcelasTitulo depende do queryClient (estável); reagir ao id basta.
+  }, [tituloParam, titulos, selectedTitulo?.id]);
+
   // Filter functions for titulos
   const filterFunctions = useMemo(() => createClienteAgrupadoFilterFunctions(), []);
 
@@ -1137,40 +1202,32 @@ export default function Titulos() {
     totalCount
   } = useGlobalFilter(clientesAgrupados, filterFunctions);
 
-  // Filtrar títulos dentro de cada cliente quando há busca ativa
+  // Filtrar títulos dentro de cada cliente quando há busca ativa.
+  // Usa o mesmo `casaTexto` da busca das listagens, então procurar por um
+  // CPF com máscara acha o cliente aqui também.
   const clientesComTitulosFiltrados = useMemo(() => {
-    const searchValue = filters.search?.toLowerCase().trim();
-    
-    if (!searchValue) {
-      return filteredClientes;
-    }
+    const busca = String(filters.search ?? '').trim();
+    if (!busca) return filteredClientes;
 
-    return filteredClientes.map(cliente => {
-      // Filtra os títulos que correspondem à busca
-      const titulosFiltrados = cliente.titulos.filter(titulo => {
-        // Match no numero_documento
-        if (titulo.numero_documento?.toLowerCase().includes(searchValue)) return true;
-        // Match no ID do título
-        if (titulo.id?.toLowerCase().includes(searchValue)) return true;
-        // Match na descrição
-        if (titulo.descricao?.toLowerCase().includes(searchValue)) return true;
-        return false;
-      });
+    return filteredClientes.map((cliente) => {
+      const titulosFiltrados = cliente.titulos.filter((titulo) =>
+        casaTexto(titulo.numero_documento, busca)
+        || casaTexto(titulo.id, busca)
+        || casaTexto(titulo.descricao, busca)
+      );
 
-      // Se encontrou títulos específicos, mostra apenas eles
-      // Caso contrário, pode ser que o match foi no cliente (nome/CPF), então mostra todos
-      const clienteMatchesSearch = 
-        cliente.nome?.toLowerCase().includes(searchValue) ||
-        cliente.cpf_cnpj?.toLowerCase().includes(searchValue);
+      // Achou títulos específicos: mostra só eles. Senão, o match pode ter sido
+      // no cliente (nome/CPF) — aí mostra a carteira inteira dele.
+      const clienteCasa = casaTexto(cliente.nome, busca) || casaTexto(cliente.cpf_cnpj, busca);
+      const titulos = titulosFiltrados.length > 0
+        ? titulosFiltrados
+        : (clienteCasa ? cliente.titulos : []);
 
-      return {
-        ...cliente,
-        titulos: titulosFiltrados.length > 0 ? titulosFiltrados : (clienteMatchesSearch ? cliente.titulos : [])
-      };
-    }).filter(cliente => cliente.titulos.length > 0);
+      return { ...cliente, titulos };
+    }).filter((cliente) => cliente.titulos.length > 0);
   }, [filteredClientes, filters.search]);
 
-  const pagination = usePagination(clientesComTitulosFiltrados, 25, JSON.stringify(filters));
+  const pagination = usePagination(clientesComTitulosFiltrados, 25, JSON.stringify(filters), PARAM_PAGINA);
 
   const totalTitulos = titulos.length;
 
@@ -1184,6 +1241,11 @@ export default function Titulos() {
       Array.from(expandedTitulos).map((tituloId) => fetchParcelasTitulo(tituloId))
     );
   };
+
+  // Leva a origem junto para o breadcrumb da ficha voltar a ESTA lista, com os
+  // filtros e a página em que o usuário estava.
+  const abrirFicha = (clienteId: string) =>
+    navigate(`/clientes/${clienteId}`, { state: { from: location.pathname + location.search } });
 
   const openWhatsApp = (telefone: string | null, nome: string) => {
     if (!telefone) {
@@ -1238,12 +1300,6 @@ export default function Titulos() {
       parcelaNumero: parcela.numero_parcela,
       saldoAtual: parcela.saldo_atual || 0
     });
-  };
-
-  // Get first pending parcela for a titulo
-  const getFirstPendingParcela = (tituloId: string): Parcela | null => {
-    const parcelas = parcelasTitulo.filter(p => p.titulo_id === tituloId && p.status !== 'pago');
-    return parcelas.length > 0 ? parcelas[0] : null;
   };
 
   const tituloActions: TituloRowActions = {
@@ -1326,8 +1382,7 @@ export default function Titulos() {
                     cliente={cliente}
                     expanded={expandedClientes.has(cliente.id)}
                     onToggleCliente={toggleClienteExpanded}
-                    onOpenFicha={(id) => navigate(`/clientes/${id}`)}
-                    onTelecobranca={(id) => navigate(`/telecobranca/${id}`)}
+                    onOpenFicha={abrirFicha}
                     onWhatsApp={openWhatsApp}
                     onEmail={openEmail}
                     actions={tituloActions}
@@ -1360,7 +1415,7 @@ export default function Titulos() {
 
       <TituloDetailsDialog
         open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
+        onOpenChange={fecharDetalhes}
         titulo={selectedTitulo}
         parcelasTitulo={parcelasTitulo}
         isAdmin={isAdmin}

@@ -94,6 +94,15 @@ export const acordosFilterConfig: FilterConfig[] = [
     type: 'text', 
     placeholder: 'Cliente, CPF/CNPJ, observações...' 
   },
+  // Cancelados ficam fora por padrão para não poluir a operação do dia a dia.
+  // Era um checkbox solto no cabeçalho do card, fora do painel de filtros.
+  {
+    id: 'cancelados',
+    label: 'Cancelados',
+    type: 'select',
+    placeholder: 'Ocultos',
+    options: [{ value: 'incluir', label: 'Mostrar cancelados' }],
+  },
   { 
     id: 'status', 
     label: 'Status', 

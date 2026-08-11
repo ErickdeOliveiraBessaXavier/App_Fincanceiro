@@ -3,14 +3,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '@/components/ui/select';
+import { SelecionarCliente } from '@/components/SelecionarCliente';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ChevronDown, ChevronRight, AlertTriangle, FileText, Loader2 } from 'lucide-react';
 import { TituloAgrupado, TituloItem, ClienteComDividas } from '@/hooks/useTitulosAgrupados';
 import { cn } from '@/lib/utils';
-import { formatCpfCnpj, formatData } from '@/utils/format';
+import { formatData } from '@/utils/format';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -57,21 +55,19 @@ function ClienteSelect({
   value: string;
   onChange: (id: string) => void;
 }) {
+  // O total em aberto vira o detalhe da linha: ajuda a confirmar que é o
+  // cliente certo antes de abrir a lista de títulos.
+  const opcoes = clientes.map((c) => ({
+    id: c.id,
+    nome: c.nome,
+    cpf_cnpj: c.cpf_cnpj,
+    detalhe: formatCurrency(c.valor_total),
+  }));
+
   return (
     <div className="space-y-2">
       <Label>Cliente *</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
-          <SelectValue placeholder="Selecione um cliente" />
-        </SelectTrigger>
-        <SelectContent>
-          {clientes.map((cliente) => (
-            <SelectItem key={cliente.id} value={cliente.id}>
-              {cliente.nome} — {formatCpfCnpj(cliente.cpf_cnpj)} ({formatCurrency(cliente.valor_total)})
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <SelecionarCliente clientes={opcoes} value={value} onChange={onChange} />
     </div>
   );
 }

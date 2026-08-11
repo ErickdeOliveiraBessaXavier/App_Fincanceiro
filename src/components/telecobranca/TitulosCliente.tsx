@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -7,12 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Handshake, AlertTriangle, FileText, ChevronDown, ChevronRight, DollarSign } from 'lucide-react';
 import { format, differenceInDays } from 'date-fns';
-import { useNavigate } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { formatData, parseDataLocal } from '@/utils/format';
 import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
+import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
 import { getStatusMeta, type StatusMeta } from '@/constants/statusConfig';
+import { useBaseMetricasCliente } from '@/lib/queries/metricas';
+import { prepararBase, situacaoFinanceiraCliente } from '@/domain/metricas';
 
 interface Parcela {
   id: string;
@@ -308,8 +310,11 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
   const [loading, setLoading] = useState(true);
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const [pagamento, setPagamento] = useState<PagamentoState>({ open: false, parcelaId: '', parcelaNumero: 0, saldoAtual: 0 });
-  const navigate = useNavigate();
+  // Negociar abria /acordos e largava o operador em outra tela no meio do
+  // atendimento; agora o acordo nasce aqui mesmo.
+  const [acordoAberto, setAcordoAberto] = useState(false);
   const { isOperador } = useUserRole();
+  const { data: base } = useBaseMetricasCliente(clienteId);
 
   useEffect(() => {
     fetchParcelas();
@@ -367,13 +372,14 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
     setExpandidos(novo);
   };
 
-  const totalEmAberto = grupos.reduce((sum, g) => sum + g.valorEmAberto, 0);
-
-  const irParaAcordo = (tituloId: string) => {
-    navigate('/acordos', {
-      state: { clienteId, tituloIds: [tituloId], valorTotal: totalEmAberto },
-    });
-  };
+  // O total vem da MESMA regra do card "Dívida em Aberto" e do Dashboard.
+  // Somar `valorEmAberto` dos grupos daria outro número: o título renegociado
+  // fica com saldo zero e a parcela do acordo em atraso não entraria na conta.
+  const situacao = useMemo(
+    () => (base ? situacaoFinanceiraCliente(prepararBase(base), clienteId) : null),
+    [base, clienteId],
+  );
+  const totalEmAberto = situacao?.emAberto ?? 0;
 
   const abrirPagamento = (parcela: Parcela) => {
     setPagamento({
@@ -431,7 +437,7 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
                   grupo={grupo}
                   isExpanded={expandidos.has(grupo.tituloId)}
                   onToggle={() => toggleExpand(grupo.tituloId)}
-                  onAcordo={() => irParaAcordo(grupo.tituloId)}
+                  onAcordo={() => setAcordoAberto(true)}
                   onPagar={isOperador ? abrirPagamento : undefined}
                 />
               ))}
@@ -448,6 +454,17 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
         saldoAtual={pagamento.saldoAtual}
         onSuccess={aposPagamento}
       />
+
+      {/* Montado só quando aberto: a busca dos títulos do cliente roda na
+          montagem, então cada abertura já traz a dívida atualizada. */}
+      {acordoAberto && (
+        <NovoAcordoDialog
+          open
+          onOpenChange={setAcordoAberto}
+          clienteIdPreSelecionado={clienteId}
+          onCriado={fetchParcelas}
+        />
+      )}
     </>
   );
 }

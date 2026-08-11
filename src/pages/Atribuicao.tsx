@@ -10,7 +10,7 @@ import {
 import { useCobradores, type CobradorRow } from '@/lib/queries/cobradores';
 import { useVendedores, type VendedorRow } from '@/lib/queries/vendedores';
 import { useUserRole } from '@/hooks/useUserRole';
-import { usePagination } from '@/hooks/usePagination';
+import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
@@ -197,7 +197,7 @@ export default function Atribuicao() {
     totalCount,
   } = useGlobalFilter(clientes, filterFunctions);
 
-  const pagination = usePagination(filtrados, 25, JSON.stringify(filters));
+  const pagination = usePagination(filtrados, 25, JSON.stringify(filters), PARAM_PAGINA);
   const pending = assignCobrador.isPending || assignVendedor.isPending;
 
   const toggle = (id: string) => {

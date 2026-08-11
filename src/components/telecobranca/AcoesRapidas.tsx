@@ -14,17 +14,15 @@ import {
 } from 'lucide-react';
 
 interface AcoesRapidasProps {
-  onNovoEvento: () => void;
   onAgendarRetorno: () => void;
-  onRegistrarResultado: () => void;
+  onRegistrarContato: () => void;
   telefone?: string | null;
   email?: string | null;
 }
 
 export function AcoesRapidas({
-  onNovoEvento,
   onAgendarRetorno,
-  onRegistrarResultado,
+  onRegistrarContato,
   telefone,
   email
 }: AcoesRapidasProps) {
@@ -123,46 +121,26 @@ export function AcoesRapidas({
         
         <Separator className="opacity-50" />
 
-        {/* Ação canônica principal */}
+        {/* Porta única: o tipo de registro (cobrança ou administrativo) é
+            escolhido dentro do modal. Antes eram dois botões e o operador
+            precisava saber a diferença antes de clicar. */}
         <Button
           size="lg"
           className="w-full shadow-md hover:shadow-lg transition-all font-bold gap-2 bg-primary hover:bg-primary/90"
-          onClick={onRegistrarResultado}
+          onClick={onRegistrarContato}
         >
           <ClipboardCheck className="h-5 w-5" />
-          Registrar Resultado
+          Registrar contato
         </Button>
 
-        {/* Ações secundárias: Layout em Grid Compacto */}
-        <div className="space-y-2 pt-1">
-          <div className="flex items-center gap-2">
-            <div className="h-px flex-1 bg-border/60" />
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest whitespace-nowrap">
-              Controle Manual
-            </span>
-            <div className="h-px flex-1 bg-border/60" />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              variant="outline"
-              className="h-14 flex-col gap-1 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors group"
-              onClick={onNovoEvento}
-            >
-              <Plus className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-[10px] font-medium">Novo Evento</span>
-            </Button>
-
-            <Button
-              variant="outline"
-              className="h-14 flex-col gap-1 border-dashed hover:border-primary/50 hover:bg-primary/5 transition-colors group"
-              onClick={onAgendarRetorno}
-            >
-              <Calendar className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-              <span className="text-[10px] font-medium">Agendar</span>
-            </Button>
-          </div>
-        </div>
+        <Button
+          variant="outline"
+          className="w-full gap-2 border-dashed hover:border-primary/50 hover:bg-primary/5"
+          onClick={onAgendarRetorno}
+        >
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <span className="text-xs font-medium">Agendar retorno</span>
+        </Button>
       </CardContent>
     </Card>
   );

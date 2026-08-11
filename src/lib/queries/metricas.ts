@@ -12,7 +12,15 @@ import type {
 export const metricasKeys = {
   all: ['metricas'] as const,
   base: () => [...metricasKeys.all, 'base'] as const,
+  cliente: (clienteId: string) => [...metricasKeys.all, 'cliente', clienteId] as const,
 };
+
+const COLUNAS_TITULO =
+  'id, cliente_id, cliente_nome, cliente_cpf_cnpj, valor_original, saldo_devedor, total_pago, status, acordo_status, proximo_vencimento, vencimento_original, created_at';
+const COLUNAS_PARCELA = 'id, titulo_id, vencimento, valor_nominal, saldo_atual, status';
+const COLUNAS_ACORDO =
+  'id, status, valor_acordo, valor_original, data_acordo, created_at, cliente_id, cliente:clientes(nome)';
+const COLUNAS_PARCELA_ACORDO = 'id, acordo_id, valor_total, data_vencimento, status';
 
 /** Propaga o erro da consulta ou devolve as linhas — evita 5 `if` seguidos. */
 function linhasDe<T>(resultado: { data: T[] | null; error: { message: string } | null }): T[] {
@@ -65,23 +73,15 @@ export function useBaseMetricas() {
     queryFn: async (): Promise<BaseMetricas> => {
       const [titulosRes, parcelasRes, recebimentosRes, acordosRes, parcelasAcordoRes] =
         await Promise.all([
-          supabase
-            .from('vw_titulos_completos')
-            .select(
-              'id, cliente_id, cliente_nome, cliente_cpf_cnpj, valor_original, saldo_devedor, total_pago, status, acordo_status, proximo_vencimento, vencimento_original, created_at',
-            ),
-          supabase
-            .from('vw_parcelas_consolidadas')
-            .select('id, titulo_id, vencimento, valor_nominal, saldo_atual, status'),
+          supabase.from('vw_titulos_completos').select(COLUNAS_TITULO),
+          supabase.from('vw_parcelas_consolidadas').select(COLUNAS_PARCELA),
           supabase
             .from('vw_recebimentos_tenant')
             .select('recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento'),
-          supabase
-            .from('acordos')
-            .select('id, status, valor_acordo, valor_original, data_acordo, created_at, cliente_id, cliente:clientes(nome)'),
+          supabase.from('acordos').select(COLUNAS_ACORDO),
           supabase
             .from('parcelas_acordo')
-            .select('id, acordo_id, valor_total, data_vencimento, status')
+            .select(COLUNAS_PARCELA_ACORDO)
             .is('deleted_at', null),
         ]);
 
@@ -91,6 +91,58 @@ export function useBaseMetricas() {
         recebimentos: linhasDe(recebimentosRes) as unknown as RecebimentoMetrica[],
         parcelasAcordo: linhasDe(parcelasAcordoRes) as unknown as ParcelaAcordoMetrica[],
         acordos: (linhasDe(acordosRes) as unknown as AcordoRow[]).map(mapearAcordo),
+      };
+    },
+  });
+}
+
+/**
+ * A mesma base, recortada em UM cliente — para a ficha.
+ *
+ * A ficha não pode carregar a carteira inteira só para somar a dívida de um
+ * cliente, mas também não pode ter regra própria: as duas somas que ela exibia
+ * eram códigos independentes e nenhuma enxergava parcela de acordo em atraso.
+ * Aqui as consultas são estreitas e o cálculo continua sendo o de
+ * `domain/metricas`.
+ *
+ * `recebimentos` fica vazio de propósito: a situação do cliente é sobre dívida
+ * viva, e nenhuma função consumida aqui lê recebimento.
+ */
+export function useBaseMetricasCliente(clienteId: string | null) {
+  return useQuery({
+    queryKey: metricasKeys.cliente(clienteId ?? ''),
+    enabled: !!clienteId,
+    queryFn: async (): Promise<BaseMetricas> => {
+      const [titulosRes, acordosRes] = await Promise.all([
+        supabase.from('vw_titulos_completos').select(COLUNAS_TITULO).eq('cliente_id', clienteId!),
+        supabase.from('acordos').select(COLUNAS_ACORDO).eq('cliente_id', clienteId!),
+      ]);
+
+      const titulos = linhasDe(titulosRes) as unknown as TituloMetrica[];
+      const acordos = (linhasDe(acordosRes) as unknown as AcordoRow[]).map(mapearAcordo);
+      const tituloIds = titulos.map((t) => t.id);
+      const acordoIds = acordos.map((a) => a.id);
+
+      // `.in()` com lista vazia devolve tudo em alguns backends; melhor não ir.
+      const [parcelasRes, parcelasAcordoRes] = await Promise.all([
+        tituloIds.length
+          ? supabase.from('vw_parcelas_consolidadas').select(COLUNAS_PARCELA).in('titulo_id', tituloIds)
+          : Promise.resolve({ data: [], error: null }),
+        acordoIds.length
+          ? supabase
+              .from('parcelas_acordo')
+              .select(COLUNAS_PARCELA_ACORDO)
+              .in('acordo_id', acordoIds)
+              .is('deleted_at', null)
+          : Promise.resolve({ data: [], error: null }),
+      ]);
+
+      return {
+        titulos,
+        acordos,
+        parcelas: linhasDe(parcelasRes) as unknown as ParcelaMetrica[],
+        parcelasAcordo: linhasDe(parcelasAcordoRes) as unknown as ParcelaAcordoMetrica[],
+        recebimentos: [],
       };
     },
   });
