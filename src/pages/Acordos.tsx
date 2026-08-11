@@ -76,6 +76,9 @@ interface LocationState {
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
+/** Parâmetro de URL que abre os detalhes de um acordo. */
+const PARAM_ACORDO = 'id';
+
 // Largura dos modais de acordo. O respiro lateral no mobile vem da base
 // (ui/dialog.tsx); aqui só liberamos a largura no desktop — 75vw é o token de
 // "modal largo" já usado em Clientes.tsx — e apertamos o padding no celular.
@@ -515,7 +518,7 @@ function CancelAcordoDialog({ open, onOpenChange, onCancel, onConfirm, isPending
 export default function Acordos() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const preSelectedData = location.state as LocationState | null;
 
   const { toast } = useToast();
@@ -539,20 +542,48 @@ export default function Acordos() {
   // Compatibilidade: a ficha do cliente hoje abre o modal no lugar, mas links
   // antigos (e o histórico do navegador) ainda podem chegar aqui com o cliente
   // no state.
+  //
+  // Depende do ID, não do objeto de state: `location.state` troca de identidade
+  // a cada navegação (inclusive a que só mexe na query string dos filtros), e
+  // isso reabriria o modal depois de o usuário fechá-lo.
+  const clientePreSelecionado = preSelectedData?.clienteId;
   useEffect(() => {
-    if (preSelectedData?.clienteId) setIsCreateModalOpen(true);
-  }, [preSelectedData]);
+    if (clientePreSelecionado) setIsCreateModalOpen(true);
+  }, [clientePreSelecionado]);
 
-  // Deep link ?id=<acordo>: abre os detalhes direto (ex.: link vindo da ficha do cliente).
+  // Deep link ?id=<acordo>: abre os detalhes direto (ex.: link vindo da ficha
+  // do cliente). O `id` sai da URL ao fechar — enquanto ele ficava lá, qualquer
+  // mexida em filtro gerava novo searchParams, este efeito rodava de novo e o
+  // modal reabria sozinho.
+  const acordoParam = searchParams.get(PARAM_ACORDO);
   useEffect(() => {
-    const id = searchParams.get('id');
-    if (!id || acordos.length === 0) return;
-    const alvo = acordos.find((a) => a.id === id);
+    if (!acordoParam || acordos.length === 0) return;
+    const alvo = acordos.find((a) => a.id === acordoParam);
     if (alvo) {
       setSelectedAcordo(alvo);
       setIsDetailsModalOpen(true);
     }
-  }, [searchParams, acordos]);
+  }, [acordoParam, acordos]);
+
+  const alterarParamAcordo = (id: string | null) => {
+    setSearchParams((atual) => {
+      const proximo = new URLSearchParams(atual);
+      if (id) proximo.set(PARAM_ACORDO, id);
+      else proximo.delete(PARAM_ACORDO);
+      return proximo;
+    }, { replace: true });
+  };
+
+  const abrirDetalhes = (acordo: AcordoRow) => {
+    setSelectedAcordo(acordo);
+    setIsDetailsModalOpen(true);
+    alterarParamAcordo(acordo.id);
+  };
+
+  const fecharDetalhes = (aberto: boolean) => {
+    setIsDetailsModalOpen(aberto);
+    if (!aberto) alterarParamAcordo(null);
+  };
 
   const handleHardDeleteAcordo = async () => {
     if (!acordoToHardDelete) return;
@@ -728,10 +759,7 @@ export default function Acordos() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            setSelectedAcordo(acordo);
-                            setIsDetailsModalOpen(true);
-                          }}
+                          onClick={() => abrirDetalhes(acordo)}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
@@ -792,7 +820,7 @@ export default function Acordos() {
 
       <AcordoDetailsDialog
         open={isDetailsModalOpen}
-        onOpenChange={setIsDetailsModalOpen}
+        onOpenChange={fecharDetalhes}
         acordo={selectedAcordo}
       />
 
