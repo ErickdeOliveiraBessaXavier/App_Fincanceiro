@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useMemo, type Dispatch, type ReactNode, type SetStateAction } from 'react';
+import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2, Trash2 } from 'lucide-react';
-import { useAcordos, useCreateAcordo, useCancelAcordo, useHardDeleteAcordos, useParcelasAcordo, usePagarParcelaAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
+import { useAcordos, useCancelAcordo, useHardDeleteAcordos, useParcelasAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { StatusBadge } from '@/components/StatusBadge';
+import { ResumoNumeros } from '@/components/ResumoNumeros';
 import { GlobalFilter } from '@/components/GlobalFilter';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { acordosFilterConfig } from '@/constants/filterConfigs';
@@ -27,22 +28,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useTitulosAgrupados, TituloAgrupado } from '@/hooks/useTitulosAgrupados';
 import { useUserRole } from '@/hooks/useUserRole';
-import { usePagination } from '@/hooks/usePagination';
+import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
-import { SelecionarTitulosAcordo } from '@/components/acordos/SelecionarTitulosAcordo';
-import { InputMoeda } from '@/components/InputMoeda';
+import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
+import { BaixaParcelaAcordoModal, type ModoBaixa } from '@/components/acordos/BaixaParcelaAcordoModal';
 import { cn } from '@/lib/utils';
-import {
-  gerarCronograma,
-  podarDatasManuais,
-  totalCronograma,
-  type CronogramaParcela,
-  type DatasManuais,
-} from '@/domain/acordos/cronograma';
-import { descontoPercentual, resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociacao';
+import { resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociacao';
 import { codigoAcordo } from '@/domain/acordos/identificacao';
 
 interface Acordo {
@@ -72,33 +64,6 @@ interface Acordo {
     nome: string;
     cpf_cnpj: string;
   };
-}
-
-interface NovoAcordo {
-  cliente_id: string;
-  titulo_ids: string[];
-  valor_original: number;
-  valor_acordo: number;
-  parcelas: number;
-  taxa_juros?: number;
-  data_inicio: string;
-  data_vencimento_primeira_parcela: string;
-  observacoes?: string;
-}
-
-interface FormErrors {
-  cliente_id?: string;
-  valor_acordo?: string;
-  parcelas?: string;
-  data_vencimento_primeira_parcela?: string;
-}
-
-interface SelectionData {
-  clienteId: string;
-  cliente: { id: string; nome: string; cpf_cnpj: string };
-  tituloIds: string[];
-  valorTotal: number;
-  dividas: TituloAgrupado[];
 }
 
 interface LocationState {
@@ -136,260 +101,34 @@ function TituloSecao({ children }: { children: ReactNode }) {
   );
 }
 
-// ===================== Subcomponentes =====================
-// Cronograma editável: as datas vêm sugeridas a partir da 1ª parcela, mas cada
-// linha pode ser ajustada. Editar a 1ª move a âncora e re-sugere as seguintes.
-interface CronogramaEditavelProps {
-  cronograma: CronogramaParcela[];
-  temDatasManuais: boolean;
-  onDataParcelaChange: (numero: number, data: string) => void;
-  onResetDatas: () => void;
-}
-function CronogramaEditavel({
-  cronograma, temDatasManuais, onDataParcelaChange, onResetDatas,
-}: CronogramaEditavelProps) {
-  const total = totalCronograma(cronograma);
+/**
+ * Números de documento dos títulos incluídos no acordo.
+ *
+ * Um acordo pode consolidar vários títulos; a coluna mostrava só o vínculo
+ * legado `titulo_id`. Acima de dois, resume para não estourar a coluna.
+ */
+function DocumentosDoAcordo({ acordo }: { acordo: AcordoRow }) {
+  const documentos = (acordo.titulos ?? [])
+    .map((t) => t.numero_documento)
+    .filter((n): n is string => !!n);
+
+  const legado = acordo.titulo?.numero_documento;
+  const lista = documentos.length > 0 ? documentos : (legado ? [legado] : []);
+
+  if (lista.length === 0) return <span className="text-muted-foreground">-</span>;
+  if (lista.length <= 2) return <>{lista.join(', ')}</>;
 
   return (
-    <div className="p-4 bg-muted rounded-lg space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="font-medium">Cronograma de Parcelas</h4>
-        {temDatasManuais && (
-          <button type="button" onClick={onResetDatas} className="text-xs text-primary hover:underline">
-            Restaurar sugestão
-          </button>
-        )}
-      </div>
-
-      <p className="text-xs text-muted-foreground">
-        As datas seguem o dia da 1ª parcela nos meses seguintes. Ajuste qualquer parcela livremente.
-      </p>
-
-      <div className="space-y-1.5">
-        {cronograma.map((p) => (
-          <div key={p.numero} className="flex items-center gap-2">
-            <span className="w-16 sm:w-20 shrink-0 text-xs sm:text-sm text-muted-foreground">
-              Parcela {p.numero}
-            </span>
-            <Input
-              type="date"
-              value={p.data_vencimento}
-              onChange={(e) => onDataParcelaChange(p.numero, e.target.value)}
-              className="h-8 flex-1 min-w-0"
-              aria-label={`Vencimento da parcela ${p.numero}`}
-            />
-            <span className="w-24 sm:w-28 shrink-0 text-right text-xs sm:text-sm font-medium">
-              {formatCurrency(p.valor_total)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="border-t pt-2 font-medium flex justify-between text-sm">
-        <span>Total</span>
-        <span>{formatCurrency(total)}</span>
-      </div>
-    </div>
-  );
-}
-
-// Torna explícita a diferença entre o débito e o que foi negociado — inclusive
-// quando o acordo fecha ACIMA do débito, caso legítimo (juros/acréscimo) que
-// antes só aparecia como um erro no salvamento.
-function ResumoNegociacaoHint({ valorOriginal, valorAcordo }: { valorOriginal: number; valorAcordo: number }) {
-  const resumo = resumoNegociacao(valorOriginal, valorAcordo);
-  if (resumo.tipo === 'neutro') return null;
-
-  const acrescimo = resumo.tipo === 'acrescimo';
-  return (
-    <span className={cn('block text-xs', acrescimo ? 'text-amber-600' : 'text-muted-foreground')}>
-      {acrescimo ? 'Acréscimo' : 'Desconto'} de {formatCurrency(resumo.valor)}
-      {' '}({resumo.percentual.toFixed(1)}%) sobre o débito
+    <span title={lista.join(', ')}>
+      {lista[0]} <span className="text-muted-foreground">+{lista.length - 1}</span>
     </span>
   );
 }
 
-interface ConfiguracaoAcordoProps {
-  newAcordo: NovoAcordo;
-  setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
-  formErrors: FormErrors;
-  cronograma: CronogramaParcela[];
-  temDatasManuais: boolean;
-  onDataParcelaChange: (numero: number, data: string) => void;
-  onResetDatas: () => void;
-}
-function ConfiguracaoAcordo({
-  newAcordo, setNewAcordo, formErrors, cronograma, temDatasManuais,
-  onDataParcelaChange, onResetDatas,
-}: ConfiguracaoAcordoProps) {
-  return (
-    <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Valor Original</Label>
-          <Input
-            value={formatCurrency(newAcordo.valor_original)}
-            disabled
-            className="bg-muted"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Valor do Acordo</Label>
-          <InputMoeda
-            value={newAcordo.valor_acordo}
-            onChange={(valor) => setNewAcordo(prev => ({ ...prev, valor_acordo: valor }))}
-            className={formErrors.valor_acordo ? "border-red-500" : ""}
-          />
-          {formErrors.valor_acordo ? (
-            <span className="text-xs text-red-500">{formErrors.valor_acordo}</span>
-          ) : (
-            <ResumoNegociacaoHint
-              valorOriginal={newAcordo.valor_original}
-              valorAcordo={totalCronograma(cronograma) || newAcordo.valor_acordo}
-            />
-          )}
-        </div>
-      </div>
-
-      {/* No mobile: Parcelas e Juros lado a lado, a data em linha própria — um
-          input de data em meia tela de celular fica ilegível. */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-        <div className="space-y-2">
-          <Label>Parcelas</Label>
-          <Input
-            type="number"
-            min="1"
-            value={newAcordo.parcelas}
-            onChange={(e) => setNewAcordo(prev => ({ ...prev, parcelas: parseInt(e.target.value) || 1 }))}
-            className={formErrors.parcelas ? "border-red-500" : ""}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Taxa de Juros (%)</Label>
-          <Input
-            type="number"
-            step="0.01"
-            min="0"
-            value={newAcordo.taxa_juros}
-            onChange={(e) => setNewAcordo(prev => ({ ...prev, taxa_juros: parseFloat(e.target.value) || 0 }))}
-          />
-        </div>
-        <div className="space-y-2 col-span-2 sm:col-span-1">
-          <Label>1ª Parcela</Label>
-          <Input
-            type="date"
-            value={newAcordo.data_vencimento_primeira_parcela}
-            onChange={(e) => setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: e.target.value }))}
-            className={formErrors.data_vencimento_primeira_parcela ? "border-red-500" : ""}
-          />
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Observações</Label>
-        <Input
-          value={newAcordo.observacoes}
-          onChange={(e) => setNewAcordo(prev => ({ ...prev, observacoes: e.target.value }))}
-        />
-      </div>
-
-      {cronograma.length > 0 && (
-        <CronogramaEditavel
-          cronograma={cronograma}
-          temDatasManuais={temDatasManuais}
-          onDataParcelaChange={onDataParcelaChange}
-          onResetDatas={onResetDatas}
-        />
-      )}
-    </>
-  );
-}
-
-interface NovoAcordoDialogProps {
-  open: boolean;
-  onOpenChange: (o: boolean) => void;
-  clientes: Parameters<typeof SelecionarTitulosAcordo>[0]['clientes'];
-  clienteIdPreSelecionado?: string;
-  loadingTitulos: boolean;
-  isCreating: boolean;
-  onSelectionChange: (selection: SelectionData | null) => void;
-  newAcordo: NovoAcordo;
-  setNewAcordo: Dispatch<SetStateAction<NovoAcordo>>;
-  formErrors: FormErrors;
-  cronograma: CronogramaParcela[];
-  temDatasManuais: boolean;
-  onDataParcelaChange: (numero: number, data: string) => void;
-  onResetDatas: () => void;
-  onCancel: () => void;
-  onCreate: () => void;
-}
-function NovoAcordoDialog({
-  open, onOpenChange, clientes, clienteIdPreSelecionado, loadingTitulos, isCreating, onSelectionChange,
-  newAcordo, setNewAcordo, formErrors, cronograma, temDatasManuais,
-  onDataParcelaChange, onResetDatas, onCancel, onCreate,
-}: NovoAcordoDialogProps) {
-  // Sem título escolhido não há o que configurar: mantém uma coluna só, para a
-  // seleção não ficar espremida com metade do modal vazia ao lado.
-  const mostrarConfiguracao = !loadingTitulos && newAcordo.titulo_ids.length > 0;
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={MODAL_LARGO}>
-        <DialogHeader>
-          <DialogTitle>Novo Acordo</DialogTitle>
-          <DialogDescription>
-            Selecione os títulos e configure o acordo de pagamento
-          </DialogDescription>
-        </DialogHeader>
-        <div className={`grid gap-6 ${mostrarConfiguracao ? 'lg:grid-cols-2' : ''}`}>
-          <div className="min-w-0">
-            <SelecionarTitulosAcordo
-              clientes={clientes}
-              clienteIdPreSelecionado={clienteIdPreSelecionado}
-              loading={loadingTitulos}
-              onSelectionChange={onSelectionChange}
-            />
-          </div>
-
-          {mostrarConfiguracao && (
-            <div className="min-w-0 space-y-4">
-              <ConfiguracaoAcordo
-                newAcordo={newAcordo}
-                setNewAcordo={setNewAcordo}
-                formErrors={formErrors}
-                cronograma={cronograma}
-                temDatasManuais={temDatasManuais}
-                onDataParcelaChange={onDataParcelaChange}
-                onResetDatas={onResetDatas}
-              />
-            </div>
-          )}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={onCancel}>
-            Cancelar
-          </Button>
-          <Button onClick={onCreate} disabled={newAcordo.titulo_ids.length === 0 || isCreating}>
-            {isCreating && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-            Criar Acordo
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-// Status de exibição da parcela do acordo: se não está paga, deriva vencida/pendente
-// pela data — o campo `status` armazenado costuma ficar em 'pendente'.
-function statusExibicaoParcela(p: ParcelaAcordoRow): 'paga' | 'vencida' | 'pendente' {
-  if (p.status === 'paga' || p.data_pagamento) return 'paga';
-  const hoje = new Date();
-  hoje.setHours(0, 0, 0, 0);
-  // parseDataLocal, e não `new Date(...)`: a coluna é `date` pura e o construtor
-  // a lê como meia-noite UTC — no fuso do Brasil isso vira o dia anterior, e a
-  // parcela que vence HOJE aparecia como vencida.
-  return parseDataLocal(p.data_vencimento) < hoje ? 'vencida' : 'pendente';
-}
+// O status vem de vw_parcelas_acordo_consolidadas, que já deriva paga/vencida/
+// pendente do saldo e da data. Antes a tela recalculava por conta porque a
+// coluna `status` da tabela ficava presa em 'pendente'.
+const parcelaQuitada = (p: ParcelaAcordoRow) => p.saldo_atual <= 0;
 
 interface ResumoParcelas {
   total: number;
@@ -404,12 +143,14 @@ function resumoParcelasAcordo(parcelas: ParcelaAcordoRow[]): ResumoParcelas {
   let saldo = 0;
   let proximo: string | null = null;
   for (const p of parcelas) {
-    if (statusExibicaoParcela(p) === 'paga') {
+    // Valor RECEBIDO e saldo REAL, não o previsto no cronograma: é a diferença
+    // entre relatar o que entrou e relatar o que deveria ter entrado.
+    valorPago += Number(p.total_pago);
+    saldo += Math.max(0, Number(p.saldo_atual));
+    if (parcelaQuitada(p)) {
       pagas += 1;
-      valorPago += Number(p.valor_total);
-    } else {
-      saldo += Number(p.valor_total);
-      if (!proximo || p.data_vencimento < proximo) proximo = p.data_vencimento;
+    } else if (!proximo || p.data_vencimento < proximo) {
+      proximo = p.data_vencimento;
     }
   }
   return { total: parcelas.length, pagas, valorPago, saldo, proximoVencimento: proximo };
@@ -438,160 +179,132 @@ function ResumoParcelasCards({ resumo }: { resumo: ResumoParcelas }) {
   );
 }
 
+interface AcaoParcela {
+  parcela: ParcelaAcordoRow;
+  modo: ModoBaixa;
+}
+
 interface ParcelaAcordoRowProps {
   parcela: ParcelaAcordoRow;
-  podePagar: boolean;
-  emPagamento: boolean;
-  dataPagamento: string;
-  isPending: boolean;
-  onIniciar: (id: string) => void;
-  onDataChange: (v: string) => void;
-  onConfirmar: () => void;
-  onCancelar: () => void;
+  podeOperar: boolean;
+  podeEstornar: boolean;
+  onAcao: (acao: AcaoParcela) => void;
 }
-// Formulário de baixa da parcela — compartilhado pela linha da tabela (desktop)
-// e pelo card (mobile), para as duas formas não divergirem.
-function FormPagamentoParcela({
-  dataPagamento, isPending, onDataChange, onConfirmar, onCancelar,
-}: Pick<ParcelaAcordoRowProps, 'dataPagamento' | 'isPending' | 'onDataChange' | 'onConfirmar' | 'onCancelar'>) {
+
+/**
+ * Ação disponível para a parcela: baixar o que está em aberto, ou desfazer a
+ * baixa do que já foi pago. As duas abrem o mesmo modal, em modos diferentes.
+ */
+function AcoesParcelaAcordo({ parcela, podeOperar, podeEstornar, onAcao }: ParcelaAcordoRowProps) {
+  // Com o razão, as duas ações podem coexistir: uma parcela com pagamento
+  // parcial ainda recebe baixa E já tem lançamento passível de estorno.
+  const temLancamento = parcela.total_pago > 0 || parcela.encargos > 0 || parcela.descontos > 0;
+  const emAberto = !parcelaQuitada(parcela);
+
   return (
-    <div className="flex flex-wrap items-end gap-2 py-1">
-      <div className="space-y-1">
-        <Label className="text-xs">Data do pagamento</Label>
-        <Input
-          type="date"
-          value={dataPagamento}
-          onChange={(e) => onDataChange(e.target.value)}
-          className="h-8 w-40"
-        />
-      </div>
-      <Button size="sm" onClick={onConfirmar} disabled={isPending}>
-        {isPending ? 'Registrando...' : 'Confirmar'}
-      </Button>
-      <Button size="sm" variant="outline" onClick={onCancelar} disabled={isPending}>
-        Voltar
-      </Button>
+    <div className="flex items-center justify-end gap-1">
+      {podeOperar && emAberto && (
+        <Button size="sm" variant="outline" className="h-8" onClick={() => onAcao({ parcela, modo: 'pagar' })}>
+          Registrar pagamento
+        </Button>
+      )}
+      {podeEstornar && temLancamento && (
+        <Button size="sm" variant="ghost" className="h-8" onClick={() => onAcao({ parcela, modo: 'estornar' })}>
+          Estornar
+        </Button>
+      )}
     </div>
   );
 }
 
-// Forma da parcela no MOBILE: a tabela de 7 colunas não cabe em tela de celular
-// sem rolagem horizontal, então lá cada parcela vira um card.
-function ParcelaAcordoCard({
-  parcela, podePagar, emPagamento, dataPagamento, isPending,
-  onIniciar, onDataChange, onConfirmar, onCancelar,
-}: ParcelaAcordoRowProps) {
-  const st = statusExibicaoParcela(parcela);
+/**
+ * Recebido na parcela, com o encargo de atraso explícito.
+ *
+ * Sem a segunda linha, uma parcela de R$ 1.000 que recebeu R$ 1.010 pareceria
+ * erro de digitação — é justamente o caso que motivou o razão.
+ */
+function ValorRecebido({ parcela }: { parcela: ParcelaAcordoRow }) {
+  if (parcela.total_pago <= 0) return <span className="text-muted-foreground">—</span>;
   return (
-    <div className="rounded-lg border p-3 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-medium">Parcela {parcela.numero_parcela}</span>
-        <StatusBadge domain="parcela_acordo" status={st} />
-      </div>
-
-      <div className="grid grid-cols-2 gap-3 text-sm">
-        <CampoDetalhe label="Vencimento">{formatData(parcela.data_vencimento)}</CampoDetalhe>
-        <CampoDetalhe label="Valor">{formatCurrency(parcela.valor_total)}</CampoDetalhe>
-        <CampoDetalhe label="Juros">
-          {parcela.valor_juros > 0 ? formatCurrency(parcela.valor_juros) : '—'}
-        </CampoDetalhe>
-        <CampoDetalhe label="Pago em">
-          {parcela.data_pagamento ? formatData(parcela.data_pagamento) : '—'}
-        </CampoDetalhe>
-      </div>
-
-      {podePagar && st !== 'paga' && !emPagamento && (
-        <Button size="sm" variant="outline" className="h-8 w-full" onClick={() => onIniciar(parcela.id)}>
-          Registrar pagamento
-        </Button>
+    <div>
+      <div className="font-medium">{formatCurrency(parcela.total_pago)}</div>
+      {parcela.encargos > 0 && (
+        <div className="text-[11px] text-amber-600">
+          inclui {formatCurrency(parcela.encargos)} de encargo
+        </div>
       )}
-      {emPagamento && (
-        <div className="rounded-md bg-muted/30 px-2">
-          <FormPagamentoParcela
-            dataPagamento={dataPagamento}
-            isPending={isPending}
-            onDataChange={onDataChange}
-            onConfirmar={onConfirmar}
-            onCancelar={onCancelar}
-          />
+      {parcela.descontos > 0 && (
+        <div className="text-[11px] text-green-600">
+          {formatCurrency(parcela.descontos)} de desconto
         </div>
       )}
     </div>
   );
 }
 
-function ParcelaAcordoTableRow({
-  parcela, podePagar, emPagamento, dataPagamento, isPending,
-  onIniciar, onDataChange, onConfirmar, onCancelar,
-}: ParcelaAcordoRowProps) {
-  const st = statusExibicaoParcela(parcela);
+// Forma da parcela no MOBILE: a tabela de 7 colunas não cabe em tela de celular
+// sem rolagem horizontal, então lá cada parcela vira um card.
+function ParcelaAcordoCard(props: ParcelaAcordoRowProps) {
+  const { parcela } = props;
   return (
-    <>
-      <TableRow>
-        <TableCell className="font-medium">{parcela.numero_parcela}</TableCell>
-        <TableCell>{formatData(parcela.data_vencimento)}</TableCell>
-        <TableCell>{formatCurrency(parcela.valor_total)}</TableCell>
-        <TableCell className="text-muted-foreground">
-          {parcela.valor_juros > 0 ? formatCurrency(parcela.valor_juros) : '—'}
+    <div className="rounded-lg border p-3 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="font-medium">Parcela {parcela.numero_parcela}</span>
+        <StatusBadge domain="parcela_acordo" status={parcela.status} />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 text-sm">
+        <CampoDetalhe label="Vencimento">{formatData(parcela.data_vencimento)}</CampoDetalhe>
+        <CampoDetalhe label="Valor">{formatCurrency(parcela.valor_total)}</CampoDetalhe>
+        <CampoDetalhe label="Recebido">
+          <ValorRecebido parcela={parcela} />
+        </CampoDetalhe>
+        <CampoDetalhe label="Saldo">
+          <span className={parcela.saldo_atual > 0 ? 'text-destructive' : ''}>
+            {formatCurrency(Math.max(0, parcela.saldo_atual))}
+          </span>
+        </CampoDetalhe>
+      </div>
+
+      <div className="[&>button]:w-full">
+        <AcoesParcelaAcordo {...props} />
+      </div>
+    </div>
+  );
+}
+
+function ParcelaAcordoTableRow(props: ParcelaAcordoRowProps) {
+  const { parcela, podeOperar, podeEstornar } = props;
+  return (
+    <TableRow>
+      <TableCell className="font-medium">{parcela.numero_parcela}</TableCell>
+      <TableCell>{formatData(parcela.data_vencimento)}</TableCell>
+      <TableCell>{formatCurrency(parcela.valor_total)}</TableCell>
+      <TableCell><ValorRecebido parcela={parcela} /></TableCell>
+      <TableCell className={parcela.saldo_atual > 0 ? 'text-destructive' : 'text-muted-foreground'}>
+        {formatCurrency(Math.max(0, parcela.saldo_atual))}
+      </TableCell>
+      <TableCell>
+        <StatusBadge domain="parcela_acordo" status={parcela.status} />
+      </TableCell>
+      {(podeOperar || podeEstornar) && (
+        <TableCell className="text-right">
+          <AcoesParcelaAcordo {...props} />
         </TableCell>
-        <TableCell>
-          <StatusBadge domain="parcela_acordo" status={st} />
-        </TableCell>
-        <TableCell>{parcela.data_pagamento ? formatData(parcela.data_pagamento) : '—'}</TableCell>
-        {podePagar && (
-          <TableCell className="text-right">
-            {st !== 'paga' && !emPagamento && (
-              <Button size="sm" variant="outline" className="h-8" onClick={() => onIniciar(parcela.id)}>
-                Registrar pagamento
-              </Button>
-            )}
-          </TableCell>
-        )}
-      </TableRow>
-      {emPagamento && (
-        <TableRow>
-          <TableCell colSpan={7} className="bg-muted/30">
-            <FormPagamentoParcela
-              dataPagamento={dataPagamento}
-              isPending={isPending}
-              onDataChange={onDataChange}
-              onConfirmar={onConfirmar}
-              onCancelar={onCancelar}
-            />
-          </TableCell>
-        </TableRow>
       )}
-    </>
+    </TableRow>
   );
 }
 
 interface ParcelasAcordoListaProps {
   parcelas: ParcelaAcordoRow[];
-  podePagar: boolean;
-  pagandoId: string | null;
-  dataPagamento: string;
-  isPending: boolean;
-  onIniciar: (id: string) => void;
-  onDataChange: (v: string) => void;
-  onConfirmar: () => void;
-  onCancelar: () => void;
+  podeOperar: boolean;
+  podeEstornar: boolean;
+  onAcao: (acao: AcaoParcela) => void;
 }
 // Duas formas do mesmo dado: tabela a partir de md, cards abaixo disso.
-function ParcelasAcordoLista({
-  parcelas, podePagar, pagandoId, dataPagamento, isPending,
-  onIniciar, onDataChange, onConfirmar, onCancelar,
-}: ParcelasAcordoListaProps) {
-  const propsComuns = (p: ParcelaAcordoRow) => ({
-    parcela: p,
-    podePagar,
-    emPagamento: pagandoId === p.id,
-    dataPagamento,
-    isPending,
-    onIniciar,
-    onDataChange,
-    onConfirmar,
-    onCancelar,
-  });
+function ParcelasAcordoLista({ parcelas, podeOperar, podeEstornar, onAcao }: ParcelasAcordoListaProps) {
+  const comuns = (p: ParcelaAcordoRow) => ({ parcela: p, podeOperar, podeEstornar, onAcao });
 
   return (
     <>
@@ -601,16 +314,16 @@ function ParcelasAcordoLista({
             <TableRow>
               <TableHead>Parcela</TableHead>
               <TableHead>Vencimento</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead>Juros</TableHead>
+              <TableHead>Previsto</TableHead>
+              <TableHead>Recebido</TableHead>
+              <TableHead>Saldo</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Pago em</TableHead>
-              {podePagar && <TableHead className="text-right">Ações</TableHead>}
+              {(podeOperar || podeEstornar) && <TableHead className="text-right">Ações</TableHead>}
             </TableRow>
           </TableHeader>
           <TableBody>
             {parcelas.map((p) => (
-              <ParcelaAcordoTableRow key={p.id} {...propsComuns(p)} />
+              <ParcelaAcordoTableRow key={p.id} {...comuns(p)} />
             ))}
           </TableBody>
         </Table>
@@ -618,7 +331,7 @@ function ParcelasAcordoLista({
 
       <div className="md:hidden space-y-2">
         {parcelas.map((p) => (
-          <ParcelaAcordoCard key={p.id} {...propsComuns(p)} />
+          <ParcelaAcordoCard key={p.id} {...comuns(p)} />
         ))}
       </div>
     </>
@@ -631,31 +344,8 @@ function ParcelasAcordoSecao({ acordoId, open, acordoCancelado }: {
   acordoCancelado: boolean;
 }) {
   const { data: parcelas = [], isLoading } = useParcelasAcordo(acordoId, open);
-  const { isOperador } = useUserRole();
-  const pagar = usePagarParcelaAcordo();
-  const { toast } = useToast();
-  const [pagandoId, setPagandoId] = useState<string | null>(null);
-  const [dataPagamento, setDataPagamento] = useState('');
-
-  const iniciar = (id: string) => {
-    setPagandoId(id);
-    setDataPagamento(hojeIso());
-  };
-
-  const confirmar = async () => {
-    if (!pagandoId) return;
-    try {
-      await pagar.mutateAsync({ parcelaAcordoId: pagandoId, dataPagamento: dataPagamento || undefined });
-      toast({ title: 'Pagamento registrado', description: 'A parcela do acordo foi baixada.' });
-      setPagandoId(null);
-    } catch (error) {
-      toast({
-        title: 'Erro',
-        description: error instanceof Error ? error.message : 'Não foi possível registrar o pagamento',
-        variant: 'destructive',
-      });
-    }
-  };
+  const { isOperador, isAdmin } = useUserRole();
+  const [acao, setAcao] = useState<AcaoParcela | null>(null);
 
   if (isLoading) {
     return <p className="text-sm text-muted-foreground">Carregando parcelas...</p>;
@@ -669,14 +359,14 @@ function ParcelasAcordoSecao({ acordoId, open, acordoCancelado }: {
       <ResumoParcelasCards resumo={resumoParcelasAcordo(parcelas)} />
       <ParcelasAcordoLista
         parcelas={parcelas}
-        podePagar={isOperador && !acordoCancelado}
-        pagandoId={pagandoId}
-        dataPagamento={dataPagamento}
-        isPending={pagar.isPending}
-        onIniciar={iniciar}
-        onDataChange={setDataPagamento}
-        onConfirmar={confirmar}
-        onCancelar={() => setPagandoId(null)}
+        podeOperar={isOperador && !acordoCancelado}
+        podeEstornar={isAdmin && !acordoCancelado}
+        onAcao={setAcao}
+      />
+      <BaixaParcelaAcordoModal
+        parcela={acao?.parcela ?? null}
+        modo={acao?.modo ?? 'pagar'}
+        onFechar={() => setAcao(null)}
       />
     </div>
   );
@@ -828,81 +518,30 @@ export default function Acordos() {
   const [searchParams] = useSearchParams();
   const preSelectedData = location.state as LocationState | null;
 
+  const { toast } = useToast();
+
   // === Data via React Query ===
   const { data: acordos = [], isLoading: loading } = useAcordos();
-  const createAcordoMutation = useCreateAcordo();
   const cancelAcordoMutation = useCancelAcordo();
   const hardDeleteAcordoMutation = useHardDeleteAcordos();
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
-  const [mostrarCancelados, setMostrarCancelados] = useState(false);
   const [selectedAcordo, setSelectedAcordo] = useState<AcordoRow | null>(null);
   const [acordoToCancel, setAcordoToCancel] = useState<AcordoRow | null>(null);
   const [acordoToHardDelete, setAcordoToHardDelete] = useState<AcordoRow | null>(null);
 
-  const [newAcordo, setNewAcordo] = useState<NovoAcordo>({
-    cliente_id: '',
-    titulo_ids: [],
-    valor_original: 0,
-    valor_acordo: 0,
-    parcelas: 1,
-    taxa_juros: 0,
-    data_inicio: hojeIso(),
-    data_vencimento_primeira_parcela: hojeIso(),
-    observacoes: ''
-  });
-
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
-  // Datas que o usuário sobrescreveu na mão, por número de parcela. O resto do
-  // cronograma é sugerido a partir do vencimento da 1ª parcela.
-  const [datasManuais, setDatasManuais] = useState<DatasManuais>({});
-  const { toast } = useToast();
-
-  // Ignora sobrescritas de parcelas que não existem mais (ex.: 6 -> 3 parcelas).
-  const datasAtivas = useMemo(
-    () => podarDatasManuais(datasManuais, newAcordo.parcelas),
-    [datasManuais, newAcordo.parcelas],
-  );
-
-  const cronograma = useMemo(
-    () => gerarCronograma(
-      {
-        valorAcordo: newAcordo.valor_acordo,
-        parcelas: newAcordo.parcelas,
-        taxaJuros: newAcordo.taxa_juros,
-        primeiroVencimento: newAcordo.data_vencimento_primeira_parcela,
-      },
-      datasAtivas,
-    ),
-    [
-      newAcordo.valor_acordo, newAcordo.parcelas, newAcordo.taxa_juros,
-      newAcordo.data_vencimento_primeira_parcela, datasAtivas,
-    ],
-  );
-
-  // A 1ª parcela é a âncora da sugestão: editá-la re-sugere as seguintes.
-  // As demais viram sobrescrita individual e param de acompanhar a âncora.
-  const handleDataParcelaChange = useCallback((numero: number, data: string) => {
-    if (numero === 1) {
-      setNewAcordo(prev => ({ ...prev, data_vencimento_primeira_parcela: data }));
-      return;
-    }
-    setDatasManuais(prev => ({ ...prev, [numero]: data }));
-  }, []);
   // Vendedor é read-only: escondemos as ações de escrita.
   // Cancelar e excluir exigem admin (RLS acordos_update / RPCs de acordo).
   const { isOperador, isAdmin } = useUserRole();
 
-  const { clientes: clientesComDividas, loading: loadingTitulos, refetch: refetchTitulos } = useTitulosAgrupados();
-
+  // Compatibilidade: a ficha do cliente hoje abre o modal no lugar, mas links
+  // antigos (e o histórico do navegador) ainda podem chegar aqui com o cliente
+  // no state.
   useEffect(() => {
-    if (preSelectedData?.clienteId) {
-      refetchTitulos();
-      setIsCreateModalOpen(true);
-    }
-  }, [preSelectedData, refetchTitulos]);
+    if (preSelectedData?.clienteId) setIsCreateModalOpen(true);
+  }, [preSelectedData]);
 
   // Deep link ?id=<acordo>: abre os detalhes direto (ex.: link vindo da ficha do cliente).
   useEffect(() => {
@@ -915,141 +554,12 @@ export default function Acordos() {
     }
   }, [searchParams, acordos]);
 
-  const validateForm = () => {
-    const errors: FormErrors = {};
-    let isValid = true;
-
-    if (!newAcordo.cliente_id || newAcordo.titulo_ids.length === 0) {
-      errors.cliente_id = 'Selecione pelo menos um título';
-      isValid = false;
-    }
-
-    if (!newAcordo.valor_acordo || newAcordo.valor_acordo <= 0) {
-      errors.valor_acordo = 'Valor do acordo deve ser maior que zero';
-      isValid = false;
-    }
-
-    if (!newAcordo.parcelas || newAcordo.parcelas <= 0) {
-      errors.parcelas = 'Número de parcelas deve ser maior que zero';
-      isValid = false;
-    }
-
-    if (!newAcordo.data_vencimento_primeira_parcela) {
-      errors.data_vencimento_primeira_parcela = 'Data de vencimento é obrigatória';
-      isValid = false;
-    }
-
-    if (cronograma.some((p) => !p.data_vencimento)) {
-      errors.data_vencimento_primeira_parcela = 'Preencha o vencimento de todas as parcelas';
-      isValid = false;
-    }
-
-    setFormErrors(errors);
-    return isValid;
-  };
-
-  const handleSelectionChange = useCallback((selection: SelectionData | null) => {
-    if (!selection) {
-      setNewAcordo(prev => ({
-        ...prev,
-        cliente_id: '',
-        titulo_ids: [],
-        valor_original: 0,
-        valor_acordo: 0
-      }));
-      return;
-    }
-
-    setNewAcordo(prev => ({
-      ...prev,
-      cliente_id: selection.clienteId,
-      titulo_ids: selection.tituloIds,
-      valor_original: selection.valorTotal,
-      valor_acordo: prev.valor_acordo === 0 || prev.valor_acordo === prev.valor_original 
-        ? selection.valorTotal 
-        : prev.valor_acordo
-    }));
-  }, []);
-
-  const handleCreateAcordo = async () => {
-    if (!validateForm()) {
-      toast({
-        title: "Erro",
-        description: "Por favor, preencha todos os campos obrigatórios.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      // Usa o cronograma exibido — inclui as datas que o usuário ajustou na mão.
-      const cronogramaParcelas = cronograma;
-      const valorTotalComJuros = totalCronograma(cronogramaParcelas);
-      const valorParcela = valorTotalComJuros / newAcordo.parcelas;
-      // Percentual sobre o mesmo par de valores que será gravado. Acordo acima
-      // do débito não tem desconto (a coluna só aceita 0..100) — a diferença
-      // fica legível em valor_original x valor_acordo.
-      const desconto = descontoPercentual(newAcordo.valor_original, valorTotalComJuros);
-
-      await createAcordoMutation.mutateAsync({
-        titulo_ids: newAcordo.titulo_ids,
-        cliente_id: newAcordo.cliente_id,
-        valor_original: newAcordo.valor_original,
-        valor_acordo: valorTotalComJuros,
-        desconto,
-        parcelas: newAcordo.parcelas,
-        valor_parcela: valorParcela,
-        data_vencimento_primeira_parcela: newAcordo.data_vencimento_primeira_parcela,
-        observacoes: newAcordo.observacoes,
-        cronograma: cronogramaParcelas.map((p) => ({
-          numero_parcela: p.numero,
-          valor: p.valor,
-          valor_juros: p.valor_juros,
-          valor_total: p.valor_total,
-          data_vencimento: p.data_vencimento,
-        })),
-      });
-
-      toast({
-        title: "Sucesso",
-        description: `Acordo criado com sucesso. ${newAcordo.titulo_ids.length} título(s) incluído(s).`,
-      });
-
-      setIsCreateModalOpen(false);
-      setDatasManuais({});
-      setNewAcordo({
-        cliente_id: '',
-        titulo_ids: [],
-        valor_original: 0,
-        valor_acordo: 0,
-        parcelas: 1,
-        taxa_juros: 0,
-        data_inicio: hojeIso(),
-        data_vencimento_primeira_parcela: hojeIso(),
-        observacoes: '',
-      });
-
-      refetchTitulos();
-    } catch (error) {
-      console.error('Erro ao criar acordo:', error);
-      toast({
-        title: "Erro",
-        // A mensagem do banco (constraint, permissão, título já em acordo) é
-        // mais útil que um texto genérico — antes o operador via só "não foi
-        // possível" e não tinha como corrigir o cadastro.
-        description: error instanceof Error ? error.message : "Não foi possível criar o acordo",
-        variant: "destructive",
-      });
-    }
-  };
-
   const handleHardDeleteAcordo = async () => {
     if (!acordoToHardDelete) return;
     try {
       await hardDeleteAcordoMutation.mutateAsync([acordoToHardDelete.id]);
       setAcordoToHardDelete(null);
       toast({ title: 'Sucesso', description: 'Acordo excluído definitivamente' });
-      refetchTitulos();
     } catch (error) {
       console.error('Erro ao excluir acordo:', error);
       toast({
@@ -1074,7 +584,6 @@ export default function Acordos() {
         description: "Acordo cancelado com sucesso",
       });
 
-      refetchTitulos();
     } catch (error) {
       console.error('Erro ao cancelar acordo:', error);
       toast({
@@ -1087,13 +596,6 @@ export default function Acordos() {
 
   // Filter functions for acordos
   const filterFunctions = useMemo(() => createAcordosFilterFunctions(), []);
-
-  // Cancelados ficam ocultos por padrão para não poluir a operação do dia a dia;
-  // o checkbox "Mostrar cancelados" reexibe o histórico quando necessário.
-  const acordosVisiveis = useMemo(
-    () => (mostrarCancelados ? acordos : acordos.filter((a) => a.status !== 'cancelado')),
-    [acordos, mostrarCancelados]
-  );
 
   // Cards refletem o estado operacional: cancelados nunca entram nos totais
   // (independente do checkbox, que afeta apenas a listagem).
@@ -1113,9 +615,9 @@ export default function Acordos() {
     activeFiltersCount,
     resultCount,
     totalCount
-  } = useGlobalFilter(acordosVisiveis, filterFunctions);
+  } = useGlobalFilter(acordos, filterFunctions);
 
-  const pagination = usePagination(filteredAcordos, 25, JSON.stringify(filters) + mostrarCancelados);
+  const pagination = usePagination(filteredAcordos, 25, JSON.stringify(filters), PARAM_PAGINA);
 
   if (loading) {
     return <CarregandoConteudo />;
@@ -1130,8 +632,7 @@ export default function Acordos() {
         {isOperador && (
           <Button 
             onClick={() => {
-              refetchTitulos();
-              setIsCreateModalOpen(true);
+                      setIsCreateModalOpen(true);
             }}
           >
             <Plus className="h-4 w-4 mr-2" />
@@ -1140,84 +641,22 @@ export default function Acordos() {
         )}
       </PageHeader>
 
-      <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total de Acordos</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-              <FileText className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-black tracking-tighter">{acordosNaoCancelados.length}</div>
-            <p className="text-[10px] font-medium text-muted-foreground mt-1">Acordos registrados</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Acordos Ativos</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 group-hover:scale-110 transition-transform">
-              <CheckCircle className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-black tracking-tighter text-blue-600">
-              {acordosNaoCancelados.filter(a => a.status === 'ativo').length}
-            </div>
-            <p className="text-[10px] font-medium text-muted-foreground mt-1">Em andamento</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-success/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Cumpridos</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-success/10 flex items-center justify-center text-success group-hover:scale-110 transition-transform">
-              <Plus className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-black tracking-tighter text-success">
-              {acordosNaoCancelados.filter(a => a.status === 'cumprido').length}
-            </div>
-            <p className="text-[10px] font-medium text-muted-foreground mt-1">Finalizados com sucesso</p>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Valor Total</CardTitle>
-            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
-              <TrendingUp className="h-4 w-4" />
-            </div>
-          </CardHeader>
-          <CardContent className="relative z-10">
-            <div className="text-3xl font-black tracking-tighter">
-              {formatCurrency(acordosNaoCancelados.reduce((sum, a) => sum + a.valor_acordo, 0))}
-            </div>
-            <p className="text-[10px] font-medium text-muted-foreground mt-1">Montante negociado</p>
-          </CardContent>
-        </Card>
-      </div>
+      <ResumoNumeros
+        itens={[
+          { rotulo: 'Acordos', valor: acordosNaoCancelados.length, icone: FileText },
+          { rotulo: 'Ativos', valor: acordosNaoCancelados.filter(a => a.status === 'ativo').length, icone: CheckCircle, cor: 'text-blue-600' },
+          { rotulo: 'Cumpridos', valor: acordosNaoCancelados.filter(a => a.status === 'cumprido').length, icone: CheckCircle, cor: 'text-success' },
+          { rotulo: 'Valor negociado', valor: formatCurrency(acordosNaoCancelados.reduce((s, a) => s + a.valor_acordo, 0)), icone: TrendingUp },
+        ]}
+      />
 
       <Card className="border-none shadow-card rounded-2xl overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <CardTitle className="text-xl font-bold tracking-tight">Lista de Acordos</CardTitle>
-              <CardDescription className="text-xs font-medium">Total de {filteredAcordos.length} acordos encontrados</CardDescription>
-            </div>
-            <label className="flex items-center gap-2 text-xs font-medium text-muted-foreground cursor-pointer">
-              <Checkbox
-                checked={mostrarCancelados}
-                onCheckedChange={(checked) => setMostrarCancelados(checked === true)}
-              />
-              Mostrar cancelados
-            </label>
+          <div>
+            <CardTitle className="text-xl font-bold tracking-tight">Lista de Acordos</CardTitle>
+            <CardDescription className="text-xs font-medium">
+              Total de {filteredAcordos.length} acordos encontrados
+            </CardDescription>
           </div>
         </CardHeader>
         <CardContent className="pt-6">
@@ -1272,7 +711,7 @@ export default function Acordos() {
                       </div>
                     </TableCell>
                     <TableCell className="hidden sm:table-cell font-mono text-sm">
-                      {acordo.titulo?.numero_documento || '-'}
+                      <DocumentosDoAcordo acordo={acordo} />
                     </TableCell>
                     <TableCell className="hidden md:table-cell">
                       {formatCurrency(acordo.valor_original)}
@@ -1341,24 +780,15 @@ export default function Acordos() {
         </CardContent>
       </Card>
 
-      <NovoAcordoDialog
-        open={isCreateModalOpen}
-        onOpenChange={setIsCreateModalOpen}
-        clientes={clientesComDividas}
-        clienteIdPreSelecionado={preSelectedData?.clienteId}
-        loadingTitulos={loadingTitulos}
-        isCreating={createAcordoMutation.isPending}
-        onSelectionChange={handleSelectionChange}
-        newAcordo={newAcordo}
-        setNewAcordo={setNewAcordo}
-        formErrors={formErrors}
-        cronograma={cronograma}
-        temDatasManuais={Object.keys(datasAtivas).length > 0}
-        onDataParcelaChange={handleDataParcelaChange}
-        onResetDatas={() => setDatasManuais({})}
-        onCancel={() => setIsCreateModalOpen(false)}
-        onCreate={handleCreateAcordo}
-      />
+      {/* Montado só quando aberto: a busca de títulos acontece na montagem,
+          então cada abertura já vem com dados frescos. */}
+      {isCreateModalOpen && (
+        <NovoAcordoDialog
+          open
+          onOpenChange={setIsCreateModalOpen}
+          clienteIdPreSelecionado={preSelectedData?.clienteId}
+        />
+      )}
 
       <AcordoDetailsDialog
         open={isDetailsModalOpen}

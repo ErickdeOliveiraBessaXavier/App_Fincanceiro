@@ -27,6 +27,14 @@ export interface AcordoRow {
     vencimento_original: string;
     numero_documento?: string;
   };
+  /**
+   * Todos os títulos incluídos no acordo (acordo_titulos).
+   *
+   * A coluna `titulo_id` é do tempo em que um acordo cobria um título só; a
+   * lista mostrava apenas esse documento e um acordo consolidado aparecia como
+   * se cobrisse um título — informação errada, não só incompleta.
+   */
+  titulos: TituloDoAcordo[];
   cliente: {
     id: string;
     nome: string;
@@ -46,11 +54,31 @@ export interface ParcelaAcordoRow {
   id: string;
   numero_parcela: number;
   valor: number;
+  /** Juros do PARCELAMENTO, fixado na criação do acordo. Não é encargo de atraso. */
   valor_juros: number;
   valor_total: number;
   data_vencimento: string;
   data_pagamento: string | null;
   status: 'pendente' | 'paga' | 'vencida';
+  /** Somatório dos pagamentos não estornados. */
+  total_pago: number;
+  /** Juros e multa por atraso lançados nesta parcela. */
+  encargos: number;
+  descontos: number;
+  /** valor_total + encargos − pagamentos − descontos. Zero ou menos = quitada. */
+  saldo_atual: number;
+}
+
+/** Um lançamento do razão da parcela de acordo. */
+export interface EventoParcelaAcordo {
+  id: string;
+  tipo: 'pagamento_total' | 'pagamento_parcial' | 'juros_aplicado' | 'multa_aplicada' | 'desconto_concedido' | 'estorno';
+  valor: number;
+  data_evento: string;
+  descricao: string | null;
+  meio_pagamento: string | null;
+  estornado: boolean;
+  created_at: string;
 }
 
 export interface CreateAcordoInput {
@@ -77,6 +105,7 @@ export const acordosKeys = {
   lists: () => [...acordosKeys.all, 'list'] as const,
   list: (filters?: Record<string, unknown>) => [...acordosKeys.lists(), filters ?? {}] as const,
   parcelas: (acordoId: string) => [...acordosKeys.all, 'parcelas', acordoId] as const,
+  eventosParcela: (parcelaId: string) => [...acordosKeys.all, 'eventos', parcelaId] as const,
 };
 
 // ============== Queries ==============
@@ -109,6 +138,7 @@ export function useAcordos() {
             vencimento_original,
             numero_documento
           ),
+          acordo_titulos ( titulos ( id, numero_documento ) ),
           cliente:clientes (
             id,
             nome,
@@ -118,7 +148,16 @@ export function useAcordos() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data as unknown as AcordoRow[]) ?? [];
+
+      type LinhaVinculo = { titulos: TituloDoAcordo | null };
+      return ((data ?? []) as unknown as Array<AcordoRow & { acordo_titulos?: LinhaVinculo[] }>)
+        .map((a) => ({
+          ...a,
+          // Fallback no vínculo legado para acordos anteriores à acordo_titulos.
+          titulos: (a.acordo_titulos ?? [])
+            .map((v) => v.titulos)
+            .filter((t): t is TituloDoAcordo => !!t),
+        }));
     },
   });
 }
@@ -132,14 +171,15 @@ export function useParcelasAcordo(acordoId: string | null, enabled = true) {
     queryKey: acordosKeys.parcelas(acordoId ?? ''),
     queryFn: async (): Promise<ParcelaAcordoRow[]> => {
       if (!acordoId) return [];
+      // A view traz o saldo derivado do razão; a tabela crua só sabe o previsto.
       const { data, error } = await supabase
-        .from('parcelas_acordo')
-        .select('id, numero_parcela, valor, valor_juros, valor_total, data_vencimento, data_pagamento, status')
+        .from('vw_parcelas_acordo_tenant')
+        .select('id, numero_parcela, valor, valor_juros, valor_total, data_vencimento, data_pagamento, status, total_pago, encargos, descontos, saldo_atual')
         .eq('acordo_id', acordoId)
         .order('numero_parcela');
 
       if (error) throw error;
-      return (data || []) as ParcelaAcordoRow[];
+      return (data || []) as unknown as ParcelaAcordoRow[];
     },
     enabled: enabled && !!acordoId,
   });
@@ -181,13 +221,72 @@ export function useCreateAcordo() {
  * Registra o pagamento de uma parcela do acordo (novação): marca 'paga' + data.
  * O trigger update_acordo_status leva o acordo a 'cumprido' quando todas quitam.
  */
+export interface PagarParcelaAcordoInput {
+  parcelaAcordoId: string;
+  /**
+   * O que ENTROU, não o previsto. Acima do saldo o excedente vira encargo de
+   * atraso; abaixo, a parcela continua aberta pela diferença.
+   */
+  valor: number;
+  dataPagamento?: string;
+  meioPagamento?: string;
+  descricao?: string;
+}
+
 export function usePagarParcelaAcordo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ parcelaAcordoId, dataPagamento }: { parcelaAcordoId: string; dataPagamento?: string }) => {
+    mutationFn: async (input: PagarParcelaAcordoInput) => {
       const { error } = await supabase.rpc('pagar_parcela_acordo', {
-        p_parcela_acordo_id: parcelaAcordoId,
-        p_data_pagamento: dataPagamento ?? null,
+        p_parcela_acordo_id: input.parcelaAcordoId,
+        p_valor: input.valor,
+        p_data_pagamento: input.dataPagamento ?? null,
+        p_meio_pagamento: input.meioPagamento ?? null,
+        p_descricao: input.descricao ?? null,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: acordosKeys.all });
+      qc.invalidateQueries({ queryKey: titulosKeys.all });
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
+    },
+  });
+}
+
+/** Lançamentos do razão de uma parcela — base do estorno e do histórico. */
+export function useEventosParcelaAcordo(parcelaAcordoId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: acordosKeys.eventosParcela(parcelaAcordoId ?? ''),
+    queryFn: async (): Promise<EventoParcelaAcordo[]> => {
+      if (!parcelaAcordoId) return [];
+      const { data, error } = await supabase
+        .from('eventos_parcela_acordo')
+        .select('id, tipo, valor, data_evento, descricao, meio_pagamento, estornado, created_at')
+        .eq('parcela_acordo_id', parcelaAcordoId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return (data || []) as EventoParcelaAcordo[];
+    },
+    enabled: enabled && !!parcelaAcordoId,
+  });
+}
+
+/**
+ * Desfaz UM lançamento do razão (admin+, motivo obrigatório).
+ *
+ * Estorna o lançamento, não a parcela inteira: numa parcela com pagamento
+ * parcial e encargo, dá para corrigir só o que foi lançado errado. O trigger
+ * update_acordo_status devolve o acordo de 'cumprido' para 'ativo' quando o
+ * saldo volta a ser positivo.
+ */
+export function useEstornarEventoParcelaAcordo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ eventoId, motivo }: { eventoId: string; motivo: string }) => {
+      const { error } = await supabase.rpc('estornar_evento_parcela_acordo', {
+        p_evento_id: eventoId,
+        p_motivo: motivo,
       });
       if (error) throw error;
     },

@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "13.0.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       acordo_titulos: {
@@ -511,6 +536,70 @@ export type Database = {
           },
         ]
       }
+      campanha_envios: {
+        Row: {
+          campanha_id: string
+          canal: string
+          cliente_id: string | null
+          company_id: string
+          created_at: string
+          destino: string
+          enviado_em: string | null
+          erro: string | null
+          id: string
+          provider_msg_id: string | null
+          status: string
+        }
+        Insert: {
+          campanha_id: string
+          canal?: string
+          cliente_id?: string | null
+          company_id: string
+          created_at?: string
+          destino: string
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          provider_msg_id?: string | null
+          status?: string
+        }
+        Update: {
+          campanha_id?: string
+          canal?: string
+          cliente_id?: string | null
+          company_id?: string
+          created_at?: string
+          destino?: string
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          provider_msg_id?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "campanha_envios_campanha_id_fkey"
+            columns: ["campanha_id"]
+            isOneToOne: false
+            referencedRelation: "campanhas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campanha_envios_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "campanha_envios_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       campanhas: {
         Row: {
           canal: string
@@ -956,6 +1045,137 @@ export type Database = {
           },
         ]
       }
+      eventos_parcela_acordo: {
+        Row: {
+          company_id: string
+          created_at: string
+          created_by: string | null
+          data_evento: string
+          descricao: string | null
+          efeito: number
+          estornado: boolean
+          estornado_por_id: string | null
+          id: string
+          meio_pagamento: string | null
+          metadata: Json | null
+          parcela_acordo_id: string
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          data_evento?: string
+          descricao?: string | null
+          efeito: number
+          estornado?: boolean
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_acordo_id: string
+          tipo: string
+          valor: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          data_evento?: string
+          descricao?: string | null
+          efeito?: number
+          estornado?: boolean
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_acordo_id?: string
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_acordo_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_acordo_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
+            referencedRelation: "eventos_parcela_acordo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_acordo_parcela_acordo_id_fkey"
+            columns: ["parcela_acordo_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas_acordo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_acordo_parcela_acordo_id_fkey"
+            columns: ["parcela_acordo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parcelas_acordo_consolidadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_acordo_parcela_acordo_id_fkey"
+            columns: ["parcela_acordo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parcelas_acordo_tenant"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      integracoes_whatsapp: {
+        Row: {
+          ativo: boolean
+          client_token: string | null
+          company_id: string
+          created_at: string
+          id: string
+          instance_id: string | null
+          provider: string
+          token: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          client_token?: string | null
+          company_id: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          provider?: string
+          token?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          client_token?: string | null
+          company_id?: string
+          created_at?: string
+          id?: string
+          instance_id?: string | null
+          provider?: string
+          token?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracoes_whatsapp_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       notificacoes: {
         Row: {
           company_id: string
@@ -1353,6 +1573,115 @@ export type Database = {
           },
         ]
       }
+      vw_integracoes_whatsapp: {
+        Row: {
+          ativo: boolean | null
+          client_token_configurado: boolean | null
+          company_id: string | null
+          id: string | null
+          instance_id: string | null
+          provider: string | null
+          token_configurado: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          ativo?: boolean | null
+          client_token_configurado?: never
+          company_id?: string | null
+          id?: string | null
+          instance_id?: string | null
+          provider?: string | null
+          token_configurado?: never
+          updated_at?: string | null
+        }
+        Update: {
+          ativo?: boolean | null
+          client_token_configurado?: never
+          company_id?: string | null
+          id?: string | null
+          instance_id?: string | null
+          provider?: string | null
+          token_configurado?: never
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "integracoes_whatsapp_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_parcelas_acordo_consolidadas: {
+        Row: {
+          acordo_id: string | null
+          company_id: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descontos: number | null
+          encargos: number | null
+          id: string | null
+          numero_parcela: number | null
+          saldo_atual: number | null
+          status: string | null
+          total_pago: number | null
+          valor: number | null
+          valor_juros: number | null
+          valor_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_acordo_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_acordo_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_parcelas_acordo_tenant: {
+        Row: {
+          acordo_id: string | null
+          company_id: string | null
+          data_pagamento: string | null
+          data_vencimento: string | null
+          descontos: number | null
+          encargos: number | null
+          id: string | null
+          numero_parcela: number | null
+          saldo_atual: number | null
+          status: string | null
+          total_pago: number | null
+          valor: number | null
+          valor_juros: number | null
+          valor_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_acordo_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_acordo_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_parcelas_consolidadas: {
         Row: {
           company_id: string | null
@@ -1571,6 +1900,10 @@ export type Database = {
         Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
         Returns: Json
       }
+      estornar_evento_parcela_acordo: {
+        Args: { p_evento_id: string; p_motivo: string }
+        Returns: Json
+      }
       excluir_acordos_definitivo: {
         Args: { p_acordo_ids: string[] }
         Returns: Json
@@ -1642,10 +1975,21 @@ export type Database = {
           usuarios: number
         }[]
       }
-      pagar_parcela_acordo: {
-        Args: { p_data_pagamento?: string; p_parcela_acordo_id: string }
-        Returns: Json
-      }
+      pagar_parcela_acordo:
+        | {
+            Args: { p_data_pagamento?: string; p_parcela_acordo_id: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              p_data_pagamento?: string
+              p_descricao?: string
+              p_meio_pagamento?: string
+              p_parcela_acordo_id: string
+              p_valor: number
+            }
+            Returns: Json
+          }
       refresh_mv_parcelas: { Args: never; Returns: undefined }
       registrar_pagamento_parcela: {
         Args: {
@@ -1675,6 +2019,10 @@ export type Database = {
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
+      }
+      sincronizar_parcela_acordo: {
+        Args: { p_parcela_acordo_id: string }
+        Returns: Json
       }
     }
     Enums: {
@@ -1810,6 +2158,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: [
