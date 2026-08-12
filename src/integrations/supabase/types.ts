@@ -1952,7 +1952,6 @@ export type Database = {
         Args: { p_motivo?: string; p_titulo_id: string }
         Returns: Json
       }
-      check_overdue_parcelas: { Args: never; Returns: undefined }
       cliente_tem_historico: {
         Args: { p_cliente_id: string }
         Returns: boolean
