@@ -13,10 +13,10 @@ export const titulosKeys = {
   clientes: ['titulos', 'clientes-select'] as const,
 };
 
-// Evento de pagamento de uma parcela (subconjunto de eventos_parcela).
+// Pagamento de uma parcela de título (subconjunto de movimentos_financeiros).
 export interface PagamentoEvento {
   id: string;
-  parcela_id: string;
+  parcela_titulo_id: string;
   tipo: string;
   valor: number;
   meio_pagamento: string | null;
@@ -94,9 +94,9 @@ export function usePagamentosByParcelas(parcelaIds: string[], enabled = true) {
     queryFn: async (): Promise<PagamentoEvento[]> => {
       if (!parcelaIds.length) return [];
       const { data, error } = await supabase
-        .from('eventos_parcela')
-        .select('id, parcela_id, tipo, valor, meio_pagamento, descricao, created_at, estornado')
-        .in('parcela_id', parcelaIds)
+        .from('movimentos_financeiros')
+        .select('id, parcela_titulo_id, tipo, valor, meio_pagamento, descricao, created_at, estornado')
+        .in('parcela_titulo_id', parcelaIds)
         .in('tipo', ['pagamento_total', 'pagamento_parcial'])
         .order('created_at', { ascending: false });
 
@@ -198,8 +198,10 @@ export function useEstornarPagamento() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ eventoId, motivo }: { eventoId: string; motivo: string }) => {
-      const { error } = await supabase.rpc('estornar_evento_parcela', {
-        p_evento_id: eventoId,
+      // Uma função para os dois lados do razão: ela descobre pelo próprio
+      // movimento se o alvo é parcela de título ou de acordo.
+      const { error } = await supabase.rpc('estornar_movimento', {
+        p_movimento_id: eventoId,
         p_motivo: motivo,
       });
       if (error) throw error;

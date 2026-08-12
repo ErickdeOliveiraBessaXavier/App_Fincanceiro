@@ -983,187 +983,6 @@ export type Database = {
           },
         ]
       }
-      eventos_parcela: {
-        Row: {
-          acordo_id: string | null
-          company_id: string
-          created_at: string | null
-          created_by: string | null
-          descricao: string | null
-          efeito: number
-          estornado: boolean | null
-          estornado_por_id: string | null
-          id: string
-          meio_pagamento: string | null
-          metadata: Json | null
-          parcela_id: string
-          tipo: string
-          valor: number
-        }
-        Insert: {
-          acordo_id?: string | null
-          company_id: string
-          created_at?: string | null
-          created_by?: string | null
-          descricao?: string | null
-          efeito: number
-          estornado?: boolean | null
-          estornado_por_id?: string | null
-          id?: string
-          meio_pagamento?: string | null
-          metadata?: Json | null
-          parcela_id: string
-          tipo: string
-          valor: number
-        }
-        Update: {
-          acordo_id?: string | null
-          company_id?: string
-          created_at?: string | null
-          created_by?: string | null
-          descricao?: string | null
-          efeito?: number
-          estornado?: boolean | null
-          estornado_por_id?: string | null
-          id?: string
-          meio_pagamento?: string | null
-          metadata?: Json | null
-          parcela_id?: string
-          tipo?: string
-          valor?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "eventos_parcela_acordo_id_fkey"
-            columns: ["acordo_id"]
-            isOneToOne: false
-            referencedRelation: "acordos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
-            columns: ["estornado_por_id"]
-            isOneToOne: false
-            referencedRelation: "eventos_parcela"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_parcela_id_fkey"
-            columns: ["parcela_id"]
-            isOneToOne: false
-            referencedRelation: "mv_parcelas_consolidadas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_parcela_id_fkey"
-            columns: ["parcela_id"]
-            isOneToOne: false
-            referencedRelation: "parcelas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_parcela_id_fkey"
-            columns: ["parcela_id"]
-            isOneToOne: false
-            referencedRelation: "vw_parcelas_consolidadas"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      eventos_parcela_acordo: {
-        Row: {
-          company_id: string
-          created_at: string
-          created_by: string | null
-          data_evento: string
-          descricao: string | null
-          efeito: number
-          estornado: boolean
-          estornado_por_id: string | null
-          id: string
-          meio_pagamento: string | null
-          metadata: Json | null
-          parcela_acordo_id: string
-          tipo: string
-          valor: number
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          created_by?: string | null
-          data_evento?: string
-          descricao?: string | null
-          efeito: number
-          estornado?: boolean
-          estornado_por_id?: string | null
-          id?: string
-          meio_pagamento?: string | null
-          metadata?: Json | null
-          parcela_acordo_id: string
-          tipo: string
-          valor: number
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          created_by?: string | null
-          data_evento?: string
-          descricao?: string | null
-          efeito?: number
-          estornado?: boolean
-          estornado_por_id?: string | null
-          id?: string
-          meio_pagamento?: string | null
-          metadata?: Json | null
-          parcela_acordo_id?: string
-          tipo?: string
-          valor?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "eventos_parcela_acordo_company_id_fkey"
-            columns: ["company_id"]
-            isOneToOne: false
-            referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_acordo_estornado_por_id_fkey"
-            columns: ["estornado_por_id"]
-            isOneToOne: false
-            referencedRelation: "eventos_parcela_acordo"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_acordo_parcela_acordo_id_fkey"
-            columns: ["parcela_acordo_id"]
-            isOneToOne: false
-            referencedRelation: "parcelas_acordo"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_acordo_parcela_acordo_id_fkey"
-            columns: ["parcela_acordo_id"]
-            isOneToOne: false
-            referencedRelation: "vw_parcelas_acordo_consolidadas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "eventos_parcela_acordo_parcela_acordo_id_fkey"
-            columns: ["parcela_acordo_id"]
-            isOneToOne: false
-            referencedRelation: "vw_parcelas_acordo_tenant"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       integracoes_whatsapp: {
         Row: {
           ativo: boolean
@@ -1204,6 +1023,141 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      movimentos_financeiros: {
+        Row: {
+          acordo_id: string | null
+          company_id: string
+          created_at: string | null
+          created_by: string | null
+          data_evento: string
+          descricao: string | null
+          efeito: number
+          estornado: boolean | null
+          estornado_por_id: string | null
+          id: string
+          meio_pagamento: string | null
+          metadata: Json | null
+          parcela_acordo_id: string | null
+          parcela_titulo_id: string | null
+          tipo: string
+          valor: number
+        }
+        Insert: {
+          acordo_id?: string | null
+          company_id: string
+          created_at?: string | null
+          created_by?: string | null
+          data_evento?: string
+          descricao?: string | null
+          efeito: number
+          estornado?: boolean | null
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_acordo_id?: string | null
+          parcela_titulo_id?: string | null
+          tipo: string
+          valor: number
+        }
+        Update: {
+          acordo_id?: string | null
+          company_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          data_evento?: string
+          descricao?: string | null
+          efeito?: number
+          estornado?: boolean | null
+          estornado_por_id?: string | null
+          id?: string
+          meio_pagamento?: string | null
+          metadata?: Json | null
+          parcela_acordo_id?: string | null
+          parcela_titulo_id?: string | null
+          tipo?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
+            referencedRelation: "movimentos_financeiros"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
+            referencedRelation: "vw_recebimentos"
+            referencedColumns: ["recebimento_id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
+            referencedRelation: "vw_recebimentos_tenant"
+            referencedColumns: ["recebimento_id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_titulo_id"]
+            isOneToOne: false
+            referencedRelation: "mv_parcelas_consolidadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_titulo_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parcelas_consolidadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_financeiros_parcela_acordo_id_fkey"
+            columns: ["parcela_acordo_id"]
+            isOneToOne: false
+            referencedRelation: "parcelas_acordo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_financeiros_parcela_acordo_id_fkey"
+            columns: ["parcela_acordo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parcelas_acordo_consolidadas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentos_financeiros_parcela_acordo_id_fkey"
+            columns: ["parcela_acordo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_parcelas_acordo_tenant"
             referencedColumns: ["id"]
           },
         ]
@@ -1766,7 +1720,22 @@ export type Database = {
           titulo_id: string | null
           valor: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_acordo_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vw_recebimentos_tenant: {
         Row: {
@@ -1779,7 +1748,22 @@ export type Database = {
           titulo_id: string | null
           valor: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_acordo_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       vw_titulos_completos: {
         Row: {
@@ -1928,12 +1912,8 @@ export type Database = {
       current_company_id: { Args: never; Returns: string }
       current_vendedor_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
-      estornar_evento_parcela: {
-        Args: { p_created_by?: string; p_evento_id: string; p_motivo: string }
-        Returns: Json
-      }
-      estornar_evento_parcela_acordo: {
-        Args: { p_evento_id: string; p_motivo: string }
+      estornar_movimento: {
+        Args: { p_motivo: string; p_movimento_id: string }
         Returns: Json
       }
       excluir_acordos_definitivo: {

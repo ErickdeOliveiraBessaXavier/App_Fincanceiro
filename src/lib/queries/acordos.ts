@@ -269,7 +269,7 @@ export function useEventosParcelaAcordo(parcelaAcordoId: string | null, enabled 
     queryFn: async (): Promise<EventoParcelaAcordo[]> => {
       if (!parcelaAcordoId) return [];
       const { data, error } = await supabase
-        .from('eventos_parcela_acordo')
+        .from('movimentos_financeiros')
         .select('id, tipo, valor, data_evento, descricao, meio_pagamento, estornado, created_at')
         .eq('parcela_acordo_id', parcelaAcordoId)
         .order('created_at', { ascending: false });
@@ -292,8 +292,8 @@ export function useEstornarEventoParcelaAcordo() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ eventoId, motivo }: { eventoId: string; motivo: string }) => {
-      const { error } = await supabase.rpc('estornar_evento_parcela_acordo', {
-        p_evento_id: eventoId,
+      const { error } = await supabase.rpc('estornar_movimento', {
+        p_movimento_id: eventoId,
         p_motivo: motivo,
       });
       if (error) throw error;
