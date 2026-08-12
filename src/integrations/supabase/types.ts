@@ -1975,21 +1975,16 @@ export type Database = {
           usuarios: number
         }[]
       }
-      pagar_parcela_acordo:
-        | {
-            Args: { p_data_pagamento?: string; p_parcela_acordo_id: string }
-            Returns: Json
-          }
-        | {
-            Args: {
-              p_data_pagamento?: string
-              p_descricao?: string
-              p_meio_pagamento?: string
-              p_parcela_acordo_id: string
-              p_valor: number
-            }
-            Returns: Json
-          }
+      pagar_parcela_acordo: {
+        Args: {
+          p_data_pagamento?: string
+          p_descricao?: string
+          p_meio_pagamento?: string
+          p_parcela_acordo_id: string
+          p_valor: number
+        }
+        Returns: Json
+      }
       refresh_mv_parcelas: { Args: never; Returns: undefined }
       registrar_pagamento_parcela: {
         Args: {
