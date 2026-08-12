@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { InputMoeda } from '@/components/InputMoeda';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
@@ -73,7 +74,7 @@ interface FormPagamentoProps {
   data: string;
   meio: string;
   observacao: string;
-  desconto: number;
+  quitarComDesconto: boolean;
   motivoDesconto: string;
   podeDarDesconto: boolean;
   tetoDesconto: number;
@@ -81,123 +82,125 @@ interface FormPagamentoProps {
   onData: (v: string) => void;
   onMeio: (v: string) => void;
   onObservacao: (v: string) => void;
-  onDesconto: (v: number) => void;
+  onQuitarComDesconto: (v: boolean) => void;
   onMotivoDesconto: (v: string) => void;
 }
 
 /**
- * Desconto por antecipação — só para admin, com teto da empresa.
+ * Por que o desconto NÃO está disponível — ou null quando está.
  *
- * Fica junto da baixa, e não como ação separada: concedido sem o pagamento, o
- * desconto deixaria a parcela artificialmente menor esperando dinheiro que
- * pode não vir. A antecipação também só faz sentido contra a data do pagamento.
+ * Espelha as travas de validar_desconto_acordo no banco, para o operador saber
+ * antes de confirmar em vez de descobrir no erro. Devolve string|null em vez de
+ * união discriminada porque o projeto roda com `strict: false`, onde os tipos
+ * literais da união não estreitam.
  */
-function BlocoDesconto({
-  parcela, data, desconto, motivo, teto, onDesconto, onMotivo,
-}: {
-  parcela: ParcelaAcordoRow;
-  data: string;
-  desconto: number;
-  motivo: string;
-  teto: number;
-  onDesconto: (v: number) => void;
-  onMotivo: (v: string) => void;
-}) {
-  const antecipado = !!data && data <= parcela.data_vencimento;
-
-  if (teto <= 0) {
-    return (
-      <p className="text-xs text-muted-foreground">
-        Desconto desabilitado para a empresa. Defina o teto em Configurações.
-      </p>
-    );
+function bloqueioDoDesconto(
+  parcela: ParcelaAcordoRow, dataPagamento: string, faltante: number,
+  podeDarDesconto: boolean, teto: number,
+): string | null {
+  if (!podeDarDesconto) return 'Só um administrador concede desconto.';
+  if (teto <= 0) return 'Desconto desabilitado. Defina o teto em Configurações.';
+  if (dataPagamento > parcela.data_vencimento) {
+    return `Desconto vale só até o vencimento (${formatData(parcela.data_vencimento)}).`;
   }
-
-  if (!antecipado) {
-    return (
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          Desconto vale só para pagamento até o vencimento
-          ({formatData(parcela.data_vencimento)}).
-        </AlertDescription>
-      </Alert>
-    );
+  if (faltante > teto) {
+    return `Acima do teto autorizado: no máximo ${formatCurrency(teto)} nesta parcela.`;
   }
-
-  return (
-    <div className="space-y-3 rounded-lg border border-dashed p-3">
-      <div className="flex items-center justify-between gap-2">
-        <Label>Desconto por antecipação</Label>
-        <span className="text-xs text-muted-foreground">até {formatCurrency(teto)}</span>
-      </div>
-      <InputMoeda value={desconto} onChange={onDesconto} />
-      {desconto > 0 && (
-        <div className="space-y-2">
-          <Label htmlFor="desc-motivo">Motivo (obrigatório)</Label>
-          <Input
-            id="desc-motivo"
-            value={motivo}
-            onChange={(e) => onMotivo(e.target.value)}
-            placeholder="Ex: antecipou o pagamento de duas parcelas"
-          />
-        </div>
-      )}
-    </div>
-  );
+  return null;
 }
 
-/** Explica o efeito do valor digitado antes de confirmar. */
-function EfeitoDoValor({ saldo, valor }: { saldo: number; valor: number }) {
-  const diferenca = Number((valor - saldo).toFixed(2));
-  if (!valor || diferenca === 0) return null;
+/**
+ * O que fazer com a diferença quando o recebido é menor que o saldo.
+ *
+ * O desconto é DERIVADO do valor recebido, não digitado à parte: o operador
+ * informa o que entrou e decide se a parcela fica aberta pelo resto ou se a
+ * diferença é desconto. Pedir os dois números seria digitar o mesmo dinheiro
+ * duas vezes.
+ */
+function DiferencaParaMenos({
+  parcela, faltante, dataPagamento, quitarComDesconto, motivoDesconto,
+  podeDarDesconto, teto, onQuitarComDesconto, onMotivoDesconto,
+}: {
+  parcela: ParcelaAcordoRow;
+  faltante: number;
+  dataPagamento: string;
+  quitarComDesconto: boolean;
+  motivoDesconto: string;
+  podeDarDesconto: boolean;
+  teto: number;
+  onQuitarComDesconto: (v: boolean) => void;
+  onMotivoDesconto: (v: string) => void;
+}) {
+  const bloqueio = bloqueioDoDesconto(parcela, dataPagamento, faltante, podeDarDesconto, teto);
 
-  if (diferenca > 0) {
-    return (
-      <Alert>
-        <Info className="h-4 w-4" />
-        <AlertDescription>
-          {formatCurrency(diferenca)} acima do saldo. A diferença é registrada como
-          <strong> encargo por atraso</strong> e a parcela fica quitada.
-        </AlertDescription>
-      </Alert>
-    );
-  }
   return (
     <Alert>
       <AlertTriangle className="h-4 w-4" />
+      <AlertDescription className="space-y-3">
+        <p>
+          Faltam <strong>{formatCurrency(faltante)}</strong> para o saldo.
+          {!quitarComDesconto && ' A parcela continua em aberto por essa diferença.'}
+        </p>
+
+        {!bloqueio ? (
+          <div className="space-y-3">
+            <div className="flex items-start gap-2">
+              <Checkbox
+                id="quitar-desconto"
+                checked={quitarComDesconto}
+                onCheckedChange={(v) => onQuitarComDesconto(v === true)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="quitar-desconto" className="text-sm font-normal leading-snug cursor-pointer">
+                Quitar a parcela com <strong>desconto de {formatCurrency(faltante)}</strong> por
+                antecipação
+              </Label>
+            </div>
+            {quitarComDesconto && (
+              <div className="space-y-2">
+                <Label htmlFor="desc-motivo">Motivo do desconto (obrigatório)</Label>
+                <Input
+                  id="desc-motivo"
+                  value={motivoDesconto}
+                  onChange={(e) => onMotivoDesconto(e.target.value)}
+                  placeholder="Ex: antecipou duas parcelas"
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Para quitar por valor menor seria preciso desconto. {bloqueio}
+          </p>
+        )}
+      </AlertDescription>
+    </Alert>
+  );
+}
+
+/** Recebido acima do saldo: a diferença é encargo de atraso. */
+function DiferencaParaMais({ excedente }: { excedente: number }) {
+  return (
+    <Alert>
+      <Info className="h-4 w-4" />
       <AlertDescription>
-        {formatCurrency(-diferenca)} abaixo do saldo. A parcela continua
-        <strong> em aberto</strong> pela diferença. Para quitar por valor menor é preciso
-        desconto autorizado — ainda não disponível.
+        {formatCurrency(excedente)} acima do saldo. A diferença é registrada como
+        <strong> encargo por atraso</strong> e a parcela fica quitada.
       </AlertDescription>
     </Alert>
   );
 }
 
 function FormPagamento({
-  parcela, valor, data, meio, observacao, desconto, motivoDesconto,
+  parcela, valor, data, meio, observacao, quitarComDesconto, motivoDesconto,
   podeDarDesconto, tetoDesconto,
-  onValor, onData, onMeio, onObservacao, onDesconto, onMotivoDesconto,
+  onValor, onData, onMeio, onObservacao, onQuitarComDesconto, onMotivoDesconto,
 }: FormPagamentoProps) {
-  // O desconto abate antes do pagamento, então o que resta a receber já
-  // considera ele — é esse número que o operador confere com o cliente.
-  const saldo = Math.max(0, parcela.saldo_atual - desconto);
+  const saldo = parcela.saldo_atual;
+  const diferenca = Number((valor - saldo).toFixed(2));
 
   return (
     <div className="space-y-4">
-      {podeDarDesconto && (
-        <BlocoDesconto
-          parcela={parcela}
-          data={data}
-          desconto={desconto}
-          motivo={motivoDesconto}
-          teto={tetoDesconto}
-          onDesconto={onDesconto}
-          onMotivo={onMotivoDesconto}
-        />
-      )}
-
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Valor recebido</Label>
@@ -212,7 +215,20 @@ function FormPagamento({
         <InputMoeda value={valor} onChange={onValor} />
       </div>
 
-      <EfeitoDoValor saldo={saldo} valor={valor} />
+      {valor > 0 && diferenca > 0 && <DiferencaParaMais excedente={diferenca} />}
+      {valor > 0 && diferenca < 0 && (
+        <DiferencaParaMenos
+          parcela={parcela}
+          faltante={-diferenca}
+          dataPagamento={data}
+          quitarComDesconto={quitarComDesconto}
+          motivoDesconto={motivoDesconto}
+          podeDarDesconto={podeDarDesconto}
+          teto={tetoDesconto}
+          onQuitarComDesconto={onQuitarComDesconto}
+          onMotivoDesconto={onMotivoDesconto}
+        />
+      )}
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -327,12 +343,12 @@ interface CorpoModalProps {
   tetoDesconto: number;
   estado: {
     valor: number; data: string; meio: string; observacao: string;
-    desconto: number; motivoDesconto: string; eventoId: string | null; motivo: string;
+    quitarComDesconto: boolean; motivoDesconto: string; eventoId: string | null; motivo: string;
   };
   setters: {
     setValor: (v: number) => void; setData: (v: string) => void;
     setMeio: (v: string) => void; setObservacao: (v: string) => void;
-    setDesconto: (v: number) => void; setMotivoDesconto: (v: string) => void;
+    setQuitarComDesconto: (v: boolean) => void; setMotivoDesconto: (v: string) => void;
     setEventoId: (v: string) => void; setMotivo: (v: string) => void;
   };
 }
@@ -355,7 +371,7 @@ function CorpoModal({ parcela, estornando, estado, setters, podeDarDesconto, tet
       data={estado.data}
       meio={estado.meio}
       observacao={estado.observacao}
-      desconto={estado.desconto}
+      quitarComDesconto={estado.quitarComDesconto}
       motivoDesconto={estado.motivoDesconto}
       podeDarDesconto={podeDarDesconto}
       tetoDesconto={tetoDesconto}
@@ -363,7 +379,7 @@ function CorpoModal({ parcela, estornando, estado, setters, podeDarDesconto, tet
       onData={setters.setData}
       onMeio={setters.setMeio}
       onObservacao={setters.setObservacao}
-      onDesconto={setters.setDesconto}
+      onQuitarComDesconto={setters.setQuitarComDesconto}
       onMotivoDesconto={setters.setMotivoDesconto}
     />
   );
@@ -380,14 +396,20 @@ interface EstadoFormulario {
   valor: number;
   eventoId: string | null;
   motivo: string;
-  desconto: number;
+  quitarComDesconto: boolean;
   motivoDesconto: string;
+}
+
+/** O desconto é a diferença entre o saldo e o recebido, quando o admin opta por quitar. */
+function descontoDerivado(parcela: ParcelaAcordoRow | null, valor: number, quitar: boolean): number {
+  if (!quitar || !parcela) return 0;
+  return Math.max(0, Number((parcela.saldo_atual - valor).toFixed(2)));
 }
 
 /** Se falta preencher algo para confirmar. Fora do componente por complexidade. */
 function faltaPreencher(estornando: boolean, estado: EstadoFormulario): boolean {
   if (estornando) return !estado.eventoId || !estado.motivo.trim();
-  if (estado.desconto > 0 && !estado.motivoDesconto.trim()) return true;
+  if (estado.quitarComDesconto && !estado.motivoDesconto.trim()) return true;
   return estado.valor <= 0;
 }
 
@@ -412,7 +434,8 @@ function useEstadoBaixa(parcela: ParcelaAcordoRow | null, modo: ModoBaixa) {
   const [observacao, setObservacao] = useState('');
   const [eventoId, setEventoId] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
-  const [desconto, setDesconto] = useState(0);
+  // Booleano, não valor: o desconto é a diferença entre o saldo e o recebido.
+  const [quitarComDesconto, setQuitarComDesconto] = useState(false);
   const [motivoDesconto, setMotivoDesconto] = useState('');
 
   const saldoInicial = Math.max(0, parcela?.saldo_atual ?? 0);
@@ -423,14 +446,14 @@ function useEstadoBaixa(parcela: ParcelaAcordoRow | null, modo: ModoBaixa) {
     setObservacao('');
     setEventoId(null);
     setMotivo('');
-    setDesconto(0);
+    setQuitarComDesconto(false);
     setMotivoDesconto('');
   }, [parcela?.id, modo, saldoInicial]);
 
   return {
     valor, setValor, data, setData, meio, setMeio, observacao, setObservacao,
     eventoId, setEventoId, motivo, setMotivo,
-    desconto, setDesconto, motivoDesconto, setMotivoDesconto,
+    quitarComDesconto, setQuitarComDesconto, motivoDesconto, setMotivoDesconto,
   };
 }
 
@@ -442,8 +465,10 @@ export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcel
   const {
     valor, setValor, data, setData, meio, setMeio, observacao, setObservacao,
     eventoId, setEventoId, motivo, setMotivo,
-    desconto, setDesconto, motivoDesconto, setMotivoDesconto,
+    quitarComDesconto, setQuitarComDesconto, motivoDesconto, setMotivoDesconto,
   } = useEstadoBaixa(parcela, modo);
+
+  const desconto = descontoDerivado(parcela, valor, quitarComDesconto);
 
   // Desconto é do admin; operador e vendedor não concedem (o banco também recusa).
   const { isAdmin } = useUserRole();
@@ -486,7 +511,7 @@ export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcel
   };
 
   const bloqueado = pendente
-    || faltaPreencher(estornando, { valor, eventoId, motivo, desconto, motivoDesconto });
+    || faltaPreencher(estornando, { valor, eventoId, motivo, quitarComDesconto, motivoDesconto });
 
   return (
     <Dialog open={!!parcela} onOpenChange={(aberto) => !aberto && onFechar()}>
@@ -507,12 +532,12 @@ export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcel
           <CorpoModal
             parcela={parcela}
             estornando={estornando}
-            estado={{ valor, data, meio, observacao, desconto, motivoDesconto, eventoId, motivo }}
+            estado={{ valor, data, meio, observacao, quitarComDesconto, motivoDesconto, eventoId, motivo }}
             podeDarDesconto={isAdmin}
             tetoDesconto={tetoDesconto}
             setters={{
               setValor, setData, setMeio, setObservacao,
-              setDesconto, setMotivoDesconto, setEventoId, setMotivo,
+              setQuitarComDesconto, setMotivoDesconto, setEventoId, setMotivo,
             }}
           />
         )}
