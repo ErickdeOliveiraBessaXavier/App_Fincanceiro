@@ -95,3 +95,53 @@ export function formatTelefone(phone?: string | null): string {
   if (d.length === 10) return d.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
   return phone;
 }
+
+/**
+ * Aplica um padrão de máscara a uma sequência de dígitos.
+ *
+ * '#' marca a posição de um dígito; o resto é separador. Para de escrever
+ * quando os dígitos acabam, então o separador só aparece depois que existe
+ * dígito para ele — digitar "000" mostra "000", não "000.".
+ */
+function aplicarMascara(digitos: string, padrao: string): string {
+  let saida = '';
+  let i = 0;
+  for (const caractere of padrao) {
+    if (i >= digitos.length) break;
+    if (caractere === '#') {
+      saida += digitos[i];
+      i += 1;
+    } else {
+      saida += caractere;
+    }
+  }
+  return saida;
+}
+
+const MASCARA_CPF = '###.###.###-##';
+const MASCARA_CNPJ = '##.###.###/####-##';
+const MASCARA_FIXO = '(##) ####-####';
+const MASCARA_CELULAR = '(##) #####-####';
+
+/**
+ * Máscara de CPF/CNPJ para digitação.
+ *
+ * Até 11 dígitos assume CPF; do 12º em diante vira CNPJ e a formatação se
+ * reorganiza sozinha. Corta em 14 — digitar além disso não faz nada em vez de
+ * gerar um documento inválido.
+ */
+export function mascaraCpfCnpj(valor: string): string {
+  const digitos = soDigitos(valor).slice(0, 14);
+  return aplicarMascara(digitos, digitos.length <= 11 ? MASCARA_CPF : MASCARA_CNPJ);
+}
+
+/**
+ * Máscara de telefone para digitação.
+ *
+ * Até 10 dígitos formata como fixo; o 11º dígito é o 9 do celular e a máscara
+ * se ajusta. Corta em 11.
+ */
+export function mascaraTelefone(valor: string): string {
+  const digitos = soDigitos(valor).slice(0, 11);
+  return aplicarMascara(digitos, digitos.length <= 10 ? MASCARA_FIXO : MASCARA_CELULAR);
+}

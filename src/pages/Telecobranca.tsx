@@ -27,6 +27,8 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { formatCpfCnpj, formatTelefone } from '@/utils/format';
 import { resumoNegociacao } from '@/domain/acordos/negociacao';
+import { derivarStatusCliente } from '@/domain/clientes/situacao';
+import { useBaseMetricasCliente } from '@/lib/queries/metricas';
 import { codigoAcordo } from '@/domain/acordos/identificacao';
 import { cn } from '@/lib/utils';
 
@@ -39,8 +41,19 @@ interface Cliente {
   endereco_completo?: string | null;
   cidade?: string | null;
   estado?: string | null;
-  status: string;
   observacoes?: string | null;
+}
+
+/**
+ * Situação do cliente derivada dos títulos, como na lista de Clientes.
+ *
+ * A ficha lia `clientes.status` — coluna que nascia 'ativo' e nunca mudava,
+ * então cliente inadimplente aparecia aqui como "Ativo". React Query reaproveita
+ * a consulta que os cards de métrica e a lista de títulos já fazem.
+ */
+function useSituacaoCliente(clienteId?: string) {
+  const { data: base } = useBaseMetricasCliente(clienteId ?? null);
+  return derivarStatusCliente((base?.titulos ?? []).map((t) => t.status));
 }
 
 export default function Telecobranca() {
@@ -59,6 +72,8 @@ export default function Telecobranca() {
   const [isContatoModalOpen, setIsContatoModalOpen] = useState(false);
   const [isAgendamentoModalOpen, setIsAgendamentoModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const situacao = useSituacaoCliente(clienteId);
 
   useEffect(() => {
     if (clienteId) {
@@ -148,7 +163,7 @@ export default function Telecobranca() {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl md:text-2xl font-bold">{cliente.nome}</h1>
-              <StatusBadge domain="cliente" status={cliente.status} />
+              <StatusBadge domain="cliente" status={situacao} />
               <StatusCobrancaAtual clienteId={cliente.id} refreshTrigger={refreshTrigger} />
             </div>
             <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">

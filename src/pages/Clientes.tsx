@@ -27,6 +27,7 @@ import { StatusBadge } from '@/components/StatusBadge';
 import { ResumoNumeros } from '@/components/ResumoNumeros';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { ReativarClienteDialog } from '@/components/clientes/ReativarClienteDialog';
+import { InputDocumento, InputTelefone } from '@/components/InputMascarado';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
@@ -311,12 +312,21 @@ function ClienteCampos<T extends NovoClienteForm>({
       </div>
       <div className="grid grid-cols-1 gap-2">
         <Label htmlFor={`${prefixo}-cpf_cnpj`}>CPF/CNPJ*</Label>
-        <Input {...campo('cpf_cnpj')} className={formErrors.cpf_cnpj ? 'border-red-500' : ''} />
+        <InputDocumento
+          id={`${prefixo}-cpf_cnpj`}
+          value={valores.cpf_cnpj}
+          onChange={(v) => onChange({ ...valores, cpf_cnpj: v })}
+          className={formErrors.cpf_cnpj ? 'border-red-500' : ''}
+        />
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="grid grid-cols-1 gap-2">
           <Label htmlFor={`${prefixo}-telefone`}>Telefone</Label>
-          <Input {...campo('telefone')} />
+          <InputTelefone
+            id={`${prefixo}-telefone`}
+            value={valores.telefone}
+            onChange={(v) => onChange({ ...valores, telefone: v })}
+          />
         </div>
         <div className="grid grid-cols-1 gap-2">
           <Label htmlFor={`${prefixo}-email`}>Email</Label>

@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { hojeNegocio } from '@/domain/telecobranca/statusCobranca';
 import { soDigitos } from '@/utils/format';
-import { derivarStatusCliente } from '@/domain/clientes/situacao';
+import { derivarStatusCliente, type SituacaoCliente } from '@/domain/clientes/situacao';
 import { titulosKeys } from './titulos';
 
 // Chaves literais das carteiras (evita import circular com cobradores/vendedores,
@@ -22,7 +22,8 @@ export interface ClienteRow {
   cep?: string | null;
   cidade?: string | null;
   estado?: string | null;
-  status: string;
+  /** Derivado dos títulos em tempo de leitura — não existe coluna equivalente. */
+  status: SituacaoCliente;
   observacoes?: string | null;
   cobrador_id?: string | null;
   cobrador_nome?: string | null;
@@ -221,7 +222,7 @@ export function useCreateCliente() {
             ...input,
             company_id: companyId,
             cpf_cnpj: soDigitos(input.cpf_cnpj),
-            status: 'ativo',
+            telefone: soDigitos(input.telefone) || null,
             created_by: user.id,
           },
         ])
@@ -265,6 +266,7 @@ export function useUpdateCliente() {
         .update({
           ...rest,
           cpf_cnpj: soDigitos(rest.cpf_cnpj),
+          telefone: soDigitos(rest.telefone) || null,
         })
         .eq('id', id);
       if (error) throw error;

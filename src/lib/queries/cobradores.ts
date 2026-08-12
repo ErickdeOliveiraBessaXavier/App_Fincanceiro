@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
+import { soDigitos } from '@/utils/format';
 import { clientesKeys } from './clientes';
 
 // ============== Types ==============
@@ -64,7 +65,7 @@ export function useCreateCobrador() {
         company_id: companyId,
         nome: input.nome.trim(),
         email: input.email?.trim() || null,
-        telefone: input.telefone?.trim() || null,
+        telefone: soDigitos(input.telefone) || null,
       });
       if (error) throw error;
     },
@@ -87,7 +88,11 @@ export function useUpdateCobrador() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...rest }: UpdateCobradorInput) => {
-      const { error } = await supabase.from('cobradores').update(rest).eq('id', id);
+      // Telefone entra mascarado da tela; o banco guarda só dígitos.
+      const dados = rest.telefone === undefined
+        ? rest
+        : { ...rest, telefone: soDigitos(rest.telefone) || null };
+      const { error } = await supabase.from('cobradores').update(dados).eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {

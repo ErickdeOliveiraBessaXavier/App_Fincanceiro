@@ -12,7 +12,6 @@ interface Cliente {
   endereco_completo?: string | null;
   cidade?: string | null;
   estado?: string | null;
-  status: string;
   observacoes?: string | null;
 }
 

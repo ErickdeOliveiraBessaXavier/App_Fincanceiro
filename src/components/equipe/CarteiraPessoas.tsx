@@ -6,6 +6,7 @@ import { useGerarConvite } from '@/lib/queries/convites';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { formatTelefone } from '@/utils/format';
+import { InputTelefone } from '@/components/InputMascarado';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -403,7 +404,11 @@ export function CarteiraPessoas({ config, isAdmin }: { config: CarteiraConfig; i
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="pessoa-tel">Telefone</Label>
-                <Input id="pessoa-tel" value={form.telefone} onChange={(e) => setForm({ ...form, telefone: e.target.value })} />
+                <InputTelefone
+                  id="pessoa-tel"
+                  value={form.telefone}
+                  onChange={(v) => setForm({ ...form, telefone: v })}
+                />
               </div>
             </div>
             {editando && (
