@@ -9,6 +9,7 @@ import TopDevedores from '@/components/dashboard/TopDevedores';
 import StatPillar from '@/components/StatPillar';
 import DashboardSkeleton from '@/components/dashboard/DashboardSkeleton';
 import { useBaseMetricas } from '@/lib/queries/metricas';
+import { useConfiguracaoEmpresa } from '@/lib/queries/configuracoes';
 import {
   calcularAging,
   calcularIndicadores,
@@ -27,10 +28,6 @@ import {
  * o Dashboard de divergir de Relatórios, que consome exatamente a mesma base.
  */
 
-// TODO(gestor): meta de recuperação ainda é global e fixa. Quando houver a
-// definição por empresa, ler de companies em vez desta constante.
-const META_MENSAL = 50000;
-
 const formatCurrency = (value: number, compact = false) =>
   new Intl.NumberFormat('pt-BR', {
     style: 'currency',
@@ -41,6 +38,8 @@ const formatCurrency = (value: number, compact = false) =>
 
 const Dashboard = () => {
   const { data: baseBruta, isLoading, isError } = useBaseMetricas();
+  // A meta era uma constante fixa no código; agora é parâmetro da empresa.
+  const { data: config } = useConfiguracaoEmpresa();
 
   const metricas = useMemo(() => {
     if (!baseBruta) return null;
@@ -77,7 +76,12 @@ const Dashboard = () => {
   }
 
   const { indicadores, aging, topDevedores, proximosVencimentos, recuperacaoMensal, qtdItensVencidos } = metricas;
-  const progressoMeta = (indicadores.valorRecuperadoMes / META_MENSAL) * 100;
+  // Meta zero (ou não configurada) esconde a barra: uma barra sem meta definida
+  // mostraria progresso contra um número inventado.
+  const meta = Number(config?.meta_recuperacao_mensal ?? 0);
+  const progressoMeta = meta > 0
+    ? { value: (indicadores.valorRecuperadoMes / meta) * 100, label: 'Meta Mensal' }
+    : undefined;
 
   return (
     <div className="space-y-10 animate-fade-in pb-10">
@@ -125,7 +129,7 @@ const Dashboard = () => {
           description="Recebido sobre o total que passou pela cobrança"
           icon={CheckCircle}
           variant="success"
-          progress={{ value: progressoMeta, label: "Meta Mensal" }}
+          progress={progressoMeta}
         />
       </div>
 

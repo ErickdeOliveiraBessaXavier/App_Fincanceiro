@@ -10,6 +10,7 @@ import {
   Users,
   Shuffle,
   ListChecks,
+  Settings,
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
@@ -75,6 +76,7 @@ const GRUPOS: MenuGrupo[] = [
       { title: "Equipe", url: "/equipe", icon: Users, admin: true },
       { title: "Atribuição", url: "/atribuicao", icon: Shuffle, admin: true },
       { title: "Importar CSV", url: "/importar", icon: Upload, admin: true },
+      { title: "Configurações", url: "/configuracoes", icon: Settings, admin: true },
     ],
   },
 ];

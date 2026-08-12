@@ -887,6 +887,38 @@ export type Database = {
           },
         ]
       }
+      configuracoes_empresa: {
+        Row: {
+          company_id: string
+          created_at: string
+          desconto_maximo_percentual: number
+          meta_recuperacao_mensal: number
+          updated_at: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          desconto_maximo_percentual?: number
+          meta_recuperacao_mensal?: number
+          updated_at?: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          desconto_maximo_percentual?: number
+          meta_recuperacao_mensal?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "configuracoes_empresa_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       convites: {
         Row: {
           cobrador_id: string | null
@@ -1978,8 +2010,10 @@ export type Database = {
       pagar_parcela_acordo: {
         Args: {
           p_data_pagamento?: string
+          p_desconto?: number
           p_descricao?: string
           p_meio_pagamento?: string
+          p_motivo_desconto?: string
           p_parcela_acordo_id: string
           p_valor: number
         }
@@ -2018,6 +2052,16 @@ export type Database = {
       sincronizar_parcela_acordo: {
         Args: { p_parcela_acordo_id: string }
         Returns: Json
+      }
+      validar_desconto_acordo: {
+        Args: {
+          p_company_id: string
+          p_data_pagamento: string
+          p_desconto: number
+          p_valor_total: number
+          p_vencimento: string
+        }
+        Returns: undefined
       }
     }
     Enums: {

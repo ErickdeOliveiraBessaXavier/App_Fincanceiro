@@ -29,6 +29,8 @@ import {
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { formatData } from '@/utils/format';
 import { cn } from '@/lib/utils';
+import { useUserRole } from '@/hooks/useUserRole';
+import { useConfiguracaoEmpresa, tetoDescontoEmReais } from '@/lib/queries/configuracoes';
 
 /**
  * Baixa e estorno de uma parcela de acordo.
@@ -66,15 +68,83 @@ const ROTULO_TIPO: Record<EventoParcelaAcordo['tipo'], string> = {
 
 // ===================== Baixa =====================
 interface FormPagamentoProps {
-  saldo: number;
+  parcela: ParcelaAcordoRow;
   valor: number;
   data: string;
   meio: string;
   observacao: string;
+  desconto: number;
+  motivoDesconto: string;
+  podeDarDesconto: boolean;
+  tetoDesconto: number;
   onValor: (v: number) => void;
   onData: (v: string) => void;
   onMeio: (v: string) => void;
   onObservacao: (v: string) => void;
+  onDesconto: (v: number) => void;
+  onMotivoDesconto: (v: string) => void;
+}
+
+/**
+ * Desconto por antecipação — só para admin, com teto da empresa.
+ *
+ * Fica junto da baixa, e não como ação separada: concedido sem o pagamento, o
+ * desconto deixaria a parcela artificialmente menor esperando dinheiro que
+ * pode não vir. A antecipação também só faz sentido contra a data do pagamento.
+ */
+function BlocoDesconto({
+  parcela, data, desconto, motivo, teto, onDesconto, onMotivo,
+}: {
+  parcela: ParcelaAcordoRow;
+  data: string;
+  desconto: number;
+  motivo: string;
+  teto: number;
+  onDesconto: (v: number) => void;
+  onMotivo: (v: string) => void;
+}) {
+  const antecipado = !!data && data <= parcela.data_vencimento;
+
+  if (teto <= 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        Desconto desabilitado para a empresa. Defina o teto em Configurações.
+      </p>
+    );
+  }
+
+  if (!antecipado) {
+    return (
+      <Alert>
+        <Info className="h-4 w-4" />
+        <AlertDescription>
+          Desconto vale só para pagamento até o vencimento
+          ({formatData(parcela.data_vencimento)}).
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
+  return (
+    <div className="space-y-3 rounded-lg border border-dashed p-3">
+      <div className="flex items-center justify-between gap-2">
+        <Label>Desconto por antecipação</Label>
+        <span className="text-xs text-muted-foreground">até {formatCurrency(teto)}</span>
+      </div>
+      <InputMoeda value={desconto} onChange={onDesconto} />
+      {desconto > 0 && (
+        <div className="space-y-2">
+          <Label htmlFor="desc-motivo">Motivo (obrigatório)</Label>
+          <Input
+            id="desc-motivo"
+            value={motivo}
+            onChange={(e) => onMotivo(e.target.value)}
+            placeholder="Ex: antecipou o pagamento de duas parcelas"
+          />
+        </div>
+      )}
+    </div>
+  );
 }
 
 /** Explica o efeito do valor digitado antes de confirmar. */
@@ -106,10 +176,28 @@ function EfeitoDoValor({ saldo, valor }: { saldo: number; valor: number }) {
 }
 
 function FormPagamento({
-  saldo, valor, data, meio, observacao, onValor, onData, onMeio, onObservacao,
+  parcela, valor, data, meio, observacao, desconto, motivoDesconto,
+  podeDarDesconto, tetoDesconto,
+  onValor, onData, onMeio, onObservacao, onDesconto, onMotivoDesconto,
 }: FormPagamentoProps) {
+  // O desconto abate antes do pagamento, então o que resta a receber já
+  // considera ele — é esse número que o operador confere com o cliente.
+  const saldo = Math.max(0, parcela.saldo_atual - desconto);
+
   return (
     <div className="space-y-4">
+      {podeDarDesconto && (
+        <BlocoDesconto
+          parcela={parcela}
+          data={data}
+          desconto={desconto}
+          motivo={motivoDesconto}
+          teto={tetoDesconto}
+          onDesconto={onDesconto}
+          onMotivo={onMotivoDesconto}
+        />
+      )}
+
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label>Valor recebido</Label>
@@ -230,6 +318,57 @@ function FormEstorno({ parcelaId, eventoId, motivo, onEvento, onMotivo }: {
   );
 }
 
+/** Escolhe o formulário conforme o modo — fora do modal, que já concentra
+ *  estado, mutações e mensagens. */
+interface CorpoModalProps {
+  parcela: ParcelaAcordoRow;
+  estornando: boolean;
+  podeDarDesconto: boolean;
+  tetoDesconto: number;
+  estado: {
+    valor: number; data: string; meio: string; observacao: string;
+    desconto: number; motivoDesconto: string; eventoId: string | null; motivo: string;
+  };
+  setters: {
+    setValor: (v: number) => void; setData: (v: string) => void;
+    setMeio: (v: string) => void; setObservacao: (v: string) => void;
+    setDesconto: (v: number) => void; setMotivoDesconto: (v: string) => void;
+    setEventoId: (v: string) => void; setMotivo: (v: string) => void;
+  };
+}
+function CorpoModal({ parcela, estornando, estado, setters, podeDarDesconto, tetoDesconto }: CorpoModalProps) {
+  if (estornando) {
+    return (
+      <FormEstorno
+        parcelaId={parcela.id}
+        eventoId={estado.eventoId}
+        motivo={estado.motivo}
+        onEvento={setters.setEventoId}
+        onMotivo={setters.setMotivo}
+      />
+    );
+  }
+  return (
+    <FormPagamento
+      parcela={parcela}
+      valor={estado.valor}
+      data={estado.data}
+      meio={estado.meio}
+      observacao={estado.observacao}
+      desconto={estado.desconto}
+      motivoDesconto={estado.motivoDesconto}
+      podeDarDesconto={podeDarDesconto}
+      tetoDesconto={tetoDesconto}
+      onValor={setters.setValor}
+      onData={setters.setData}
+      onMeio={setters.setMeio}
+      onObservacao={setters.setObservacao}
+      onDesconto={setters.setDesconto}
+      onMotivoDesconto={setters.setMotivoDesconto}
+    />
+  );
+}
+
 // ===================== Modal =====================
 interface BaixaParcelaAcordoModalProps {
   parcela: ParcelaAcordoRow | null;
@@ -239,17 +378,22 @@ interface BaixaParcelaAcordoModalProps {
 
 interface EstadoFormulario {
   valor: number;
-  data: string;
-  meio: string;
-  observacao: string;
   eventoId: string | null;
   motivo: string;
+  desconto: number;
+  motivoDesconto: string;
 }
 
 /** Se falta preencher algo para confirmar. Fora do componente por complexidade. */
 function faltaPreencher(estornando: boolean, estado: EstadoFormulario): boolean {
   if (estornando) return !estado.eventoId || !estado.motivo.trim();
+  if (estado.desconto > 0 && !estado.motivoDesconto.trim()) return true;
   return estado.valor <= 0;
+}
+
+function mensagemErro(erro: unknown, estornando: boolean): string {
+  if (erro instanceof Error) return erro.message;
+  return estornando ? 'Não foi possível estornar o lançamento' : 'Não foi possível registrar o pagamento';
 }
 
 function rotuloConfirmar(pendente: boolean, estornando: boolean): string {
@@ -257,28 +401,54 @@ function rotuloConfirmar(pendente: boolean, estornando: boolean): string {
   return estornando ? 'Confirmar estorno' : 'Registrar pagamento';
 }
 
-export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcelaAcordoModalProps) {
-  const { toast } = useToast();
-  const pagar = usePagarParcelaAcordo();
-  const estornar = useEstornarEventoParcelaAcordo();
-
+/**
+ * Estado do formulário, reiniciado a cada abertura — senão o motivo do estorno
+ * anterior reaparece na próxima parcela.
+ */
+function useEstadoBaixa(parcela: ParcelaAcordoRow | null, modo: ModoBaixa) {
   const [valor, setValor] = useState(0);
   const [data, setData] = useState(hojeIso());
   const [meio, setMeio] = useState('pix');
   const [observacao, setObservacao] = useState('');
   const [eventoId, setEventoId] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
+  const [desconto, setDesconto] = useState(0);
+  const [motivoDesconto, setMotivoDesconto] = useState('');
 
-  // Cada abertura recomeça limpa — senão o motivo do estorno anterior reaparece.
+  const saldoInicial = Math.max(0, parcela?.saldo_atual ?? 0);
   useEffect(() => {
-    if (!parcela) return;
-    setValor(parcela.saldo_atual > 0 ? parcela.saldo_atual : 0);
+    setValor(saldoInicial);
     setData(hojeIso());
     setMeio('pix');
     setObservacao('');
     setEventoId(null);
     setMotivo('');
-  }, [parcela, modo]);
+    setDesconto(0);
+    setMotivoDesconto('');
+  }, [parcela?.id, modo, saldoInicial]);
+
+  return {
+    valor, setValor, data, setData, meio, setMeio, observacao, setObservacao,
+    eventoId, setEventoId, motivo, setMotivo,
+    desconto, setDesconto, motivoDesconto, setMotivoDesconto,
+  };
+}
+
+export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcelaAcordoModalProps) {
+  const { toast } = useToast();
+  const pagar = usePagarParcelaAcordo();
+  const estornar = useEstornarEventoParcelaAcordo();
+
+  const {
+    valor, setValor, data, setData, meio, setMeio, observacao, setObservacao,
+    eventoId, setEventoId, motivo, setMotivo,
+    desconto, setDesconto, motivoDesconto, setMotivoDesconto,
+  } = useEstadoBaixa(parcela, modo);
+
+  // Desconto é do admin; operador e vendedor não concedem (o banco também recusa).
+  const { isAdmin } = useUserRole();
+  const { data: config } = useConfiguracaoEmpresa();
+  const tetoDesconto = tetoDescontoEmReais(config, parcela?.valor_total ?? 0);
 
   const pendente = pagar.isPending || estornar.isPending;
   const estornando = modo === 'estornar';
@@ -295,6 +465,8 @@ export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcel
       dataPagamento: data || undefined,
       meioPagamento: meio,
       descricao: observacao.trim() || undefined,
+      desconto: desconto > 0 ? desconto : undefined,
+      motivoDesconto: desconto > 0 ? motivoDesconto.trim() : undefined,
     });
     toast({ title: 'Pagamento registrado', description: `Recebido ${formatCurrency(valor)}.` });
   };
@@ -307,16 +479,14 @@ export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcel
     } catch (error) {
       toast({
         title: 'Erro',
-        description: error instanceof Error
-          ? error.message
-          : `Não foi possível ${estornando ? 'estornar o lançamento' : 'registrar o pagamento'}`,
+        description: mensagemErro(error, estornando),
         variant: 'destructive',
       });
     }
   };
 
   const bloqueado = pendente
-    || faltaPreencher(estornando, { valor, data, meio, observacao, eventoId, motivo });
+    || faltaPreencher(estornando, { valor, eventoId, motivo, desconto, motivoDesconto });
 
   return (
     <Dialog open={!!parcela} onOpenChange={(aberto) => !aberto && onFechar()}>
@@ -333,26 +503,17 @@ export function BaixaParcelaAcordoModal({ parcela, modo, onFechar }: BaixaParcel
           </DialogDescription>
         </DialogHeader>
 
-        {parcela && estornando && (
-          <FormEstorno
-            parcelaId={parcela.id}
-            eventoId={eventoId}
-            motivo={motivo}
-            onEvento={setEventoId}
-            onMotivo={setMotivo}
-          />
-        )}
-        {parcela && !estornando && (
-          <FormPagamento
-            saldo={parcela.saldo_atual}
-            valor={valor}
-            data={data}
-            meio={meio}
-            observacao={observacao}
-            onValor={setValor}
-            onData={setData}
-            onMeio={setMeio}
-            onObservacao={setObservacao}
+        {parcela && (
+          <CorpoModal
+            parcela={parcela}
+            estornando={estornando}
+            estado={{ valor, data, meio, observacao, desconto, motivoDesconto, eventoId, motivo }}
+            podeDarDesconto={isAdmin}
+            tetoDesconto={tetoDesconto}
+            setters={{
+              setValor, setData, setMeio, setObservacao,
+              setDesconto, setMotivoDesconto, setEventoId, setMotivo,
+            }}
           />
         )}
 

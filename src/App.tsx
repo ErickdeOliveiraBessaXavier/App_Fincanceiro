@@ -16,6 +16,7 @@ const Fila = React.lazy(() => import("./pages/Fila"));
 const Clientes = React.lazy(() => import("./pages/Clientes"));
 const Atribuicao = React.lazy(() => import("./pages/Atribuicao"));
 const Equipe = React.lazy(() => import("./pages/Equipe"));
+const Configuracoes = React.lazy(() => import("./pages/Configuracoes"));
 const Titulos = React.lazy(() => import("./pages/Titulos"));
 const Acordos = React.lazy(() => import("./pages/Acordos"));
 const Campanhas = React.lazy(() => import("./pages/Campanhas"));
@@ -87,6 +88,7 @@ const App = () => (
               <Route path="/importar" element={<Layout><BlockVendedorRoute><ImportarCSV /></BlockVendedorRoute></Layout>} />
               <Route path="/relatorios" element={<Layout><BlockVendedorRoute><Relatorios /></BlockVendedorRoute></Layout>} />
               <Route path="/atribuicao" element={<Layout><AdminRoute><Atribuicao /></AdminRoute></Layout>} />
+              <Route path="/configuracoes" element={<Layout><AdminRoute><Configuracoes /></AdminRoute></Layout>} />
               <Route path="/usuarios" element={<Navigate to="/equipe?aba=acessos" replace />} />
               {/* Rota antiga da ficha. Mantida só como redirect: links salvos e
                   favoritos continuam funcionando, mas /clientes/:id é a canônica. */}

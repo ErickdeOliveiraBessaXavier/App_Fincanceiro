@@ -231,6 +231,12 @@ export interface PagarParcelaAcordoInput {
   dataPagamento?: string;
   meioPagamento?: string;
   descricao?: string;
+  /**
+   * Desconto por antecipação, abatido antes do pagamento. Exige admin, teto
+   * configurado na empresa e pagamento até o vencimento — o banco valida.
+   */
+  desconto?: number;
+  motivoDesconto?: string;
 }
 
 export function usePagarParcelaAcordo() {
@@ -243,6 +249,8 @@ export function usePagarParcelaAcordo() {
         p_data_pagamento: input.dataPagamento ?? null,
         p_meio_pagamento: input.meioPagamento ?? null,
         p_descricao: input.descricao ?? null,
+        p_desconto: input.desconto ?? 0,
+        p_motivo_desconto: input.motivoDesconto ?? null,
       });
       if (error) throw error;
     },
