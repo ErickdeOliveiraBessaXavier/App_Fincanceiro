@@ -1940,6 +1940,7 @@ export type Database = {
         }
         Returns: Json
       }
+      buscar_cliente_arquivado: { Args: { p_cpf_cnpj: string }; Returns: Json }
       cadastros_incompletos: {
         Args: never
         Returns: {
@@ -1955,6 +1956,10 @@ export type Database = {
         Returns: Json
       }
       check_overdue_parcelas: { Args: never; Returns: undefined }
+      cliente_tem_historico: {
+        Args: { p_cliente_id: string }
+        Returns: boolean
+      }
       cliente_tem_titulo_em_aberto: {
         Args: { p_cliente_id: string }
         Returns: boolean
@@ -2093,6 +2098,10 @@ export type Database = {
           p_parcela_acordo_id: string
           p_valor: number
         }
+        Returns: Json
+      }
+      reativar_cliente: {
+        Args: { p_cliente_id: string; p_dados?: Json }
         Returns: Json
       }
       refresh_mv_parcelas: { Args: never; Returns: undefined }

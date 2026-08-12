@@ -279,12 +279,16 @@ export function useUpdateCliente() {
 // Exclusão de cliente é SOFT (marca deleted_at) via RPC excluir_cliente: o
 // DELETE físico sempre falhava por FK (titulos.cliente_id sem CASCADE). A RPC
 // bloqueia quando o cliente tem título/acordo em aberto e exige role admin.
+/** 'removido' = apagado do banco; 'arquivado' = soft delete, tinha histórico. */
+export type ModoExclusaoCliente = 'removido' | 'arquivado';
+
 export function useDeleteCliente() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (clienteId: string) => {
-      const { error } = await supabase.rpc('excluir_cliente', { p_cliente_id: clienteId });
+    mutationFn: async (clienteId: string): Promise<ModoExclusaoCliente> => {
+      const { data, error } = await supabase.rpc('excluir_cliente', { p_cliente_id: clienteId });
       if (error) throw error;
+      return ((data as { modo?: ModoExclusaoCliente } | null)?.modo ?? 'arquivado');
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: clientesKeys.all });
@@ -345,19 +349,54 @@ export function useAssignVendedor() {
 }
 
 /**
- * Helper: verifica se ja existe cliente com o CPF/CNPJ informado.
+ * Cadastro arquivado com este CPF/CNPJ, se houver.
+ *
+ * Passa por RPC porque a RLS esconde os excluídos: uma consulta comum
+ * responderia "não existe" e o INSERT seguinte estouraria 409 sem explicação —
+ * era exatamente o que acontecia.
  */
-export async function checkCpfCnpjExists(
-  cpfCnpj: string,
-  excludeId?: string
-): Promise<boolean> {
-  const cleaned = soDigitos(cpfCnpj);
-  let query = supabase.from('clientes').select('id').eq('cpf_cnpj', cleaned);
-  if (excludeId) query = query.neq('id', excludeId);
-  const { data, error } = await query.maybeSingle();
-  if (error) {
-    console.error('Erro ao verificar CPF/CNPJ:', error);
-    return false;
-  }
-  return data !== null;
+export interface ClienteArquivado {
+  id: string;
+  nome: string;
+  cpf_cnpj: string;
+  deleted_at: string;
+  titulos: number;
+  acordos: number;
+}
+
+export async function buscarClienteArquivado(cpfCnpj: string): Promise<ClienteArquivado | null> {
+  const { data, error } = await supabase.rpc('buscar_cliente_arquivado', {
+    p_cpf_cnpj: soDigitos(cpfCnpj),
+  });
+  if (error) throw error;
+  return (data as unknown as ClienteArquivado | null) ?? null;
+}
+
+/** Erro de violação da UNIQUE (company_id, cpf_cnpj). */
+export function ehCpfDuplicado(erro: unknown): boolean {
+  return typeof erro === 'object' && erro !== null
+    && (erro as { code?: string }).code === '23505';
+}
+
+export interface ReativarClienteInput {
+  clienteId: string;
+  dados: Record<string, string>;
+}
+
+/** Traz de volta o cadastro arquivado, junto de agendamentos e comunicações. */
+export function useReativarCliente() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ clienteId, dados }: ReativarClienteInput) => {
+      const { error } = await supabase.rpc('reativar_cliente', {
+        p_cliente_id: clienteId,
+        p_dados: dados,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: clientesKeys.all });
+      qc.invalidateQueries({ queryKey: titulosKeys.clientes });
+    },
+  });
 }

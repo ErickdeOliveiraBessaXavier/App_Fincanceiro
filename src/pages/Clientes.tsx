@@ -8,7 +8,10 @@ import {
   useCreateCliente,
   useUpdateCliente,
   useDeleteCliente,
-  checkCpfCnpjExists,
+  useReativarCliente,
+  buscarClienteArquivado,
+  ehCpfDuplicado,
+  type ClienteArquivado,
   type ClienteRow,
 } from '@/lib/queries/clientes';
 import { useCobradores } from '@/lib/queries/cobradores';
@@ -23,6 +26,7 @@ import { GlobalFilter } from '@/components/GlobalFilter';
 import { StatusBadge } from '@/components/StatusBadge';
 import { ResumoNumeros } from '@/components/ResumoNumeros';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
+import { ReativarClienteDialog } from '@/components/clientes/ReativarClienteDialog';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
@@ -458,10 +462,13 @@ export default function Clientes() {
   const { data: clientes = [], isLoading: loading } = useClientes();
   const { data: cobradores = [] } = useCobradores();
   const { data: vendedores = [] } = useVendedores();
-  const { isOperador, isVendedor } = useUserRole();
+  const { isOperador, isAdmin } = useUserRole();
   const createClienteMutation = useCreateCliente();
   const updateClienteMutation = useUpdateCliente();
   const deleteClienteMutation = useDeleteCliente();
+  const reativarClienteMutation = useReativarCliente();
+  // Preenchido quando o CPF digitado já pertence a um cadastro arquivado.
+  const [clienteArquivado, setClienteArquivado] = useState<ClienteArquivado | null>(null);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [newCliente, setNewCliente] = useState({
@@ -506,6 +513,26 @@ export default function Clientes() {
     return isValid;
   };
 
+  const limparFormulario = () => setNewCliente({
+    nome: '', cpf_cnpj: '', telefone: '', email: '', endereco_completo: '',
+    cep: '', cidade: '', estado: '', observacoes: '', cobrador_id: '', vendedor_id: '',
+  });
+
+  /**
+   * CPF já em uso pode ser de um cadastro ARQUIVADO, que a listagem não mostra.
+   * Nesse caso oferecemos a reativação em vez de repetir o erro do banco.
+   */
+  const tratarCpfDuplicado = async (): Promise<boolean> => {
+    try {
+      const arquivado = await buscarClienteArquivado(newCliente.cpf_cnpj);
+      if (!arquivado) return false;
+      setClienteArquivado(arquivado);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const handleCreateCliente = async () => {
     if (!validateForm()) return;
     try {
@@ -516,9 +543,33 @@ export default function Clientes() {
       });
       toast({ title: "Sucesso", description: "Cliente criado com sucesso." });
       setIsCreateModalOpen(false);
-      setNewCliente({ nome: '', cpf_cnpj: '', telefone: '', email: '', endereco_completo: '', cep: '', cidade: '', estado: '', observacoes: '', cobrador_id: '', vendedor_id: '' });
+      limparFormulario();
     } catch (error) {
-      toast({ title: "Erro", description: "Não foi possível criar o cliente.", variant: "destructive" });
+      if (ehCpfDuplicado(error) && await tratarCpfDuplicado()) return;
+      const description = ehCpfDuplicado(error)
+        ? 'Já existe um cliente com este CPF/CNPJ.'
+        : 'Não foi possível criar o cliente.';
+      toast({ title: "Erro", description, variant: "destructive" });
+    }
+  };
+
+  const handleReativarCliente = async () => {
+    if (!clienteArquivado) return;
+    try {
+      await reativarClienteMutation.mutateAsync({
+        clienteId: clienteArquivado.id,
+        dados: { ...newCliente },
+      });
+      toast({ title: 'Cadastro reativado', description: `${clienteArquivado.nome} voltou para a lista com o histórico.` });
+      setClienteArquivado(null);
+      setIsCreateModalOpen(false);
+      limparFormulario();
+    } catch (error) {
+      toast({
+        title: 'Erro',
+        description: error instanceof Error ? error.message : 'Não foi possível reativar o cadastro',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -557,8 +608,15 @@ export default function Clientes() {
   const handleDeleteCliente = async () => {
     if (!clienteToDelete) return;
     try {
-      await deleteClienteMutation.mutateAsync(clienteToDelete.id);
-      toast({ title: "Sucesso", description: "Cliente excluído com sucesso." });
+      const modo = await deleteClienteMutation.mutateAsync(clienteToDelete.id);
+      // O texto muda porque o efeito muda: sem histórico o registro sai do
+      // banco e o CPF fica livre; com histórico ele é preservado.
+      toast({
+        title: 'Cliente excluído',
+        description: modo === 'removido'
+          ? 'O cadastro foi removido do banco. O CPF/CNPJ pode ser usado de novo.'
+          : 'O cadastro saiu das listagens. O histórico financeiro foi preservado.',
+      });
       setIsDeleteModalOpen(false);
       setClienteToDelete(null);
     } catch (error) {
@@ -765,6 +823,14 @@ export default function Clientes() {
         onSave={handleEditCliente}
         cobradores={cobradores}
         vendedores={vendedores}
+      />
+
+      <ReativarClienteDialog
+        arquivado={clienteArquivado}
+        podeReativar={isAdmin}
+        isPending={reativarClienteMutation.isPending}
+        onCancelar={() => setClienteArquivado(null)}
+        onConfirmar={handleReativarCliente}
       />
 
       <DeleteClienteDialog
