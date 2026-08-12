@@ -89,22 +89,21 @@ interface FormPagamentoProps {
 /**
  * Por que o desconto NÃO está disponível — ou null quando está.
  *
- * Espelha as travas de validar_desconto_acordo no banco, para o operador saber
+ * Espelha as recusas de avaliar_desconto_acordo no banco, para o operador saber
  * antes de confirmar em vez de descobrir no erro. Devolve string|null em vez de
  * união discriminada porque o projeto roda com `strict: false`, onde os tipos
  * literais da união não estreitam.
+ *
+ * Passar do teto NÃO está aqui: é permitido ao admin e vira exceção registrada.
  */
 function bloqueioDoDesconto(
-  parcela: ParcelaAcordoRow, dataPagamento: string, faltante: number,
+  parcela: ParcelaAcordoRow, dataPagamento: string,
   podeDarDesconto: boolean, teto: number,
 ): string | null {
   if (!podeDarDesconto) return 'Só um administrador concede desconto.';
   if (teto <= 0) return 'Desconto desabilitado. Defina o teto em Configurações.';
   if (dataPagamento > parcela.data_vencimento) {
     return `Desconto vale só até o vencimento (${formatData(parcela.data_vencimento)}).`;
-  }
-  if (faltante > teto) {
-    return `Acima do teto autorizado: no máximo ${formatCurrency(teto)} nesta parcela.`;
   }
   return null;
 }
@@ -131,7 +130,11 @@ function DiferencaParaMenos({
   onQuitarComDesconto: (v: boolean) => void;
   onMotivoDesconto: (v: string) => void;
 }) {
-  const bloqueio = bloqueioDoDesconto(parcela, dataPagamento, faltante, podeDarDesconto, teto);
+  const bloqueio = bloqueioDoDesconto(parcela, dataPagamento, podeDarDesconto, teto);
+  // Acima do teto é exceção, não impedimento: o aviso informa a consequência
+  // em vez de perguntar se a pessoa está decidida. Confirmação pedida toda hora
+  // vira reflexo; registro com nome e motivo, não.
+  const excedeTeto = faltante > teto;
 
   return (
     <Alert>
@@ -154,16 +157,28 @@ function DiferencaParaMenos({
               <Label htmlFor="quitar-desconto" className="text-sm font-normal leading-snug cursor-pointer">
                 Quitar a parcela com <strong>desconto de {formatCurrency(faltante)}</strong> por
                 antecipação
+                {excedeTeto && <span className="text-amber-700 dark:text-amber-300"> (acima do teto)</span>}
               </Label>
             </div>
+            {quitarComDesconto && excedeTeto && (
+              <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+                Acima do teto de {formatCurrency(teto)} nesta parcela. Será registrado como
+                <strong> exceção</strong>, com o seu nome e o motivo, e aparecerá em
+                Relatórios › Descontos.
+              </p>
+            )}
             {quitarComDesconto && (
               <div className="space-y-2">
-                <Label htmlFor="desc-motivo">Motivo do desconto (obrigatório)</Label>
+                <Label htmlFor="desc-motivo">
+                  Motivo do desconto (obrigatório)
+                </Label>
                 <Input
                   id="desc-motivo"
                   value={motivoDesconto}
                   onChange={(e) => onMotivoDesconto(e.target.value)}
-                  placeholder="Ex: antecipou duas parcelas"
+                  placeholder={excedeTeto
+                    ? 'Justifique a exceção — ex: proposta à vista, última chance'
+                    : 'Ex: antecipou duas parcelas'}
                 />
               </div>
             )}

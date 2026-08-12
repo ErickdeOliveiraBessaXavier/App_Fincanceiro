@@ -13,6 +13,8 @@ import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
 import { formatCpfCnpj, formatData } from '@/utils/format';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { useBaseMetricas } from '@/lib/queries/metricas';
+import { useDescontosConcedidos, type DescontoConcedido } from '@/lib/queries/descontos';
+import { DescontosConcedidos } from '@/components/relatorios/DescontosConcedidos';
 import {
   ROTULO_CLASSE,
   calcularComparativos,
@@ -43,7 +45,7 @@ import type { Periodo } from '@/domain/metricas';
  */
 
 type ExportOptions = Parameters<typeof exportToCSV>[0];
-type TipoRelatorio = 'geral' | 'titulos' | 'acordos';
+type TipoRelatorio = 'geral' | 'titulos' | 'acordos' | 'descontos';
 
 function exportarComFormato(format: 'csv' | 'excel' | 'pdf', options: ExportOptions) {
   if (format === 'csv') exportToCSV(options);
@@ -159,6 +161,55 @@ function colunasEDadosDeTitulos(dados: DadosRelatorio) {
       'Valor Total': formatCurrency(dados.indicadores.valorTotal),
     },
   };
+}
+
+/** Quais blocos cada tipo de relatório mostra. Fora do componente por complexidade. */
+function blocosVisiveis(reportType: TipoRelatorio) {
+  const descontos = reportType === 'descontos';
+  return {
+    descontos,
+    titulos: !descontos && reportType !== 'acordos',
+    acordos: !descontos && reportType !== 'titulos',
+    comparativo: reportType === 'geral',
+    graficoAcordos: reportType === 'acordos',
+  };
+}
+
+function exportarDescontos(
+  format: 'csv' | 'excel' | 'pdf',
+  descontos: DescontoConcedido[],
+  periodo?: Periodo,
+) {
+  const validos = descontos.filter((d) => !d.estornado);
+  exportarComFormato(format, {
+    filename: `relatorio_descontos_${hojeIso()}`,
+    title: 'Descontos concedidos',
+    subtitle: periodo
+      ? `Concedidos entre ${formatData(periodo.de)} e ${formatData(periodo.ate)}`
+      : 'Todos os registros',
+    columns: [
+      { header: 'Data', key: 'data' },
+      { header: 'Cliente', key: 'cliente' },
+      { header: 'Valor', key: 'valor' },
+      { header: 'Acima do teto', key: 'excecao' },
+      { header: 'Concedido por', key: 'por' },
+      { header: 'Motivo', key: 'motivo' },
+    ],
+    data: descontos.map((d) => ({
+      data: formatData(d.data_evento),
+      cliente: d.cliente_nome || 'N/A',
+      valor: Number(d.valor),
+      excecao: d.excedeu_teto ? 'Sim' : 'Não',
+      por: d.concedido_por || 'N/A',
+      motivo: d.descricao || '',
+    })),
+    totals: {
+      'Descontos concedidos': String(validos.length),
+      'Valor total': formatCurrency(validos.reduce((s, d) => s + Number(d.valor), 0)),
+      'Acima do teto': String(validos.filter((d) => d.excedeu_teto).length),
+    },
+  });
+  toast.success(`Relatório exportado em ${format.toUpperCase()}`);
 }
 
 function exportarRelatorio(
@@ -366,7 +417,15 @@ export default function Relatorios() {
     };
   }, [baseBruta, periodo]);
 
+  // A lista de descontos tem consulta própria: não sai da base de métricas,
+  // que é sobre dívida, não sobre concessão.
+  const { data: descontos = [] } = useDescontosConcedidos(periodo);
+
   const handleExport = (format: 'csv' | 'excel' | 'pdf') => {
+    if (reportType === 'descontos') {
+      exportarDescontos(format, descontos, periodo);
+      return;
+    }
     if (dados) exportarRelatorio(format, reportType, dados, periodo);
   };
 
@@ -382,8 +441,7 @@ export default function Relatorios() {
     );
   }
 
-  const mostraTitulos = reportType !== 'acordos';
-  const mostraAcordos = reportType !== 'titulos';
+  const blocos = blocosVisiveis(reportType);
   // O comparativo é mês-a-mês; com um período arbitrário selecionado ele viraria
   // uma comparação entre bases diferentes, então some.
   const comparacaoVisivel = !periodo;
@@ -426,6 +484,7 @@ export default function Relatorios() {
               <SelectItem value="geral">Relatório Geral</SelectItem>
               <SelectItem value="titulos">Títulos</SelectItem>
               <SelectItem value="acordos">Acordos</SelectItem>
+            <SelectItem value="descontos">Descontos</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -438,17 +497,20 @@ export default function Relatorios() {
         </div>
       </div>
 
-      <CardsIndicadores
-        dados={dados}
-        mostraTitulos={mostraTitulos}
-        mostraAcordos={mostraAcordos}
-        comparacaoVisivel={comparacaoVisivel}
-      />
+      {!blocos.descontos && (
+        <CardsIndicadores
+          dados={dados}
+          mostraTitulos={blocos.titulos}
+          mostraAcordos={blocos.acordos}
+          comparacaoVisivel={comparacaoVisivel}
+        />
+      )}
 
       <div className="grid gap-10 grid-cols-1 md:grid-cols-2">
-        {mostraTitulos && <GraficosDeTitulos dados={dados} />}
-        {reportType === 'geral' && <GraficoComparativo dados={dados} />}
-        {reportType === 'acordos' && <GraficoDeAcordos dados={dados} />}
+        {blocos.titulos && <GraficosDeTitulos dados={dados} />}
+        {blocos.comparativo && <GraficoComparativo dados={dados} />}
+        {blocos.graficoAcordos && <GraficoDeAcordos dados={dados} />}
+        {blocos.descontos && <DescontosConcedidos descontos={descontos} />}
       </div>
     </div>
   );

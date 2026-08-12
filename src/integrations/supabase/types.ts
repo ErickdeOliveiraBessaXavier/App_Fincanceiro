@@ -1108,6 +1108,20 @@ export type Database = {
             foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
             columns: ["estornado_por_id"]
             isOneToOne: false
+            referencedRelation: "vw_descontos_concedidos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
+            referencedRelation: "vw_descontos_concedidos_tenant"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_estornado_por_id_fkey"
+            columns: ["estornado_por_id"]
+            isOneToOne: false
             referencedRelation: "vw_recebimentos"
             referencedColumns: ["recebimento_id"]
           },
@@ -1559,6 +1573,78 @@ export type Database = {
           },
         ]
       }
+      vw_descontos_concedidos: {
+        Row: {
+          acordo_id: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          company_id: string | null
+          concedido_por: string | null
+          data_evento: string | null
+          descricao: string | null
+          estornado: boolean | null
+          excedeu_teto: boolean | null
+          id: string | null
+          numero_parcela: number | null
+          origem: string | null
+          teto_percentual: number | null
+          teto_valor: number | null
+          valor: number | null
+          valor_parcela: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_acordo_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vw_descontos_concedidos_tenant: {
+        Row: {
+          acordo_id: string | null
+          cliente_id: string | null
+          cliente_nome: string | null
+          company_id: string | null
+          concedido_por: string | null
+          data_evento: string | null
+          descricao: string | null
+          estornado: boolean | null
+          excedeu_teto: boolean | null
+          id: string | null
+          numero_parcela: number | null
+          origem: string | null
+          teto_percentual: number | null
+          teto_valor: number | null
+          valor: number | null
+          valor_parcela: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "eventos_parcela_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_acordo_acordo_id_fkey"
+            columns: ["acordo_id"]
+            isOneToOne: false
+            referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_integracoes_whatsapp: {
         Row: {
           ativo: boolean | null
@@ -1844,6 +1930,16 @@ export type Database = {
         Returns: Json
       }
       audit_log_do_tenant: { Args: { p_audit_id: string }; Returns: boolean }
+      avaliar_desconto_acordo: {
+        Args: {
+          p_company_id: string
+          p_data_pagamento: string
+          p_desconto: number
+          p_valor_total: number
+          p_vencimento: string
+        }
+        Returns: Json
+      }
       cadastros_incompletos: {
         Args: never
         Returns: {
@@ -2032,16 +2128,6 @@ export type Database = {
       sincronizar_parcela_acordo: {
         Args: { p_parcela_acordo_id: string }
         Returns: Json
-      }
-      validar_desconto_acordo: {
-        Args: {
-          p_company_id: string
-          p_data_pagamento: string
-          p_desconto: number
-          p_valor_total: number
-          p_vencimento: string
-        }
-        Returns: undefined
       }
     }
     Enums: {

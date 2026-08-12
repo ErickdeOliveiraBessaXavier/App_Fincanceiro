@@ -23,7 +23,7 @@ function CampoTetoDesconto({ valor, onChange }: { valor: string; onChange: (v: s
   const numero = Number(valor) || 0;
   return (
     <div className="space-y-2">
-      <Label htmlFor="teto-desconto">Teto de desconto por antecipação (%)</Label>
+      <Label htmlFor="teto-desconto">Teto de desconto (%)</Label>
       <div className="flex items-center gap-2">
         <Input
           id="teto-desconto"
@@ -37,20 +37,25 @@ function CampoTetoDesconto({ valor, onChange }: { valor: string; onChange: (v: s
         />
         <Percent className="h-4 w-4 text-muted-foreground" />
       </div>
-      <p className="text-xs text-muted-foreground">
-        {numero > 0 ? (
-          <>
-            Um administrador pode conceder até <strong>{numero}%</strong> sobre o valor da
-            parcela, e só em pagamento feito <strong>até a data de vencimento</strong>.
-            Operador e vendedor não concedem desconto.
-          </>
-        ) : (
-          <>
-            Zero desabilita o desconto: ninguém consegue conceder, nem administrador.
-            É o padrão até que a empresa autorize um percentual.
-          </>
-        )}
-      </p>
+      {numero > 0 ? (
+        <div className="space-y-1 text-xs text-muted-foreground">
+          <p>
+            Limite normal do desconto: <strong>{numero}%</strong> sobre o valor da parcela.
+            Só administrador concede, e só em pagamento feito <strong>até a data de
+            vencimento</strong> — operador e vendedor não concedem.
+          </p>
+          <p>
+            O administrador pode <strong>ultrapassar este limite</strong> quando a
+            negociação exigir. Nesse caso o desconto é registrado como exceção, com o nome
+            de quem concedeu e o motivo, e aparece em Relatórios › Descontos.
+          </p>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Zero desabilita o desconto por completo: ninguém consegue conceder, nem
+          administrador. É o padrão até que a empresa autorize um percentual.
+        </p>
+      )}
     </div>
   );
 }
