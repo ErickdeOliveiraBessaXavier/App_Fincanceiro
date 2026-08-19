@@ -101,7 +101,9 @@ export function SelecionarCliente({
           disabled={disabled}
           className="w-full justify-between font-normal"
         >
-          <span className={cn('truncate', !selecionado && 'text-muted-foreground')}>
+          {/* `min-w-0` faz o `truncate` valer: sem ele o span não encolhe abaixo
+              do próprio texto e um nome longo empurra o botão para fora do modal. */}
+          <span className={cn('min-w-0 flex-1 truncate text-left', !selecionado && 'text-muted-foreground')}>
             {selecionado
               ? `${selecionado.nome} — ${formatCpfCnpj(selecionado.cpf_cnpj)}`
               : placeholder}

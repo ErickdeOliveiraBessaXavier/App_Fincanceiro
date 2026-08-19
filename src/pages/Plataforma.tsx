@@ -12,7 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
-import { Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2, UserX } from 'lucide-react';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2, UserX, KeyRound, MoreHorizontal,
+} from 'lucide-react';
+import { ChavesApiDialog } from '@/components/plataforma/ChavesApiDialog';
+import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 
 interface CompanyRow {
   id: string;
@@ -96,33 +103,55 @@ interface EmpresaAcoesProps {
   statusPending: boolean;
   onSetStatus: (id: string, status: string) => void;
   onLimpar: (c: CompanyRow) => void;
+  onIntegracao: (c: CompanyRow) => void;
 }
-function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar }: EmpresaAcoesProps) {
-  const inativa = c.status === 'suspensa' || c.status === 'cancelada';
-  return (
-    <div className="flex justify-end gap-2">
-      {c.status === 'pendente' && (
-        <Button size="sm" disabled={statusPending} onClick={() => onSetStatus(c.id, 'ativa')}>
-          <Check className="mr-1 h-4 w-4" /> Aprovar
-        </Button>
-      )}
-      {c.status === 'ativa' && (
-        <Button size="sm" variant="outline" disabled={statusPending}
-          onClick={() => onSetStatus(c.id, 'suspensa')}>
-          <Pause className="mr-1 h-4 w-4" /> Suspender
-        </Button>
-      )}
-      {inativa && (
-        <Button size="sm" variant="outline" disabled={statusPending}
-          onClick={() => onSetStatus(c.id, 'ativa')}>
-          <Play className="mr-1 h-4 w-4" /> Reativar
-        </Button>
-      )}
-      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
-        title="Limpar todos os títulos desta empresa"
-        onClick={() => onLimpar(c)}>
-        <Trash2 className="mr-1 h-4 w-4" /> Limpar títulos
+// Mudança de status fica visível (é a decisão do dia a dia); o resto vai para o
+// menu. Sem isso, cada ação nova alarga a linha e a tabela ganha scroll lateral.
+function BotaoStatus({ c, statusPending, onSetStatus }: Omit<EmpresaAcoesProps, 'onLimpar' | 'onIntegracao'>) {
+  if (c.status === 'pendente') {
+    return (
+      <Button size="sm" disabled={statusPending} onClick={() => onSetStatus(c.id, 'ativa')}>
+        <Check className="mr-1 h-4 w-4" /> Aprovar
       </Button>
+    );
+  }
+  if (c.status === 'ativa') {
+    return (
+      <Button size="sm" variant="outline" disabled={statusPending}
+        onClick={() => onSetStatus(c.id, 'suspensa')}>
+        <Pause className="mr-1 h-4 w-4" /> Suspender
+      </Button>
+    );
+  }
+  return (
+    <Button size="sm" variant="outline" disabled={statusPending}
+      onClick={() => onSetStatus(c.id, 'ativa')}>
+      <Play className="mr-1 h-4 w-4" /> Reativar
+    </Button>
+  );
+}
+
+function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao }: EmpresaAcoesProps) {
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <BotaoStatus c={c} statusPending={statusPending} onSetStatus={onSetStatus} />
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-8 w-8 shrink-0 p-0" title="Mais ações">
+            <MoreHorizontal className="h-4 w-4" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onIntegracao(c)}>
+            <KeyRound className="mr-2 h-4 w-4" /> Integração (chaves de API)
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="text-destructive focus:text-destructive"
+            onClick={() => onLimpar(c)}>
+            <Trash2 className="mr-2 h-4 w-4" /> Limpar títulos
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 }
@@ -130,7 +159,7 @@ function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar }: EmpresaAcoesP
 interface EmpresaRowProps extends EmpresaAcoesProps {
   m?: MetricaEmpresa;
 }
-function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar }: EmpresaRowProps) {
+function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar, onIntegracao }: EmpresaRowProps) {
   return (
     <TableRow>
       <TableCell className="font-medium">{c.nome}</TableCell>
@@ -144,7 +173,8 @@ function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar }: EmpresaRowPr
       <MetricasCells m={m} />
       <TableCell className="hidden xl:table-cell">{fmtDate(c.created_at)}</TableCell>
       <TableCell className="text-right">
-        <EmpresaAcoes c={c} statusPending={statusPending} onSetStatus={onSetStatus} onLimpar={onLimpar} />
+        <EmpresaAcoes c={c} statusPending={statusPending} onSetStatus={onSetStatus}
+          onLimpar={onLimpar} onIntegracao={onIntegracao} />
       </TableCell>
     </TableRow>
   );
@@ -157,8 +187,9 @@ interface EmpresasTableCardProps {
   statusPending: boolean;
   onSetStatus: (id: string, status: string) => void;
   onLimpar: (c: CompanyRow) => void;
+  onIntegracao: (c: CompanyRow) => void;
 }
-function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSetStatus, onLimpar }: EmpresasTableCardProps) {
+function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSetStatus, onLimpar, onIntegracao }: EmpresasTableCardProps) {
   return (
     <Card>
       <CardHeader><CardTitle>Empresas cadastradas</CardTitle></CardHeader>
@@ -195,6 +226,7 @@ function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSe
                     statusPending={statusPending}
                     onSetStatus={onSetStatus}
                     onLimpar={onLimpar}
+                    onIntegracao={onIntegracao}
                   />
                 ))}
               </TableBody>
@@ -209,7 +241,11 @@ function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSe
 // Contas que se cadastraram e não concluíram a criação da empresa: ficam sem
 // company_id e sem papel. Não são uma company, então não apareceriam na tabela
 // abaixo — e é justamente aí que um cliente real trava sem ninguém notar.
-function CadastrosIncompletosCard({ cadastros }: { cadastros: CadastroIncompleto[] }) {
+interface CadastrosIncompletosCardProps {
+  cadastros: CadastroIncompleto[];
+  onExcluir: (c: CadastroIncompleto) => void;
+}
+function CadastrosIncompletosCard({ cadastros, onExcluir }: CadastrosIncompletosCardProps) {
   if (cadastros.length === 0) return null;
 
   const titulo = cadastros.length === 1
@@ -235,14 +271,21 @@ function CadastrosIncompletosCard({ cadastros }: { cadastros: CadastroIncompleto
                 <TableHead>Nome</TableHead>
                 <TableHead>E-mail</TableHead>
                 <TableHead>Desde</TableHead>
+                <TableHead className="text-right">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {cadastros.map((c) => (
                 <TableRow key={c.user_id}>
                   <TableCell className="font-medium">{c.nome}</TableCell>
-                  <TableCell>{c.email}</TableCell>
+                  <TableCell className="break-all">{c.email}</TableCell>
                   <TableCell>{fmtDate(c.created_at)}</TableCell>
+                  <TableCell className="text-right">
+                    <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+                      title="Descartar este cadastro" onClick={() => onExcluir(c)}>
+                      <Trash2 className="mr-1 h-4 w-4" /> Descartar
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -346,6 +389,30 @@ export default function Plataforma() {
       toast({ title: 'Erro', description: e.message ?? 'Falha ao atualizar', variant: 'destructive' }),
   });
 
+  // Chaves de API da empresa: liberar a integração é decisão de plataforma, não
+  // configuração que o admin da empresa se concede.
+  const [integracaoAlvo, setIntegracaoAlvo] = useState<CompanyRow | null>(null);
+
+  // Cadastro abandonado no meio do caminho. Sem poder descartar, a lista só
+  // cresce e esconde o próximo caso que realmente precisa de atenção.
+  const [descartarAlvo, setDescartarAlvo] = useState<CadastroIncompleto | null>(null);
+  const descartarCadastro = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('excluir-cadastro-incompleto', {
+        body: { user_id: userId },
+      });
+      if (error) throw error;
+      if ((data as { error?: string })?.error) throw new Error((data as { error: string }).error);
+    },
+    onSuccess: () => {
+      toast({ title: 'Cadastro descartado', description: 'A conta foi removida.' });
+      setDescartarAlvo(null);
+      qc.invalidateQueries({ queryKey: ['plataforma', 'cadastros-incompletos'] });
+    },
+    onError: (e: Error) =>
+      toast({ title: 'Erro ao descartar', description: e.message, variant: 'destructive' }),
+  });
+
   // Limpeza de títulos de uma empresa (hard delete) — só super admin, com
   // confirmação digitando o nome da empresa.
   const [limparAlvo, setLimparAlvo] = useState<CompanyRow | null>(null);
@@ -420,7 +487,10 @@ export default function Plataforma() {
           </Card>
         </div>
 
-        <CadastrosIncompletosCard cadastros={incompletosQuery.data ?? []} />
+        <CadastrosIncompletosCard
+          cadastros={incompletosQuery.data ?? []}
+          onExcluir={setDescartarAlvo}
+        />
 
         <EmpresasTableCard
           companies={companies}
@@ -429,8 +499,27 @@ export default function Plataforma() {
           statusPending={setStatus.isPending}
           onSetStatus={(id, status) => setStatus.mutate({ id, status })}
           onLimpar={(c) => { setConfirmacao(''); setLimparAlvo(c); }}
+          onIntegracao={setIntegracaoAlvo}
         />
       </main>
+
+      <ChavesApiDialog empresa={integracaoAlvo} onClose={() => setIntegracaoAlvo(null)} />
+
+      <ConfirmarAcaoDestrutiva
+        open={!!descartarAlvo}
+        onOpenChange={(o) => { if (!o) setDescartarAlvo(null); }}
+        titulo="Descartar cadastro incompleto"
+        descricao={
+          <>
+            A conta de <strong>{descartarAlvo?.nome}</strong> ({descartarAlvo?.email}) será
+            removida. Ela nunca concluiu o cadastro da empresa, então não há dados de cobrança
+            associados. Se a pessoa quiser voltar, basta se cadastrar de novo.
+          </>
+        }
+        rotuloConfirmar="Descartar cadastro"
+        isPending={descartarCadastro.isPending}
+        onConfirm={() => descartarAlvo && descartarCadastro.mutate(descartarAlvo.user_id)}
+      />
 
       <LimparTitulosDialog
         alvo={limparAlvo}

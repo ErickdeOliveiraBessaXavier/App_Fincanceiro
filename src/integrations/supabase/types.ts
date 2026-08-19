@@ -402,6 +402,53 @@ export type Database = {
           },
         ]
       }
+      api_keys: {
+        Row: {
+          actor_id: string
+          company_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          nome: string
+          revoked_at: string | null
+        }
+        Insert: {
+          actor_id: string
+          company_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          nome: string
+          revoked_at?: string | null
+        }
+        Update: {
+          actor_id?: string
+          company_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          nome?: string
+          revoked_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -1570,6 +1617,28 @@ export type Database = {
           },
         ]
       }
+      vw_api_keys: {
+        Row: {
+          ativa: boolean | null
+          company_id: string | null
+          company_nome: string | null
+          created_at: string | null
+          id: string | null
+          key_prefix: string | null
+          last_used_at: string | null
+          nome: string | null
+          revoked_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_keys_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       vw_descontos_concedidos: {
         Row: {
           acordo_id: string | null
@@ -1915,6 +1984,24 @@ export type Database = {
       }
     }
     Functions: {
+      _importar_titulo_completo: {
+        Args: {
+          p_actor: string
+          p_cidade?: string
+          p_cliente_nome: string
+          p_cobrador?: string
+          p_company: string
+          p_contato?: string
+          p_cpf_cnpj: string
+          p_descricao?: string
+          p_estado?: string
+          p_numero_documento: string
+          p_origem?: string
+          p_parcelas: Json
+          p_vendedor?: string
+        }
+        Returns: Json
+      }
       aplicar_encargo_parcela: {
         Args: {
           p_created_by?: string
@@ -2122,10 +2209,12 @@ export type Database = {
         }
         Returns: Json
       }
+      resolver_chave_api: { Args: { p_hash: string }; Returns: Json }
       reverter_audit_log: {
         Args: { p_audit_id: string; p_motivo: string }
         Returns: Json
       }
+      revogar_chave_api: { Args: { p_id: string }; Returns: Json }
       role_rank: {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number

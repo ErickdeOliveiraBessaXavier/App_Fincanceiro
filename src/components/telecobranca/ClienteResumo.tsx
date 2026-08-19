@@ -48,7 +48,7 @@ export function ClienteResumo({ cliente }: ClienteResumoProps) {
               className="flex items-center gap-2 p-2 rounded-lg hover:bg-muted transition-colors group"
             >
               <Mail className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1 truncate">{cliente.email}</span>
+              <span className="min-w-0 flex-1 truncate">{cliente.email}</span>
               <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
             </a>
           )}

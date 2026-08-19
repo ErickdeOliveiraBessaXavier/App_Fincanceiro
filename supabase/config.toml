@@ -12,3 +12,8 @@ uri = "pg-functions://postgres/public/custom_access_token_hook"
 # função é chamada sem JWT (a segurança vem da validação do token do convite).
 [functions.registrar-convite]
 verify_jwt = false
+
+# API do ERP do cliente: quem chama é uma máquina, não um usuário logado.
+# A segurança vem da chave de API por empresa (tabela api_keys).
+[functions.api-v1]
+verify_jwt = false
