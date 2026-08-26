@@ -1755,6 +1755,7 @@ export type Database = {
       vw_parcelas_acordo_consolidadas: {
         Row: {
           acordo_id: string | null
+          cliente_id: string | null
           company_id: string | null
           data_pagamento: string | null
           data_vencimento: string | null
@@ -1770,6 +1771,13 @@ export type Database = {
           valor_total: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "acordos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parcelas_acordo_acordo_id_fkey"
             columns: ["acordo_id"]
@@ -1789,6 +1797,7 @@ export type Database = {
       vw_parcelas_acordo_tenant: {
         Row: {
           acordo_id: string | null
+          cliente_id: string | null
           company_id: string | null
           data_pagamento: string | null
           data_vencimento: string | null
@@ -1804,6 +1813,13 @@ export type Database = {
           valor_total: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "acordos_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "parcelas_acordo_acordo_id_fkey"
             columns: ["acordo_id"]
@@ -1864,6 +1880,7 @@ export type Database = {
       vw_recebimentos: {
         Row: {
           acordo_id: string | null
+          cliente_id: string | null
           company_id: string | null
           data_recebimento: string | null
           meio_pagamento: string | null
@@ -1892,6 +1909,7 @@ export type Database = {
       vw_recebimentos_tenant: {
         Row: {
           acordo_id: string | null
+          cliente_id: string | null
           company_id: string | null
           data_recebimento: string | null
           meio_pagamento: string | null
