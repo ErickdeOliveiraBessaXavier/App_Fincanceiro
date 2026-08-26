@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useToast } from '@/hooks/use-toast';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
-import { Filter, Clock, CheckCircle, XCircle, AlertCircle, MoreHorizontal } from 'lucide-react';
+import { Filter, Clock, CheckCircle, History, XCircle, AlertCircle, MoreHorizontal } from 'lucide-react';
 
 /**
  * Aba "Histórico de Eventos": a linha do tempo completa do cliente.
@@ -72,6 +72,8 @@ export function EventoTimeline({ clienteId }: EventoTimelineProps) {
         return <XCircle className="h-4 w-4 text-destructive" />;
       case 'pendente':
         return <Clock className="h-4 w-4 text-yellow-600" />;
+      case 'substituido':
+        return <History className="h-4 w-4 text-muted-foreground" />;
       default:
         return null;
     }
@@ -100,10 +102,10 @@ export function EventoTimeline({ clienteId }: EventoTimelineProps) {
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className="overflow-hidden">
+      <CardHeader className="pb-4 bg-muted/10 border-b border-border/40">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg">Histórico de Eventos</CardTitle>
+          <CardTitle className="text-lg font-bold tracking-tight">Histórico de Eventos</CardTitle>
           <Select value={filtroTipo} onValueChange={setFiltroTipo}>
             <SelectTrigger className="w-[180px]">
               <Filter className="mr-2 h-4 w-4" />
@@ -123,7 +125,7 @@ export function EventoTimeline({ clienteId }: EventoTimelineProps) {
           </Select>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="pt-6">
         {filteredEventos.length === 0 ? (
           <div className="text-center py-8 text-muted-foreground">
             <AlertCircle className="h-12 w-12 mx-auto mb-2 opacity-50" />

@@ -46,7 +46,9 @@ const TableHead = React.forwardRef<HTMLTableCellElement, React.ThHTMLAttributes<
     <th
       ref={ref}
       className={cn(
-        "h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0",
+        // O cabeçalho já nasce no padrão de rótulo do app; as telas não
+        // precisam repetir a combinação de classes em cada <TableHead>.
+        "h-12 px-4 text-left align-middle text-[10px] font-bold uppercase tracking-widest text-muted-foreground [&:has([role=checkbox])]:pr-0",
         className,
       )}
       {...props}

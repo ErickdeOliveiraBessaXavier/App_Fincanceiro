@@ -1,7 +1,6 @@
 import { useState, useMemo, type ChangeEvent } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
-import { useLocation, useNavigate } from 'react-router-dom';
 import { Plus, Eye, Edit, Phone, Mail, FileText, User, Trash2, MoreHorizontal, CheckCircle, AlertTriangle } from 'lucide-react';
 import {
   useClientes,
@@ -30,7 +29,7 @@ import { ReativarClienteDialog } from '@/components/clientes/ReativarClienteDial
 import { InputDocumento, InputTelefone } from '@/components/InputMascarado';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
-import { estadoDaFila } from '@/hooks/useFilaNavegacao';
+import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
 import { TablePagination } from '@/components/TablePagination';
 import { clientesFilterConfig } from '@/constants/filterConfigs';
 import { clientesPresets } from '@/constants/filterPresets';
@@ -58,6 +57,7 @@ import { Label } from "@/components/ui/label";
 import type { CobradorRow } from '@/lib/queries/cobradores';
 import type { VendedorRow } from '@/lib/queries/vendedores';
 import { formatCpfCnpj, formatTelefone, formatData } from '@/utils/format';
+import { Rotulo } from '@/components/Rotulo';
 
 // Atualize a interface Cliente para incluir todos os campos
 interface Cliente {
@@ -148,15 +148,15 @@ function ClienteCard({ cliente, isOperador, onDetails, onEdit, onDelete }: Clien
       <div className="flex items-center justify-between pt-4 border-t border-dashed border-border/50">
         <div className="flex gap-4">
           <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Títulos</p>
+            <Rotulo>Títulos</Rotulo>
             <p className="text-sm font-black">{cliente.total_titulos}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total</p>
+            <Rotulo>Total</Rotulo>
             <p className="text-sm font-black text-primary">{formatCurrency(cliente.total_valor || 0)}</p>
           </div>
           <div>
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Retorno</p>
+            <Rotulo>Retorno</Rotulo>
             <RetornoCell cliente={cliente} />
           </div>
         </div>
@@ -465,8 +465,6 @@ function DeleteClienteDialog({ open, onOpenChange, cliente, onCancel, onConfirm 
 }
 
 export default function Clientes() {
-  const navigate = useNavigate();
-  const location = useLocation();
   const { toast } = useToast();
 
   // === Data via React Query ===
@@ -640,10 +638,7 @@ export default function Clientes() {
   // lista com os filtros e a página que estavam valendo, e o Próximo/Anterior da
   // ficha percorre a carteira na mesma ordem que está na tela (todas as páginas,
   // não só a atual).
-  const openDetails = (c: ClienteRow) =>
-    navigate(`/clientes/${c.id}`, {
-      state: estadoDaFila(location.pathname + location.search, orderedClientes.map((x) => x.id)),
-    });
+  const openDetails = (c: ClienteRow) => abrirFicha(c.id);
   const openDelete = (c: ClienteRow) => { setClienteToDelete(c); setIsDeleteModalOpen(true); };
   const openEdit = (c: ClienteRow) => {
     setEditingCliente({
@@ -703,6 +698,8 @@ export default function Clientes() {
   }, [filteredClientes, filters.retorno]);
 
   const pagination = usePagination(orderedClientes, 25, JSON.stringify(filters), PARAM_PAGINA);
+  // A fila da ficha é a lista inteira na ordem da tela — todas as páginas.
+  const abrirFicha = useAbrirFicha(useMemo(() => orderedClientes.map((c) => c.id), [orderedClientes]));
 
   const statusCounts = {
     total: clientes.length,
@@ -743,7 +740,7 @@ export default function Clientes() {
       />
 
       <div className="space-y-10">
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
             <div className="flex items-center justify-between">
               <div>
@@ -789,12 +786,12 @@ export default function Clientes() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cliente</TableHead>
-                    <TableHead className="hidden xl:table-cell text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
-                    <TableHead className="hidden xl:table-cell text-[10px] font-bold uppercase tracking-widest">Responsáveis</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Retorno</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Situação</TableHead>
-                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead className="hidden xl:table-cell">Contato</TableHead>
+                    <TableHead className="hidden xl:table-cell">Responsáveis</TableHead>
+                    <TableHead>Retorno</TableHead>
+                    <TableHead>Situação</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -45,7 +45,7 @@ const StatPillar = ({
   };
 
   return (
-    <Card className={cn("border-none shadow-card overflow-hidden group", className)}>
+    <Card className={cn("overflow-hidden group", className)}>
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4">
           <div className={cn("h-12 w-12 rounded-2xl flex items-center justify-center transition-transform group-hover:scale-110", iconStyles[variant])}>

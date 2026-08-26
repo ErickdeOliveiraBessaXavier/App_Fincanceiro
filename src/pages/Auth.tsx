@@ -106,7 +106,7 @@ const Auth = () => {
           </div>
 
           {confirmationEmail ? (
-            <Card className="border-0 shadow-none lg:shadow-card lg:border">
+            <Card className="border-0 shadow-none lg: lg:border">
               <CardHeader className="text-center pb-2">
                 <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
                   <MailCheck className="h-7 w-7 text-primary" />
@@ -131,7 +131,7 @@ const Auth = () => {
               </CardContent>
             </Card>
           ) : (
-          <Card className="border-0 shadow-none lg:shadow-card lg:border">
+          <Card className="border-0 shadow-none lg: lg:border">
             <CardHeader className="text-center pb-2">
               <CardTitle className="text-2xl font-bold">Bem-vindo de volta</CardTitle>
               <CardDescription>
@@ -140,19 +140,9 @@ const Auth = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="login" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-6 bg-muted p-1 rounded-xl">
-                  <TabsTrigger 
-                    value="login" 
-                    className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Entrar
-                  </TabsTrigger>
-                  <TabsTrigger 
-                    value="signup"
-                    className="rounded-lg data-[state=active]:bg-background data-[state=active]:shadow-sm"
-                  >
-                    Cadastrar
-                  </TabsTrigger>
+                <TabsList variant="pill" className="mb-6 grid w-full grid-cols-2">
+                  <TabsTrigger value="login">Entrar</TabsTrigger>
+                  <TabsTrigger value="signup">Cadastrar</TabsTrigger>
                 </TabsList>
                 
                 <TabsContent value="login" className="space-y-4">

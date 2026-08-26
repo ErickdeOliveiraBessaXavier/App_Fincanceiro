@@ -20,6 +20,7 @@ import {
   serieRecuperacaoMensal,
   ultimosMeses,
 } from '@/domain/metricas';
+import { Rotulo } from '@/components/Rotulo';
 
 /**
  * Resumo executivo da carteira.
@@ -91,7 +92,7 @@ const Dashboard = () => {
       >
         <div className="flex items-center gap-4 bg-card px-6 py-3 rounded-2xl shadow-card border border-border/40">
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Atualizado em</span>
+            <Rotulo as="span">Atualizado em</Rotulo>
             <span className="text-sm font-black text-foreground">
               {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </span>
@@ -136,7 +137,7 @@ const Dashboard = () => {
       <div className="grid gap-10 grid-cols-1 xl:grid-cols-12">
         {/* Lado Esquerdo: Saúde e Tendência */}
         <div className="xl:col-span-8 space-y-10">
-          <Card className="border-none shadow-card overflow-hidden">
+          <Card className="overflow-hidden">
             <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
               <div className="flex items-center justify-between">
                 <div>

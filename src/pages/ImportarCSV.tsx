@@ -15,6 +15,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { soDigitos } from '@/utils/format';
 import { cn } from '@/lib/utils';
+import { rotuloClasses } from '@/components/Rotulo';
 
 // ===================== Parsing de planilha (CSV ou XLSX) =====================
 // O importador entende tanto um CSV simples quanto a planilha do cliente (GRAN.xlsx),
@@ -342,7 +343,7 @@ function EmpresaSelect({ isSuperAdmin, companies, selectedCompany, onChange }: E
   if (!isSuperAdmin) return null;
   return (
     <div className="grid gap-2 p-4 rounded-xl bg-muted/30 border border-border/40">
-      <Label htmlFor="imp-company" className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground ml-1">Empresa de destino</Label>
+      <Label htmlFor="imp-company" className={cn(rotuloClasses, 'ml-1')}>Empresa de destino</Label>
       <select
         id="imp-company"
         value={selectedCompany}
@@ -411,7 +412,7 @@ function ImportStatus({ parsed, errors, uploading, uploadProgress }: ImportStatu
 function PreviewCard({ parsed }: { parsed: ParsedFile | null }) {
   if (!parsed || parsed.previewRows.length === 0) return null;
   return (
-    <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+    <Card className="overflow-hidden">
       <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
         <CardTitle className="text-xl font-bold tracking-tight">Prévia da Planilha</CardTitle>
         <CardDescription className="text-xs font-medium">As primeiras 5 linhas identificadas</CardDescription>
@@ -422,7 +423,7 @@ function PreviewCard({ parsed }: { parsed: ParsedFile | null }) {
             <TableHeader className="bg-muted/30">
               <TableRow>
                 {parsed.previewHeaders.map((h) => (
-                  <TableHead key={h} className="text-[10px] font-bold uppercase tracking-widest">{h.replace('_', ' ')}</TableHead>
+                  <TableHead key={h}>{h.replace('_', ' ')}</TableHead>
                 ))}
               </TableRow>
             </TableHeader>
@@ -443,7 +444,7 @@ function PreviewCard({ parsed }: { parsed: ParsedFile | null }) {
 function ResultCard({ result }: { result: ImportResult | null }) {
   if (!result) return null;
   return (
-    <Card className="border-none shadow-card rounded-2xl overflow-hidden bg-primary/5 border-primary/10">
+    <Card className="overflow-hidden bg-primary/5 border-primary/10">
       <CardHeader className="pb-4 border-b border-primary/10">
         <CardTitle className="text-xl font-bold tracking-tight text-primary">Resultado da Importação</CardTitle>
       </CardHeader>
@@ -639,7 +640,7 @@ export default function ImportarCSV() {
       </PageHeader>
 
       <div className="grid gap-10 md:grid-cols-2">
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+        <Card className="overflow-hidden">
           <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
@@ -689,7 +690,7 @@ export default function ImportarCSV() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden bg-muted/10">
+        <Card className="overflow-hidden bg-muted/10">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg font-bold">Instruções de Preparo</CardTitle>
             <CardDescription className="text-xs font-medium text-muted-foreground">Siga os padrões para evitar erros</CardDescription>

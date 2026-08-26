@@ -20,6 +20,7 @@ import { Label } from '@/components/ui/label';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
+import { rotuloClasses } from '@/components/Rotulo';
 
 interface Usuario {
   id: string;
@@ -41,7 +42,7 @@ interface PendingConvitesCardProps {
 function PendingConvitesCard({ isAdmin, pendentes, busy, onAutorizar, onRecusar }: PendingConvitesCardProps) {
   if (!isAdmin || pendentes.length === 0) return null;
   return (
-    <Card className="border-2 border-amber-500/20 bg-amber-500/5 shadow-card rounded-2xl overflow-hidden">
+    <Card className="border-2 border-amber-500/20 bg-amber-500/5 overflow-hidden">
       <CardHeader className="pb-4 border-b border-amber-500/10 bg-amber-500/10">
         <CardTitle className="flex items-center gap-3 text-amber-700">
           <Clock className="h-5 w-5" />
@@ -57,11 +58,11 @@ function PendingConvitesCard({ isAdmin, pendentes, busy, onAutorizar, onRecusar 
           <Table>
             <TableHeader className="bg-amber-500/10">
               <TableRow>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Nome</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Email</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Tipo</TableHead>
-                <TableHead className="text-[10px] font-bold uppercase tracking-widest text-amber-800">Carteira</TableHead>
-                <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest text-amber-800">Ações</TableHead>
+                <TableHead className="text-amber-800">Nome</TableHead>
+                <TableHead className="text-amber-800">Email</TableHead>
+                <TableHead className="text-amber-800">Tipo</TableHead>
+                <TableHead className="text-amber-800">Carteira</TableHead>
+                <TableHead className="text-right text-amber-800">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -346,25 +347,25 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
       )}
 
       <div className="grid gap-6 grid-cols-1 sm:grid-cols-3">
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+        <Card className="overflow-hidden group">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Total de Usuários</CardTitle>
+            <CardTitle className={rotuloClasses}>Total de Usuários</CardTitle>
             <User className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent><div className="text-2xl font-black tracking-tighter">{usuarios.length}</div></CardContent>
         </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+        <Card className="overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Administradores</CardTitle>
+            <CardTitle className={rotuloClasses}>Administradores</CardTitle>
             <Shield className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="relative z-10"><div className="text-2xl font-black tracking-tighter text-primary">{count('admin')}</div></CardContent>
         </Card>
-        <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+        <Card className="overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Cobradores</CardTitle>
+            <CardTitle className={rotuloClasses}>Cobradores</CardTitle>
             <UserCog className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
           </CardHeader>
           <CardContent className="relative z-10"><div className="text-2xl font-black tracking-tighter text-blue-600">{count('operador')}</div></CardContent>
@@ -379,7 +380,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
         onRecusar={handleRecusar}
       />
 
-      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
@@ -405,11 +406,11 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Email</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Função</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cadastro</TableHead>
-                  <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Função</TableHead>
+                  <TableHead>Cadastro</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

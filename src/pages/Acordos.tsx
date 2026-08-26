@@ -37,6 +37,7 @@ import { OrigemDoAcordo } from '@/components/acordos/OrigemDoAcordo';
 import { cn } from '@/lib/utils';
 import { resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociacao';
 import { codigoAcordo } from '@/domain/acordos/identificacao';
+import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
 
 interface Acordo {
   id: string;
@@ -730,6 +731,12 @@ export default function Acordos() {
 
   const pagination = usePagination(filteredAcordos, 25, JSON.stringify(filters), PARAM_PAGINA);
 
+  // O mesmo cliente pode ter vários acordos: a fila da ficha é de clientes,
+  // então cada um entra uma vez só, na ordem em que aparece na tabela.
+  const abrirFicha = useAbrirFicha(
+    useMemo(() => [...new Set(filteredAcordos.map((a) => a.cliente_id))], [filteredAcordos]),
+  );
+
   if (loading) {
     return <CarregandoConteudo />;
   }
@@ -761,7 +768,7 @@ export default function Acordos() {
         ]}
       />
 
-      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <div>
             <CardTitle className="text-xl font-bold tracking-tight">Lista de Acordos</CardTitle>
@@ -811,7 +818,7 @@ export default function Acordos() {
                       <div>
                         <button
                           type="button"
-                          onClick={() => navigate(`/clientes/${acordo.cliente_id}`)}
+                          onClick={() => abrirFicha(acordo.cliente_id)}
                           className="block text-left font-medium hover:text-primary hover:underline transition-colors"
                         >
                           {acordo.cliente?.nome}

@@ -1,7 +1,7 @@
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import React, { useEffect, useState, useMemo } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -27,7 +27,7 @@ import { GlobalFilter } from '@/components/GlobalFilter';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
-import { estadoDaFila } from '@/hooks/useFilaNavegacao';
+import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
 import { TablePagination } from '@/components/TablePagination';
 import { titulosFilterConfig } from '@/constants/filterConfigs';
 import { titulosPresets } from '@/constants/filterPresets';
@@ -914,7 +914,6 @@ const PARAM_TITULO = 'titulo';
 
 export default function Titulos() {
   const navigate = useNavigate();
-  const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -1245,13 +1244,9 @@ export default function Titulos() {
 
   // Leva a origem e a ordem dos clientes: o breadcrumb da ficha volta a ESTA
   // lista (com filtros e página) e o Próximo/Anterior segue a mesma sequência.
-  const abrirFicha = (clienteId: string) =>
-    navigate(`/clientes/${clienteId}`, {
-      state: estadoDaFila(
-        location.pathname + location.search,
-        clientesComTitulosFiltrados.map((c) => c.cliente_id),
-      ),
-    });
+  const abrirFicha = useAbrirFicha(
+    useMemo(() => clientesComTitulosFiltrados.map((c) => c.cliente_id), [clientesComTitulosFiltrados]),
+  );
 
   const openWhatsApp = (telefone: string | null, nome: string) => {
     if (!telefone) {
@@ -1340,7 +1335,7 @@ export default function Titulos() {
         )}
       </PageHeader>
 
-      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
@@ -1373,12 +1368,12 @@ export default function Titulos() {
               <TableHeader className="bg-muted/30">
                 <TableRow>
                   <TableHead className="w-10"></TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cliente / Título</TableHead>
-                  <TableHead className="hidden md:table-cell text-[10px] font-bold uppercase tracking-widest">CPF/CNPJ</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Saldo</TableHead>
-                  <TableHead className="hidden lg:table-cell text-[10px] font-bold uppercase tracking-widest">Títulos</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Situação</TableHead>
-                  <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
+                  <TableHead>Cliente / Título</TableHead>
+                  <TableHead className="hidden md:table-cell">CPF/CNPJ</TableHead>
+                  <TableHead>Saldo</TableHead>
+                  <TableHead className="hidden lg:table-cell">Títulos</TableHead>
+                  <TableHead>Situação</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>

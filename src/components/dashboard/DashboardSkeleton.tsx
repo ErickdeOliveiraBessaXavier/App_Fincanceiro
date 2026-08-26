@@ -16,7 +16,7 @@ const DashboardSkeleton = () => {
       {/* 3 Pillars Skeleton */}
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
         {[...Array(3)].map((_, i) => (
-          <Card key={i} className="border-none shadow-card">
+          <Card key={i}>
             <CardContent className="p-6 space-y-4">
               <Skeleton className="h-12 w-12 rounded-2xl" />
               <div className="space-y-2">
@@ -36,7 +36,7 @@ const DashboardSkeleton = () => {
       <div className="grid gap-10 grid-cols-1 xl:grid-cols-12">
         {/* Main Area Skeleton */}
         <div className="xl:col-span-8 space-y-10">
-          <Card className="h-[400px] border-none shadow-card">
+          <Card className="h-[400px]">
             <CardHeader>
               <Skeleton className="h-8 w-48" />
             </CardHeader>
@@ -46,7 +46,7 @@ const DashboardSkeleton = () => {
               ))}
             </CardContent>
           </Card>
-          <Card className="h-[300px] border-none shadow-card">
+          <Card className="h-[300px]">
             <CardContent className="p-6 space-y-4">
               {[...Array(4)].map((_, i) => (
                 <Skeleton key={i} className="h-12 w-full rounded-xl" />
@@ -57,7 +57,7 @@ const DashboardSkeleton = () => {
 
         {/* Action Center Skeleton */}
         <div className="xl:col-span-4">
-          <Card className="h-[750px] border-none shadow-card rounded-3xl">
+          <Card className="h-[750px] rounded-3xl">
             <CardContent className="p-8 space-y-10">
               <div className="space-y-2">
                 <Skeleton className="h-6 w-40" />

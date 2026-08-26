@@ -7,7 +7,9 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
     <div
       ref={ref}
       className={cn(
-        "rounded-3xl border-none bg-card text-card-foreground transition-all duration-300 shadow-card",
+        // rounded-xl = calc(var(--radius) + 4px): o raio do cartão sai do token,
+        // não de um valor fixo repetido em cada tela.
+        "rounded-xl border-none bg-card text-card-foreground transition-all duration-300 shadow-card",
         className
       )}
       {...props}

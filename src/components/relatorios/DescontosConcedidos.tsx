@@ -81,7 +81,7 @@ export function DescontosConcedidos({ descontos }: { descontos: DescontoConcedid
         ]}
       />
 
-      <Card className="overflow-hidden rounded-2xl border-none shadow-card">
+      <Card className="overflow-hidden">
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
           <CardTitle className="text-lg font-bold tracking-tight">Descontos concedidos</CardTitle>
           <CardDescription className="text-xs font-medium">
@@ -100,12 +100,12 @@ export function DescontosConcedidos({ descontos }: { descontos: DescontoConcedid
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Data</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cliente</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Valor</TableHead>
-                    <TableHead className="hidden md:table-cell text-[10px] font-bold uppercase tracking-widest">Limite</TableHead>
-                    <TableHead className="hidden lg:table-cell text-[10px] font-bold uppercase tracking-widest">Concedido por</TableHead>
-                    <TableHead className="hidden xl:table-cell text-[10px] font-bold uppercase tracking-widest">Motivo</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead className="hidden md:table-cell">Limite</TableHead>
+                    <TableHead className="hidden lg:table-cell">Concedido por</TableHead>
+                    <TableHead className="hidden xl:table-cell">Motivo</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>

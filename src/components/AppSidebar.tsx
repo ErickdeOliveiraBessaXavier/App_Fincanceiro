@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { rotuloClasses } from '@/components/Rotulo';
 
 /**
  * Navegação agrupada por finalidade.
@@ -151,7 +152,7 @@ const GrupoNav = ({ grupo, isCollapsed, isActive }: {
     <SidebarGroup className={cn(isCollapsed && "!p-1")}>
       {/* Recolhida, a sidebar tem 3rem: um rótulo de grupo não caberia. */}
       {!isCollapsed && (
-        <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/50">
+        <SidebarGroupLabel className={cn(rotuloClasses, 'px-3 text-sidebar-foreground/50')}>
           {grupo.label}
         </SidebarGroupLabel>
       )}

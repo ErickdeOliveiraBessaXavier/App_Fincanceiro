@@ -36,6 +36,8 @@ import {
   ultimosMeses,
 } from '@/domain/metricas';
 import type { ClientePago, Periodo, RecebimentoDetalhado } from '@/domain/metricas';
+import { rotuloClasses } from '@/components/Rotulo';
+import { cn } from '@/lib/utils';
 
 /**
  * Relatórios operacionais.
@@ -91,10 +93,10 @@ interface IndicadorCardProps {
 }
 
 const IndicadorCard = ({ titulo, valor, icone: Icone, corIcone, comparacao, nota }: IndicadorCardProps) => (
-  <Card className="border-none shadow-card rounded-2xl overflow-hidden group">
+  <Card className="overflow-hidden group">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
-      <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{titulo}</CardTitle>
+      <CardTitle className={rotuloClasses}>{titulo}</CardTitle>
       <div className={`h-8 w-8 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform ${corIcone}`}>
         <Icone className="h-4 w-4" />
       </div>
@@ -377,7 +379,7 @@ const CardsIndicadores = ({ dados, mostraTitulos, mostraAcordos, comparacaoVisiv
 
 const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
   <>
-    <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+    <Card className="overflow-hidden">
       <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
         <CardTitle className="text-lg font-bold tracking-tight">Títulos por Situação</CardTitle>
         <CardDescription className="text-xs font-medium">
@@ -403,7 +405,7 @@ const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
       </CardContent>
     </Card>
 
-    <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+    <Card className="overflow-hidden">
       <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
         <CardTitle className="text-lg font-bold tracking-tight">Títulos por Mês</CardTitle>
         <CardDescription className="text-xs font-medium">Títulos com parcela vencendo no mês</CardDescription>
@@ -424,7 +426,7 @@ const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
 );
 
 const GraficoComparativo = ({ dados }: { dados: DadosRelatorio }) => (
-  <Card className="md:col-span-2 border-none shadow-card rounded-2xl overflow-hidden">
+  <Card className="md:col-span-2 overflow-hidden">
     <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
       <div className="flex items-center justify-between">
         <div>
@@ -457,7 +459,7 @@ const GraficoComparativo = ({ dados }: { dados: DadosRelatorio }) => (
 );
 
 const GraficoDeAcordos = ({ dados }: { dados: DadosRelatorio }) => (
-  <Card className="md:col-span-2 border-none shadow-card rounded-2xl overflow-hidden">
+  <Card className="md:col-span-2 overflow-hidden">
     <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
       <CardTitle className="text-lg font-bold tracking-tight">Acordos por Mês</CardTitle>
       <CardDescription className="text-xs font-medium">Acordos com parcela vencendo no mês</CardDescription>
@@ -600,7 +602,7 @@ export default function Relatorios() {
 
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border/50">
         <div className="flex flex-col gap-1.5 flex-1 w-full sm:w-auto">
-          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">Tipo de Visão</label>
+          <label className={cn(rotuloClasses, 'ml-1')}>Tipo de Visão</label>
           <Select value={reportType} onValueChange={(v) => setReportType(v as TipoRelatorio)}>
             <SelectTrigger className="w-full sm:w-56 rounded-xl bg-background">
               <SelectValue placeholder="Tipo de relatório" />
@@ -616,7 +618,7 @@ export default function Relatorios() {
         </div>
 
         <div className="flex flex-col gap-1.5 w-full sm:w-auto">
-          <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest ml-1">
+          <label className={cn(rotuloClasses, 'ml-1')}>
             {rotuloPeriodo(reportType)}
           </label>
           <DatePickerWithRange date={dateRange} onDateChange={setDateRange} />

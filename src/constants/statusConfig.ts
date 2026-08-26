@@ -1,4 +1,4 @@
-import { Clock, CheckCircle, XCircle, type LucideIcon } from 'lucide-react';
+import { Clock, CheckCircle, History, XCircle, type LucideIcon } from 'lucide-react';
 
 /**
  * Fonte única de verdade para rótulos, cores e ícones de status.
@@ -96,6 +96,10 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     pendente: { label: 'Pendente', variant: 'warning', icon: Clock },
     concluido: { label: 'Concluído', variant: 'success', icon: CheckCircle },
     cancelado: { label: 'Cancelado', variant: 'destructive', icon: XCircle },
+    // Remarcado: o cliente empurrou a data e um novo retorno herdou o
+    // compromisso. Separado de 'cancelado' de propósito — "desmarquei" e
+    // "ele empurrou de novo" são fatos diferentes na cobrança.
+    substituido: { label: 'Remarcado', variant: 'secondary', icon: History },
   },
   // Status de cobrança da telecobrança (agendamentos.status_cobranca).
   // Rótulos espelham STATUS_COBRANCA em src/domain/telecobranca/statusCobranca.ts.

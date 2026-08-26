@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { User, Phone, Mail, MapPin, ExternalLink } from 'lucide-react';
 import { formatTelefone } from '@/utils/format';
+import { rotuloClasses } from '@/components/Rotulo';
+import { cn } from '@/lib/utils';
 
 interface Cliente {
   id: string;
@@ -21,14 +23,14 @@ interface ClienteResumoProps {
 
 export function ClienteResumo({ cliente }: ClienteResumoProps) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base flex items-center gap-2">
-          <User className="h-4 w-4 text-muted-foreground" />
+    <Card className="shadow-none bg-transparent">
+      <CardHeader className="pb-2 px-2">
+        <CardTitle className={cn(rotuloClasses, 'flex items-center gap-2')}>
+          <User className="h-4 w-4" />
           Dados do Cliente
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-1 text-sm">
+      <CardContent className="space-y-1 text-sm px-2">
         {/* Lista compacta de informações */}
         <div className="space-y-1">
           {cliente.telefone && (

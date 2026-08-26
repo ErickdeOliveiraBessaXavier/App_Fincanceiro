@@ -37,6 +37,28 @@ export function estadoDaFila(origem: string, fila: string[]): EstadoFila {
   return { from: origem, fila };
 }
 
+/**
+ * State a mandar para a ficha a partir da tela atual.
+ *
+ * Toda tela que lista clientes precisa mandar isto; quem esquecia entregava
+ * uma ficha sem Anterior/Próximo e sem volta para a lista certa. Use com
+ * `useAbrirFicha` em botão, ou direto no `state` de um `<Link>`.
+ *
+ * `fila` são os ids na ordem exibida, de TODAS as páginas da listagem — não só
+ * a página atual, senão a sequência morre na virada de página.
+ */
+export function useEstadoDaFila(fila: string[]): EstadoFila {
+  const location = useLocation();
+  return estadoDaFila(location.pathname + location.search, fila);
+}
+
+/** Abre a ficha de um cliente levando a fila da tela atual. */
+export function useAbrirFicha(fila: string[]): (clienteId: string) => void {
+  const navigate = useNavigate();
+  const estado = useEstadoDaFila(fila);
+  return (clienteId: string) => navigate(`/clientes/${clienteId}`, { state: estado });
+}
+
 export function useFilaNavegacao(clienteId?: string): FilaNavegacao {
   const navigate = useNavigate();
   const location = useLocation();

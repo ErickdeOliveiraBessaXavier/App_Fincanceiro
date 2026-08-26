@@ -39,9 +39,10 @@ interface AgendamentoModalProps {
 /**
  * Retorno pendente que o cliente já tem, se houver.
  *
- * "Registrar contato" também cria agendamento (o próximo contato), então sem
- * este aviso o mesmo cliente terminava com dois retornos em datas diferentes —
- * e as listagens mostram só o mais próximo, escondendo o outro.
+ * "Registrar contato" também cria agendamento (o próximo contato). Mostrar o
+ * que já está marcado evita o operador remarcar sem perceber que havia um
+ * compromisso combinado — a substituição em si é automática desde a migration
+ * 20260826130000 (um retorno pendente por cliente).
  */
 function useRetornoPendente(clienteId: string, ativo: boolean) {
   const [retorno, setRetorno] = useState<string | null>(null);
@@ -105,19 +106,18 @@ export function AgendamentoModal({
       setLoading(true);
       if (!user || !companyId) throw new Error('Sessão inválida');
 
-      const { error } = await supabase
-        .from('agendamentos')
-        .insert({
-          company_id: companyId,
-          cliente_id: clienteId,
-          titulo_id: tituloId || null,
-          acordo_id: acordoId || null,
-          tipo_evento: tipoEvento,
-          descricao,
-          data_agendamento: paraTimestampNegocio(dataAgendamento, horaAgendamento),
-          status: 'pendente',
-          created_by: user.id,
-        });
+      // Escrita via RPC, não INSERT direto: agendar retorno é evento de
+      // domínio e precisa de um lugar só onde as regras valham. O INSERT cru
+      // daqui era a segunda porta, que furava a validação da RPC de registro
+      // de contato (ver migration 20260826120000).
+      const { error } = await supabase.rpc('agendar_retorno', {
+        p_cliente_id: clienteId,
+        p_data_agendamento: paraTimestampNegocio(dataAgendamento, horaAgendamento),
+        p_tipo_evento: tipoEvento,
+        p_descricao: descricao || null,
+        p_titulo_id: tituloId || null,
+        p_acordo_id: acordoId || null,
+      });
 
       if (error) throw error;
 
@@ -152,8 +152,8 @@ export function AgendamentoModal({
               <Info className="h-4 w-4" />
               <AlertDescription>
                 Este cliente já tem um retorno pendente para{' '}
-                <strong>{formatData(retornoPendente)}</strong>. Um novo agendamento não
-                substitui o anterior — os dois vão coexistir.
+                <strong>{formatData(retornoPendente)}</strong>. Salvar aqui <strong>remarca</strong>:
+                o anterior é fechado como Remarcado e continua no histórico.
               </AlertDescription>
             </Alert>
           )}

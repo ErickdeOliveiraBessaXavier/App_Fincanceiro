@@ -2002,6 +2002,17 @@ export type Database = {
         }
         Returns: Json
       }
+      agendar_retorno: {
+        Args: {
+          p_acordo_id?: string
+          p_cliente_id: string
+          p_data_agendamento: string
+          p_descricao?: string
+          p_tipo_evento?: string
+          p_titulo_id?: string
+        }
+        Returns: Json
+      }
       aplicar_encargo_parcela: {
         Args: {
           p_created_by?: string

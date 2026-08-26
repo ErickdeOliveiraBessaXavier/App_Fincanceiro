@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useParams } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { Layout } from "@/components/Layout";
 import { AdminRoute } from "@/components/AdminRoute";
@@ -51,7 +51,10 @@ function HomeRoute() {
 // A ficha agora é só /clientes/:id; esta rota sobrevive como redirect.
 function RedirecionarParaFicha() {
   const { clienteId } = useParams<{ clienteId: string }>();
-  return <Navigate to={`/clientes/${clienteId}`} replace />;
+  // O state segue junto: sem ele o redirect engolia a fila e a origem, e a
+  // ficha chegava sem Anterior/Próximo.
+  const { state } = useLocation();
+  return <Navigate to={`/clientes/${clienteId}`} state={state} replace />;
 }
 
 const App = () => (

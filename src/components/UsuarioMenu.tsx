@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import type { AppRole } from '@/domain/perfis';
+import { Rotulo } from '@/components/Rotulo';
 
 /**
  * Identidade do usuário no cabeçalho.
@@ -76,9 +77,9 @@ export const UsuarioMenu = memo(() => {
           <span className="block text-sm font-semibold">{nome}</span>
           <span className="block truncate text-xs text-muted-foreground">{user?.email}</span>
           {papel && (
-            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+            <Rotulo as="span" className="mt-1 inline-flex items-center gap-1 text-primary">
               <User className="h-3 w-3" /> {papel}
-            </span>
+            </Rotulo>
           )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />

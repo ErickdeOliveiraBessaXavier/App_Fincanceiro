@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { formatCpfCnpj } from '@/utils/format';
+import { rotuloClasses } from '@/components/Rotulo';
 
 // Sentinela do Radix Select (não aceita value vazio) para "sem vínculo".
 const NONE = 'none';
@@ -81,7 +82,7 @@ function BulkBar({ count, cobradores, vendedores, onAtribuirCobrador, onAtribuir
       <div className="text-sm font-bold">{count} selecionado{count === 1 ? '' : 's'}</div>
       <div className="flex items-end gap-2">
         <div className="space-y-1.5">
-          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Cobrador</Label>
+          <Label className={rotuloClasses}>Cobrador</Label>
           <div className="w-44">
             <AssignSelect value={cob} opcoes={cobradores} semLabel="Remover cobrador" onChange={(id) => setCob(id ?? '')} />
           </div>
@@ -90,7 +91,7 @@ function BulkBar({ count, cobradores, vendedores, onAtribuirCobrador, onAtribuir
       </div>
       <div className="flex items-end gap-2">
         <div className="space-y-1.5">
-          <Label className="text-[10px] uppercase tracking-widest text-muted-foreground">Vendedor</Label>
+          <Label className={rotuloClasses}>Vendedor</Label>
           <div className="w-44">
             <AssignSelect value={ven} opcoes={vendedores} semLabel="Remover vendedor" onChange={(id) => setVen(id ?? '')} />
           </div>
@@ -253,7 +254,7 @@ export default function Atribuicao() {
         description="Distribua clientes entre cobradores e vendedores de forma centralizada."
       />
 
-      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <CardTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
             <Users className="h-5 w-5" /> Clientes
@@ -303,10 +304,10 @@ export default function Atribuicao() {
                     <TableHead className="w-10">
                       <Checkbox checked={todosFiltradosSelecionados} onCheckedChange={toggleTodos} />
                     </TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cliente</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">CPF/CNPJ</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Cobrador</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Vendedor</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>CPF/CNPJ</TableHead>
+                    <TableHead>Cobrador</TableHead>
+                    <TableHead>Vendedor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

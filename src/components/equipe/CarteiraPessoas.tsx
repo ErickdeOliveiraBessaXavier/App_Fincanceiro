@@ -322,7 +322,7 @@ export function CarteiraPessoas({ config, isAdmin }: { config: CarteiraConfig; i
     <div className="space-y-6">
       <ResumoCards pessoas={config.pessoas} />
 
-      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
@@ -351,11 +351,11 @@ export function CarteiraPessoas({ config, isAdmin }: { config: CarteiraConfig; i
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Contato</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Carteira</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Ativo</TableHead>
-                    <TableHead className="text-right text-[10px] font-bold uppercase tracking-widest">Ações</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Contato</TableHead>
+                    <TableHead>Carteira</TableHead>
+                    <TableHead>Ativo</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

@@ -14,21 +14,19 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, ChevronLeft, ChevronRight, Phone, FileText, Clock, Handshake } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Phone, FileText, Clock, Handshake } from 'lucide-react';
 import { ClienteResumo } from '@/components/telecobranca/ClienteResumo';
 import { TitulosCliente } from '@/components/telecobranca/TitulosCliente';
 import { AcoesRapidas } from '@/components/telecobranca/AcoesRapidas';
 import { EventoTimeline } from '@/components/telecobranca/EventoTimeline';
-import { MetricasCliente } from '@/components/telecobranca/MetricasCliente';
 import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
 import { RegistrarContatoModal } from '@/components/telecobranca/RegistrarContatoModal';
 import { PainelLateralFicha } from '@/components/telecobranca/PainelLateralFicha';
 import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
-import { UltimoContato } from '@/components/telecobranca/UltimoContato';
 import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
-import { formatCpfCnpj, formatTelefone } from '@/utils/format';
+import { formatCpfCnpj, formatData, formatTelefone } from '@/utils/format';
 import { resumoNegociacao } from '@/domain/acordos/negociacao';
 import { derivarStatusCliente } from '@/domain/clientes/situacao';
 import { useBaseMetricasCliente } from '@/lib/queries/metricas';
@@ -37,6 +35,11 @@ import { useFilaNavegacao } from '@/hooks/useFilaNavegacao';
 import { usePaginaAlturaFixa } from '@/hooks/usePaginaAlturaFixa';
 import { useInvalidarEventos } from '@/lib/queries/eventos';
 import { cn } from '@/lib/utils';
+import { Rotulo } from '@/components/Rotulo';
+import { Card } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { useParcelasAcordo } from '@/lib/queries/acordos';
+import { ProximoRetorno } from '@/components/telecobranca/ProximoRetorno';
 
 interface Cliente {
   id: string;
@@ -87,30 +90,82 @@ function NavegacaoFila({ fila }: { fila: ReturnType<typeof useFilaNavegacao> }) 
   if (fila.total === 0 || fila.posicao === 0) return null;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2 shrink-0">
       <Button
         variant="outline"
-        size="sm"
-        className="gap-1"
+        size="icon"
+        className="h-8 w-8 rounded-full"
         disabled={!fila.temAnterior}
         onClick={fila.irParaAnterior}
       >
         <ChevronLeft className="h-4 w-4" />
-        <span className="hidden sm:inline">Anterior</span>
       </Button>
-      <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-muted-foreground">
+      <Rotulo as="span" className="mx-1 whitespace-nowrap">
         {fila.posicao} de {fila.total}
-      </span>
+      </Rotulo>
       <Button
         variant="outline"
-        size="sm"
-        className="gap-1"
+        size="icon"
+        className="h-8 w-8 rounded-full"
         disabled={!fila.temProximo}
         onClick={fila.irParaProximo}
       >
-        <span className="hidden sm:inline">Próximo</span>
         <ChevronRight className="h-4 w-4" />
       </Button>
+    </div>
+  );
+}
+
+/**
+ * Coluna principal da ficha: as abas de Parcelas / Histórico / Acordos.
+ *
+ * Ganha a mesma moldura da coluna de ação ao lado (contorno e fundo um passo
+ * mais escuro que a página): sem isso as duas colunas se liam como um bloco só.
+ * Com `emColuna`, ela tem altura própria e quem rola é o conteúdo da aba — as
+ * pílulas ficam paradas no topo.
+ */
+function ColunaPrincipal({ clienteId, aba, onAba, emColuna }: {
+  clienteId: string;
+  aba: string;
+  onAba: (valor: string) => void;
+  emColuna: boolean;
+}) {
+  const alturaPropria = emColuna ? 'lg:flex lg:min-h-0 lg:flex-1 lg:flex-col' : undefined;
+
+  return (
+    <div className={cn('order-2', emColuna && 'lg:order-1 lg:col-span-2 lg:h-full lg:pl-1', alturaPropria)}>
+      <div className={cn('rounded-xl border border-border/60 bg-muted/30 p-4', alturaPropria)}>
+        <Tabs value={aba} onValueChange={onAba} className={cn('w-full', alturaPropria)}>
+          <TabsList variant="pill" className="mb-4 w-full justify-start">
+            <TabsTrigger value="parcelas" className="gap-2">
+              <FileText className="h-4 w-4" />
+              <span className="hidden sm:inline">Parcelas</span>
+            </TabsTrigger>
+            <TabsTrigger value="historico" className="gap-2">
+              <Clock className="h-4 w-4" />
+              <span className="hidden sm:inline">Histórico</span>
+            </TabsTrigger>
+            <TabsTrigger value="acordos" className="gap-2">
+              <Handshake className="h-4 w-4" />
+              <span className="hidden sm:inline">Acordos</span>
+            </TabsTrigger>
+          </TabsList>
+
+          <div className={cn(emColuna && 'lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pb-2 lg:pr-2')}>
+            <TabsContent value="parcelas" className="mt-0">
+              <TitulosCliente clienteId={clienteId} />
+            </TabsContent>
+
+            <TabsContent value="historico" className="mt-0">
+              <EventoTimeline clienteId={clienteId} />
+            </TabsContent>
+
+            <TabsContent value="acordos" className="mt-0">
+              <AcordosCliente clienteId={clienteId} />
+            </TabsContent>
+          </div>
+        </Tabs>
+      </div>
     </div>
   );
 }
@@ -221,29 +276,37 @@ export default function Telecobranca() {
       </Breadcrumb>
 
       {/* Header Aprimorado */}
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+      <div className="flex items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 mt-2 sm:mt-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
           
           {/* Avatar com iniciais */}
-          <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-xl font-bold shadow-md">
+          <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm sm:text-xl font-bold shadow-md shrink-0 mt-2 sm:mt-0">
             {getInitials(cliente.nome)}
           </div>
           
-          <div>
+          <div className="min-w-0 flex-1">
             {/* A tela não se apresentava: quem chegava por um clique no nome do
                 cliente não sabia como ela se chama nem como voltar a ela. */}
-            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-              Ficha do Cliente
-            </p>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl md:text-2xl font-bold">{cliente.nome}</h1>
-              <StatusBadge domain="cliente" status={situacao} />
-              <StatusCobrancaAtual clienteId={cliente.id} refreshTrigger={refreshTrigger} />
+            <Rotulo>Ficha do Cliente</Rotulo>
+            <div className="flex flex-col xl:flex-row xl:items-center gap-3 min-w-0">
+              {/* Quem corta o nome é o `truncate`, na largura que sobrar: um
+                  corte fixo em 35 caracteres encurtava o nome até em tela larga. */}
+              <h1 className="truncate text-2xl font-black tracking-tighter sm:text-3xl md:text-4xl" title={cliente.nome}>
+                {cliente.nome}
+              </h1>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                <StatusBadge domain="cliente" status={situacao} />
+                <StatusCobrancaAtual clienteId={cliente.id} refreshTrigger={refreshTrigger} />
+                {/* O compromisso combinado fica no cabeçalho, visível em
+                    qualquer aba: é o que o operador precisa ter na frente
+                    enquanto negocia. */}
+                <ProximoRetorno clienteId={cliente.id} />
+              </div>
             </div>
-            <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+            <div className="flex items-center gap-4 text-xs sm:text-sm text-muted-foreground flex-wrap mt-0.5 sm:mt-0">
               <span className="font-mono">{formatCpfCnpj(cliente.cpf_cnpj)}</span>
               {cliente.telefone && (
                 <span className="flex items-center gap-1">
@@ -257,8 +320,6 @@ export default function Telecobranca() {
 
         <NavegacaoFila fila={fila} />
       </div>
-
-      <MetricasCliente clienteId={cliente.id} />
 
       {/* Sem ações de escrita (vendedor/leitura), a coluna lateral ficava com um
           card só e metade do espaço nobre vazia ao lado das abas de cobrança.
@@ -276,55 +337,32 @@ export default function Telecobranca() {
             uma ligação exigia rolar a ficha inteira. No desktop ela volta para a
             direita, ao lado das parcelas. */}
         {isOperador && (
-          <div className="order-1 lg:order-2 lg:col-span-1 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
-            <PainelLateralFicha
-              cliente={cliente}
-              onSucesso={handleEventoSuccess}
-              onSalvarEProximo={fila.temProximo ? fila.irParaProximo : undefined}
-              onEventoAdministrativo={() => setIsContatoModalOpen(true)}
-              onAgendarRetorno={() => setIsAgendamentoModalOpen(true)}
-            />
+          <div className="order-1 lg:order-2 lg:col-span-1 lg:h-full lg:min-h-0 lg:pr-1 flex flex-col">
+            {/* Moldura dupla: p-1 = 4px, e rounded-lg (var(--radius)) é
+                exatamente rounded-xl (var(--radius) + 4px) menos essa borda —
+                o canto interno acompanha o externo sem número mágico. */}
+            <div className="flex min-h-0 flex-1 flex-col rounded-xl border border-primary/10 bg-primary/5 p-1">
+              <div className="flex min-h-0 flex-1 flex-col rounded-lg bg-background py-4 shadow-sm sm:py-5">
+                <div className="flex-1 overflow-y-auto px-4 sm:px-5">
+                  <PainelLateralFicha
+                    cliente={cliente}
+                    onSucesso={handleEventoSuccess}
+                    onSalvarEProximo={fila.temProximo ? fila.irParaProximo : undefined}
+                    onEventoAdministrativo={() => setIsContatoModalOpen(true)}
+                    onAgendarRetorno={() => setIsAgendamentoModalOpen(true)}
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
-        {/* Coluna Principal com Tabs */}
-        <div className={cn(
-          'order-2 space-y-4',
-          isOperador && 'lg:order-1 lg:col-span-2 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1',
-        )}>
-          {/* O que foi combinado na última ligação fica junto das parcelas: são
-              as duas informações usadas ao mesmo tempo para negociar. Na aba
-              Histórico ele sai de cena — seria a mesma lista duas vezes. */}
-          {abaPrincipal !== 'historico' && <UltimoContato clienteId={cliente.id} />}
-          <Tabs value={abaPrincipal} onValueChange={setAbaPrincipal} className="w-full">
-            <TabsList className="w-full justify-start mb-4 h-auto flex-wrap">
-              <TabsTrigger value="parcelas" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <FileText className="h-4 w-4" />
-                <span className="hidden sm:inline">Parcelas</span>
-              </TabsTrigger>
-              <TabsTrigger value="historico" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Clock className="h-4 w-4" />
-                <span className="hidden sm:inline">Histórico</span>
-              </TabsTrigger>
-              <TabsTrigger value="acordos" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-                <Handshake className="h-4 w-4" />
-                <span className="hidden sm:inline">Acordos</span>
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="parcelas" className="mt-0">
-              <TitulosCliente clienteId={cliente.id} />
-            </TabsContent>
-            
-            <TabsContent value="historico" className="mt-0">
-              <EventoTimeline clienteId={cliente.id} />
-            </TabsContent>
-            
-            <TabsContent value="acordos" className="mt-0">
-              <AcordosCliente clienteId={cliente.id} />
-            </TabsContent>
-          </Tabs>
-        </div>
+        <ColunaPrincipal
+          clienteId={cliente.id}
+          aba={abaPrincipal}
+          onAba={setAbaPrincipal}
+          emColuna={isOperador}
+        />
       </div>
 
       {/* Modais */}
@@ -347,6 +385,9 @@ export default function Telecobranca() {
   );
 }
 
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
 interface AcordoResumo {
   id: string;
   status: string;
@@ -366,8 +407,8 @@ function NegociacaoResumo({ valorOriginal, valorAcordo }: { valorOriginal: numbe
 
   return (
     <div>
-      <p className="text-muted-foreground">{acrescimo ? 'Acréscimo' : 'Desconto'}</p>
-      <p className={cn('font-medium', acrescimo ? 'text-amber-600' : 'text-green-600')}>
+      <Rotulo>{acrescimo ? 'Acréscimo' : 'Desconto'}</Rotulo>
+      <p className={cn('font-bold text-base mt-1', acrescimo ? 'text-amber-600' : 'text-green-600')}>
         {percentual.toFixed(1)}%
       </p>
     </div>
@@ -397,6 +438,124 @@ function PainelNovoAcordo({ clienteId, aberto, onAbertoChange, onCriado }: {
 }
 
 /**
+ * Parcelas de um acordo, no mesmo desenho da expansão de um título.
+ *
+ * Só consulta quando o card é aberto: a aba pode listar vários acordos e
+ * carregar o cronograma de todos de uma vez é trabalho jogado fora.
+ */
+function ParcelasDoAcordo({ acordoId }: { acordoId: string }) {
+  const { data: parcelas = [], isLoading } = useParcelasAcordo(acordoId);
+
+  if (isLoading) {
+    return <p className="px-4 py-3 text-xs text-muted-foreground">Carregando parcelas...</p>;
+  }
+  if (parcelas.length === 0) {
+    return <p className="px-4 py-3 text-xs text-muted-foreground">Nenhuma parcela neste acordo.</p>;
+  }
+
+  return (
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Parcela</TableHead>
+          <TableHead>Vencimento</TableHead>
+          <TableHead>Valor</TableHead>
+          <TableHead>Pago</TableHead>
+          <TableHead>Saldo</TableHead>
+          <TableHead>Status</TableHead>
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {parcelas.map((parcela) => (
+          <TableRow key={parcela.id} className="[&>td]:whitespace-nowrap">
+            <TableCell className="font-medium">
+              {parcela.numero_parcela}/{parcelas.length}
+            </TableCell>
+            <TableCell>{formatData(parcela.data_vencimento)}</TableCell>
+            <TableCell>{formatCurrency(parcela.valor_total)}</TableCell>
+            <TableCell>
+              {parcela.total_pago > 0 ? formatCurrency(parcela.total_pago) : <span className="text-muted-foreground">—</span>}
+            </TableCell>
+            <TableCell className={parcela.saldo_atual > 0 ? 'text-destructive' : 'text-muted-foreground'}>
+              {formatCurrency(Math.max(0, parcela.saldo_atual))}
+            </TableCell>
+            <TableCell>
+              <StatusBadge domain="parcela_acordo" status={parcela.status} />
+            </TableCell>
+          </TableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
+}
+
+/**
+ * Um acordo na aba: resumo clicável que abre o cronograma, como o título faz
+ * com as parcelas. O card inteiro não navega mais — quem leva para a tela de
+ * acordos é o botão "Abrir", senão abrir e expandir disputariam o mesmo clique.
+ */
+function AcordoCard({ acordo, expandido, onAlternar, onAbrir }: {
+  acordo: AcordoResumo;
+  expandido: boolean;
+  onAlternar: () => void;
+  onAbrir: () => void;
+}) {
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex items-start gap-3 p-6">
+        <button
+          type="button"
+          onClick={onAlternar}
+          aria-expanded={expandido}
+          className="flex min-w-0 flex-1 items-start gap-3 text-left"
+        >
+          <span className="mt-0.5 shrink-0 text-muted-foreground">
+            {expandido ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+          </span>
+
+          <div className="min-w-0 flex-1 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Handshake className="h-4 w-4 text-muted-foreground" />
+                <span className="font-medium">Acordo <span className="font-mono">{codigoAcordo(acordo.id)}</span></span>
+              </div>
+              <StatusBadge domain="acordo" status={acordo.status} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
+              <div>
+                <Rotulo>Valor Original</Rotulo>
+                <p className="font-bold text-base mt-1">{formatCurrency(acordo.valor_original)}</p>
+              </div>
+              <div>
+                <Rotulo>Valor Acordo</Rotulo>
+                <p className="font-bold text-lg text-primary mt-1">{formatCurrency(acordo.valor_acordo)}</p>
+              </div>
+              <div>
+                <Rotulo>Parcelas</Rotulo>
+                <p className="font-bold text-base mt-1">{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</p>
+              </div>
+              <NegociacaoResumo valorOriginal={acordo.valor_original} valorAcordo={acordo.valor_acordo} />
+            </div>
+          </div>
+        </button>
+
+        <Button size="sm" variant="outline" className="shrink-0 gap-1" onClick={onAbrir}>
+          <ExternalLink className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">Abrir</span>
+        </Button>
+      </div>
+
+      {expandido && (
+        <div className="mb-6 ml-9 mr-6 overflow-x-auto rounded-lg border border-l-2 border-dashed border-l-primary/40 bg-muted/30">
+          <ParcelasDoAcordo acordoId={acordo.id} />
+        </div>
+      )}
+    </Card>
+  );
+}
+
+/**
  * Acordos do cliente, com a criação em painel lateral.
  *
  * "Criar novo acordo" levava para /acordos: o operador saía do atendimento no
@@ -407,7 +566,15 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
   const [acordos, setAcordos] = useState<AcordoResumo[]>([]);
   const [loading, setLoading] = useState(true);
   const [novoAcordoAberto, setNovoAcordoAberto] = useState(false);
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
   const navigate = useNavigate();
+
+  const alternar = (acordoId: string) =>
+    setExpandidos((atual) => {
+      const proximo = new Set(atual);
+      if (!proximo.delete(acordoId)) proximo.add(acordoId);
+      return proximo;
+    });
 
   useEffect(() => {
     fetchAcordos();
@@ -430,13 +597,6 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
     }
   };
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(value);
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -448,10 +608,10 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
   if (acordos.length === 0) {
     return (
       <>
-        <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
-          <Handshake className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-          <p className="text-muted-foreground">Nenhum acordo encontrado</p>
-          <Button variant="link" className="mt-2" onClick={() => setNovoAcordoAberto(true)}>
+        <div className="text-center py-12 bg-muted/20 rounded-2xl border-none shadow-sm">
+          <Handshake className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
+          <p className="text-sm font-medium text-muted-foreground">Nenhum acordo encontrado</p>
+          <Button variant="outline" className="mt-4 rounded-full" onClick={() => setNovoAcordoAberto(true)}>
             Criar novo acordo
           </Button>
         </div>
@@ -482,34 +642,13 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
       />
 
       {acordos.map((acordo) => (
-        <div
+        <AcordoCard
           key={acordo.id}
-          className="p-4 border rounded-lg bg-card hover:shadow-md transition-shadow cursor-pointer"
-          onClick={() => navigate(`/acordos?id=${acordo.id}`)}
-        >
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <Handshake className="h-4 w-4 text-muted-foreground" />
-              <span className="font-medium">Acordo <span className="font-mono">{codigoAcordo(acordo.id)}</span></span>
-            </div>
-            <StatusBadge domain="acordo" status={acordo.status} />
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-            <div>
-              <p className="text-muted-foreground">Valor Original</p>
-              <p className="font-medium">{formatCurrency(acordo.valor_original)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Valor Acordo</p>
-              <p className="font-medium text-primary">{formatCurrency(acordo.valor_acordo)}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Parcelas</p>
-              <p className="font-medium">{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</p>
-            </div>
-            <NegociacaoResumo valorOriginal={acordo.valor_original} valorAcordo={acordo.valor_acordo} />
-          </div>
-        </div>
+          acordo={acordo}
+          expandido={expandidos.has(acordo.id)}
+          onAlternar={() => alternar(acordo.id)}
+          onAbrir={() => navigate(`/acordos?id=${acordo.id}`)}
+        />
       ))}
     </div>
   );

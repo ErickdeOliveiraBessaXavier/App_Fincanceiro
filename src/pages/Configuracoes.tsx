@@ -126,7 +126,7 @@ export default function Configuracoes() {
         description="Parâmetros de negócio que valem para toda a empresa."
       />
 
-      <Card className="max-w-2xl rounded-2xl border-none shadow-card">
+      <Card className="max-w-2xl">
         <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
           <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <Target className="h-5 w-5 text-primary" />

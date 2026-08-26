@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AlertTriangle, CalendarClock, CalendarDays, CalendarX2, Phone, CheckCircle2 } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
@@ -9,13 +9,14 @@ import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
 import { TablePagination } from '@/components/TablePagination';
 import { usePagination, type PaginationControls } from '@/hooks/usePagination';
-import { estadoDaFila } from '@/hooks/useFilaNavegacao';
+import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
 import { useClientes, type ClienteRow } from '@/lib/queries/clientes';
 import { useDividaPorCliente } from '@/lib/queries/metricas';
 import type { DividaCliente } from '@/domain/metricas';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { formatCpfCnpj, formatData, formatTelefone, isoDeData } from '@/utils/format';
 import { cn } from '@/lib/utils';
+import { Rotulo } from '@/components/Rotulo';
 
 /**
  * Fila de retornos do dia.
@@ -138,10 +139,10 @@ function TituloSecao({ children, descricao }: { children: string; descricao: str
   );
 }
 
-const ESTILO_BLOCO: Record<ChaveBloco, { icone: typeof AlertTriangle; cor: string; borda: string }> = {
-  atrasados: { icone: CalendarX2, cor: 'text-destructive', borda: 'border-destructive/30' },
-  hoje: { icone: CalendarClock, cor: 'text-primary', borda: 'border-primary/30' },
-  proximos: { icone: CalendarDays, cor: 'text-muted-foreground', borda: 'border-border/60' },
+const ESTILO_BLOCO: Record<ChaveBloco, { icone: typeof AlertTriangle; cor: string; bg: string }> = {
+  atrasados: { icone: CalendarX2, cor: 'text-destructive', bg: 'bg-destructive/5' },
+  hoje: { icone: CalendarClock, cor: 'text-primary', bg: 'bg-primary/5' },
+  proximos: { icone: CalendarDays, cor: 'text-muted-foreground', bg: 'bg-muted/10' },
 };
 
 function LinhaCliente({ cliente, atrasado, divida, onAbrir }: {
@@ -184,9 +185,9 @@ function LinhaCliente({ cliente, atrasado, divida, onAbrir }: {
           <span className="block text-sm font-black text-primary">
             {divida.emAberto > 0 ? formatCurrency(divida.emAberto) : '—'}
           </span>
-          <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <Rotulo as="span" className="block">
             {divida.vencido > 0 ? `${formatCurrency(divida.vencido)} vencido` : 'em aberto'}
-          </span>
+          </Rotulo>
         </span>
         <Button size="sm" variant="outline" className="h-8" onClick={() => onAbrir(cliente)}>
           Atender
@@ -203,11 +204,11 @@ interface BlocoFilaProps {
 }
 
 function BlocoFila({ bloco, dividas, onAbrir }: BlocoFilaProps) {
-  const { icone: Icone, cor, borda } = ESTILO_BLOCO[bloco.chave];
+  const { icone: Icone, cor, bg } = ESTILO_BLOCO[bloco.chave];
   const pagina = usePagination(bloco.clientes, TAMANHO_PAGINA, String(bloco.clientes.length));
   return (
-    <Card className={cn('overflow-hidden rounded-2xl border shadow-card', borda)}>
-      <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+    <Card className="overflow-hidden hover:shadow-card-hover">
+      <CardHeader className={cn("border-b border-border/40 pb-4", bg)}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <Icone className={cn('h-5 w-5', cor)} />
@@ -309,9 +310,9 @@ function LinhaEmAtraso({ item, onAbrir }: { item: EmAtraso; onAbrir: (c: Cliente
           <span className="block text-sm font-black text-destructive">
             {formatCurrency(divida.vencido)}
           </span>
-          <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+          <Rotulo as="span" className="block">
             vencido
-          </span>
+          </Rotulo>
         </span>
         <Button size="sm" variant="outline" className="h-8" onClick={() => onAbrir(cliente)}>
           Abrir
@@ -353,8 +354,8 @@ function PainelEmAtraso({ itens, onAbrir }: {
   const total = itens.reduce((soma, i) => soma + i.divida.vencido, 0);
 
   return (
-    <Card className="overflow-hidden rounded-2xl border border-destructive/30 shadow-card">
-      <CardHeader className="border-b border-border/50 bg-destructive/5 pb-4">
+    <Card className="overflow-hidden hover:shadow-card-hover">
+      <CardHeader className="border-b border-border/40 bg-destructive/5 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -370,9 +371,9 @@ function PainelEmAtraso({ itens, onAbrir }: {
             <span className="block text-2xl font-black tabular-nums text-destructive">
               {formatCurrency(total)}
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+            <Rotulo as="span">
               {itens.length} {plural(itens.length, 'cliente', 'clientes')}
-            </span>
+            </Rotulo>
           </div>
         </div>
       </CardHeader>
@@ -401,8 +402,8 @@ function QuitadosDaFila({ clientes, onAbrir }: {
   if (clientes.length === 0) return null;
 
   return (
-    <Card className="rounded-2xl border border-success/30 shadow-card">
-      <CardHeader className="border-b border-border/50 bg-success/5 pb-4">
+    <Card className="overflow-hidden hover:shadow-card-hover">
+      <CardHeader className="border-b border-border/40 bg-success/5 pb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-success" />
@@ -450,7 +451,6 @@ function QuitadosDaFila({ clientes, onAbrir }: {
 
 export default function Fila() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { data: clientes = [], isLoading } = useClientes();
   // A dívida vem da base única (títulos + acordos). Sem ela não dá para dizer
   // quem já pagou, então a tela espera as duas consultas.
@@ -475,31 +475,32 @@ export default function Fila() {
   // A ordem da fila é a ordem da tela: retornos atrasados, de hoje, dívida
   // vencida e por fim o programado. É nessa sequência que o Próximo/Anterior da
   // ficha caminha, sem repetir cliente.
+  // "Já pagaram" entra no fim: são clientes abríveis pela tela, e ficando fora
+  // da ordem eles chegavam à ficha sem Anterior/Próximo nenhum.
   const ordemDaFila = useMemo(() => {
     const ids = [
       ...agora.flatMap((b) => b.clientes.map((c) => c.id)),
       ...emAtraso.map((i) => i.cliente.id),
       ...programado.flatMap((b) => b.clientes.map((c) => c.id)),
+      ...quitados.map((c) => c.id),
     ];
     return [...new Set(ids)];
-  }, [agora, emAtraso, programado]);
+  }, [agora, emAtraso, programado, quitados]);
 
-  const abrirFicha = (cliente: ClienteRow) =>
-    navigate(`/clientes/${cliente.id}`, {
-      state: estadoDaFila(location.pathname + location.search, ordemDaFila),
-    });
+  const irParaFicha = useAbrirFicha(ordemDaFila);
+  const abrirFicha = (cliente: ClienteRow) => irParaFicha(cliente.id);
 
   if (isLoading || carregandoDivida) return <CarregandoConteudo />;
 
   return (
-    <div className="space-y-8 animate-fade-in pb-10">
+    <div className="space-y-10 animate-fade-in pb-10">
       <PageHeader
         title="Minha fila"
         description="Do mais urgente para o mais distante: compromissos de hoje, inadimplência sem dono e o que já está agendado."
       />
 
       {erroDivida && (
-        <Card className="rounded-2xl border border-warning/40 shadow-card">
+        <Card className="border border-warning/40">
           <CardContent className="py-4 text-sm">
             Não foi possível calcular o saldo dos clientes agora. A fila está mostrando
             todos os retornos — inclusive de quem já pagou.
@@ -508,7 +509,7 @@ export default function Fila() {
       )}
 
       {total === 0 ? (
-        <Card className="rounded-2xl border-none shadow-card">
+        <Card>
           <CardContent className="py-16 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-success/50" />
             <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">

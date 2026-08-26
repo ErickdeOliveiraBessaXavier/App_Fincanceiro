@@ -101,7 +101,7 @@ export default function Equipe() {
       />
 
       <Tabs value={aba} onValueChange={trocarAba}>
-        <TabsList className="mb-6">
+        <TabsList variant="pill" className="mb-6">
           <TabsTrigger value="cobradores">Cobradores</TabsTrigger>
           <TabsTrigger value="vendedores">Vendedores</TabsTrigger>
           <TabsTrigger value="acessos">Acessos</TabsTrigger>

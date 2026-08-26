@@ -8,6 +8,8 @@ import { TablePagination } from '@/components/TablePagination';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { formatData } from '@/utils/format';
 import type { ClientePago, RecebimentoDetalhado } from '@/domain/metricas';
+import { Rotulo } from '@/components/Rotulo';
+import { useEstadoDaFila, type EstadoFila } from '@/hooks/useFilaNavegacao';
 
 /**
  * O que já foi pago — por cliente e pagamento a pagamento.
@@ -25,12 +27,14 @@ const ROTULO_ORIGEM: Record<RecebimentoDetalhado['origem'], string> = {
   acordo: 'Parcela de acordo',
 };
 
-const CABECALHO = 'text-[10px] font-bold uppercase tracking-widest';
-
-function NomeDoCliente({ id, nome }: { id: string | null; nome: string }) {
+/**
+ * `fila` leva a ordem da tabela para a ficha: sem ela o relatório entregava uma
+ * ficha sem Anterior/Próximo e com o "voltar" caindo em /clientes.
+ */
+function NomeDoCliente({ id, nome, fila }: { id: string | null; nome: string; fila: EstadoFila }) {
   if (!id) return <span className="font-medium">{nome}</span>;
   return (
-    <Link to={`/clientes/${id}`} className="font-medium hover:text-primary hover:underline">
+    <Link to={`/clientes/${id}`} state={fila} className="font-medium hover:text-primary hover:underline">
       {nome}
     </Link>
   );
@@ -39,17 +43,17 @@ function NomeDoCliente({ id, nome }: { id: string | null; nome: string }) {
 function ListaVazia({ mensagem }: { mensagem: string }) {
   return (
     <div className="rounded-xl border border-dashed border-border/60 bg-muted/5 py-10 text-center">
-      <p className={`${CABECALHO} text-muted-foreground`}>{mensagem}</p>
+      <Rotulo>{mensagem}</Rotulo>
     </div>
   );
 }
 
-function LinhaCliente({ cliente }: { cliente: ClientePago }) {
+function LinhaCliente({ cliente, fila }: { cliente: ClientePago; fila: EstadoFila }) {
   const quitado = cliente.emAberto <= 0;
   return (
     <TableRow>
       <TableCell>
-        <NomeDoCliente id={cliente.clienteId} nome={cliente.clienteNome} />
+        <NomeDoCliente id={cliente.clienteId} nome={cliente.clienteNome} fila={fila} />
       </TableCell>
       <TableCell className="whitespace-nowrap font-bold tabular-nums text-success">
         {formatCurrency(cliente.valorPago)}
@@ -75,12 +79,12 @@ function LinhaCliente({ cliente }: { cliente: ClientePago }) {
   );
 }
 
-function LinhaPagamento({ recebimento }: { recebimento: RecebimentoDetalhado }) {
+function LinhaPagamento({ recebimento, fila }: { recebimento: RecebimentoDetalhado; fila: EstadoFila }) {
   return (
     <TableRow>
       <TableCell className="whitespace-nowrap">{formatData(recebimento.data) || '—'}</TableCell>
       <TableCell>
-        <NomeDoCliente id={recebimento.clienteId} nome={recebimento.clienteNome} />
+        <NomeDoCliente id={recebimento.clienteId} nome={recebimento.clienteNome} fila={fila} />
       </TableCell>
       <TableCell className="whitespace-nowrap font-bold tabular-nums text-success">
         {formatCurrency(recebimento.valor)}
@@ -97,9 +101,10 @@ function LinhaPagamento({ recebimento }: { recebimento: RecebimentoDetalhado }) 
 
 function ClientesQuePagaram({ clientes }: { clientes: ClientePago[] }) {
   const pagination = usePagination(clientes, 25, String(clientes.length), PARAM_PAGINA);
+  const fila = useEstadoDaFila(clientes.map((c) => c.clienteId).filter((id): id is string => !!id));
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-none shadow-card">
+    <Card className="overflow-hidden">
       <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
         <CardTitle className="text-lg font-bold tracking-tight">Clientes que pagaram</CardTitle>
         <CardDescription className="text-xs font-medium">
@@ -114,17 +119,17 @@ function ClientesQuePagaram({ clientes }: { clientes: ClientePago[] }) {
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow>
-                  <TableHead className={CABECALHO}>Cliente</TableHead>
-                  <TableHead className={CABECALHO}>Valor pago</TableHead>
-                  <TableHead className={`hidden md:table-cell ${CABECALHO}`}>Em aberto</TableHead>
-                  <TableHead className={`hidden lg:table-cell ${CABECALHO}`}>Pagamentos</TableHead>
-                  <TableHead className={`hidden lg:table-cell ${CABECALHO}`}>Último</TableHead>
-                  <TableHead className={CABECALHO}>Situação</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Valor pago</TableHead>
+                  <TableHead className="hidden md:table-cell">Em aberto</TableHead>
+                  <TableHead className="hidden lg:table-cell">Pagamentos</TableHead>
+                  <TableHead className="hidden lg:table-cell">Último</TableHead>
+                  <TableHead>Situação</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {pagination.pageItems.map((cliente) => (
-                  <LinhaCliente key={cliente.clienteId ?? cliente.clienteNome} cliente={cliente} />
+                  <LinhaCliente key={cliente.clienteId ?? cliente.clienteNome} cliente={cliente} fila={fila} />
                 ))}
               </TableBody>
             </Table>
@@ -138,11 +143,15 @@ function ClientesQuePagaram({ clientes }: { clientes: ClientePago[] }) {
 
 function PagamentoAPagamento({ recebimentos }: { recebimentos: RecebimentoDetalhado[] }) {
   const pagination = usePagination(recebimentos, 25, String(recebimentos.length));
+  // Um cliente pode ter vários pagamentos: na fila da ficha ele entra uma vez.
+  const fila = useEstadoDaFila([
+    ...new Set(recebimentos.map((r) => r.clienteId).filter((id): id is string => !!id)),
+  ]);
 
   if (recebimentos.length === 0) return null;
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-none shadow-card">
+    <Card className="overflow-hidden">
       <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
         <CardTitle className="text-lg font-bold tracking-tight">Pagamentos recebidos</CardTitle>
         <CardDescription className="text-xs font-medium">
@@ -154,16 +163,16 @@ function PagamentoAPagamento({ recebimentos }: { recebimentos: RecebimentoDetalh
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow>
-                <TableHead className={CABECALHO}>Data</TableHead>
-                <TableHead className={CABECALHO}>Cliente</TableHead>
-                <TableHead className={CABECALHO}>Valor</TableHead>
-                <TableHead className={`hidden md:table-cell ${CABECALHO}`}>Origem</TableHead>
-                <TableHead className={`hidden lg:table-cell ${CABECALHO}`}>Meio</TableHead>
+                <TableHead>Data</TableHead>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead className="hidden md:table-cell">Origem</TableHead>
+                <TableHead className="hidden lg:table-cell">Meio</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pagination.pageItems.map((recebimento) => (
-                <LinhaPagamento key={recebimento.id} recebimento={recebimento} />
+                <LinhaPagamento key={recebimento.id} recebimento={recebimento} fila={fila} />
               ))}
             </TableBody>
           </Table>

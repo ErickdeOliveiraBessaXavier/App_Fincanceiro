@@ -15,6 +15,7 @@ import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
 import { getStatusMeta, type StatusMeta } from '@/constants/statusConfig';
 import { useBaseMetricasCliente } from '@/lib/queries/metricas';
 import { prepararBase, situacaoFinanceiraCliente } from '@/domain/metricas';
+import { Rotulo } from '@/components/Rotulo';
 
 interface Parcela {
   id: string;
@@ -168,8 +169,8 @@ async function buscarAcordoPorTitulo(clienteId: string): Promise<Map<string, str
 function ResumoItem({ label, valor, destaque }: { label: string; valor: string; destaque?: boolean }) {
   return (
     <div className="min-w-0">
-      <p className="text-muted-foreground">{label}</p>
-      <p className={cn('font-medium truncate', destaque && 'text-destructive font-bold')}>{valor}</p>
+      <Rotulo>{label}</Rotulo>
+      <p className={cn('text-sm font-bold truncate mt-0.5', destaque ? 'text-destructive' : '')}>{valor}</p>
     </div>
   );
 }
@@ -410,27 +411,27 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-3">
+      <Card className="overflow-hidden">
+        <CardHeader className="pb-4 bg-muted/10 border-b border-border/40">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FileText className="h-5 w-5" />
+            <CardTitle className="text-lg flex items-center gap-2 font-bold tracking-tight">
+              <FileText className="h-5 w-5 text-muted-foreground" />
               Títulos e Parcelas
             </CardTitle>
             <div className="text-right">
-              <p className="text-sm text-muted-foreground">Total em Aberto</p>
-              <p className="text-xl font-bold text-destructive">{formatCurrency(totalEmAberto)}</p>
+              <Rotulo>Total em Aberto</Rotulo>
+              <p className="text-2xl font-black tracking-tighter text-destructive mt-0.5">{formatCurrency(totalEmAberto)}</p>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {grupos.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               <FileText className="h-12 w-12 mx-auto mb-2 opacity-50" />
               <p>Nenhum título encontrado</p>
             </div>
           ) : (
-            <div className="border rounded-lg divide-y">
+            <div className="overflow-hidden rounded-lg border border-border/40 divide-y divide-border/40">
               {grupos.map((grupo) => (
                 <TituloGrupoCard
                   key={grupo.tituloId}

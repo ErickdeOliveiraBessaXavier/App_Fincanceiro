@@ -4,6 +4,7 @@ import { TrendingDown, User, ArrowUpRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 import type { Devedor } from '@/domain/metricas';
+import { Rotulo } from '@/components/Rotulo';
 
 interface TopDevedoresProps {
   devedores: Devedor[];
@@ -21,7 +22,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
 
   if (devedores.length === 0) {
     return (
-      <Card className="border-none shadow-card overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-destructive" />
@@ -41,14 +42,14 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
   }
 
   return (
-    <Card className="border-none shadow-card overflow-hidden">
+    <Card className="overflow-hidden">
       <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-destructive" />
             Top 5 Devedores
           </CardTitle>
-          <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest bg-muted px-2 py-1 rounded-md">Por Volume</span>
+          <Rotulo as="span" className="rounded-md bg-muted px-2 py-1">Por Volume</Rotulo>
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
@@ -80,9 +81,9 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
                   <span className="text-sm font-black text-destructive tracking-tight">
                     {formatCurrency(devedor.totalValor)}
                   </span>
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest mt-0.5">
+                  <Rotulo as="span" className="mt-0.5 flex items-center gap-1">
                     Detalhes <ArrowUpRight className="h-2.5 w-2.5" />
-                  </div>
+                  </Rotulo>
                 </div>
               </div>
               <div className="pl-[52px]">

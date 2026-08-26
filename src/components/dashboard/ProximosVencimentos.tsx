@@ -31,7 +31,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
 
   if (vencimentos.length === 0) {
     return (
-      <Card className="border-none shadow-card overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <CalendarClock className="h-5 w-5 text-primary" />
@@ -51,7 +51,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
   }
 
   return (
-    <Card className="border-none shadow-card overflow-hidden">
+    <Card className="overflow-hidden">
       <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">

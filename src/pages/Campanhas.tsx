@@ -218,7 +218,7 @@ export default function Campanhas() {
 
       {isAdmin && <IntegracaoWhatsApp />}
 
-      <Card className="border-none shadow-card rounded-2xl overflow-hidden">
+      <Card className="overflow-hidden">
         <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <div className="flex items-center justify-between">
             <div>
@@ -263,12 +263,12 @@ export default function Campanhas() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Nome</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Canal</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest">Status</TableHead>
-                    <TableHead className="hidden md:table-cell text-[10px] font-bold uppercase tracking-widest">Mensagem</TableHead>
-                    <TableHead className="hidden sm:table-cell text-[10px] font-bold uppercase tracking-widest">Criada em</TableHead>
-                    <TableHead className="text-[10px] font-bold uppercase tracking-widest text-right">Ações</TableHead>
+                    <TableHead>Nome</TableHead>
+                    <TableHead>Canal</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Mensagem</TableHead>
+                    <TableHead className="hidden sm:table-cell">Criada em</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

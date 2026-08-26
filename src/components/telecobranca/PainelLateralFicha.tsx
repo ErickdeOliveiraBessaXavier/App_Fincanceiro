@@ -31,7 +31,7 @@ interface PainelLateralFichaProps {
   onAgendarRetorno: () => void;
 }
 
-const GATILHO = 'flex items-center gap-1.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground';
+const GATILHO = 'gap-1.5 px-3';
 
 export function PainelLateralFicha({
   cliente,
@@ -44,7 +44,7 @@ export function PainelLateralFicha({
 
   return (
     <Tabs value={aba} onValueChange={(v) => setAba(v as AbaLateral)}>
-      <TabsList className="grid w-full grid-cols-3">
+      <TabsList variant="pill" className="grid w-full grid-cols-3">
         <TabsTrigger value="falar" className={GATILHO}>
           <Phone className="h-4 w-4" />
           <span className="text-xs">Falar</span>

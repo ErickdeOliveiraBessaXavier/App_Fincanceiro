@@ -2,6 +2,7 @@ import { Calendar, FilePlus2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ResultadoCobrancaForm } from '@/components/telecobranca/ResultadoCobrancaForm';
+import { Rotulo } from '@/components/Rotulo';
 
 /**
  * Registro do resultado da cobrança, aberto na própria ficha.
@@ -52,9 +53,7 @@ export function PainelRegistroContato({
 
       {/* Fora do card: são outros tipos de registro, não variações deste. */}
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
-        <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-          Outras ações
-        </span>
+        <Rotulo as="span">Outras ações</Rotulo>
         <Button variant="link" size="sm" className="h-auto gap-1 p-0 text-xs" onClick={onAgendarRetorno}>
           <Calendar className="h-3 w-3" />
           Agendar retorno

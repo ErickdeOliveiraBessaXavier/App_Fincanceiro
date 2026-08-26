@@ -1,4 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Rotulo } from '@/components/Rotulo';
 import { cn } from '@/lib/utils';
 
 /**
@@ -19,16 +21,21 @@ export interface NumeroResumo {
 
 export function ResumoNumeros({ itens }: { itens: NumeroResumo[] }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-8 gap-y-3 rounded-xl border border-border/50 bg-muted/10 px-5 py-3">
+    // As telas passam de 3 a 5 números. Uma grade de colunas fixas deixava
+    // célula vazia com 3 e uma linha órfã com 5 — e, no celular, o `divide-x`
+    // desenhava traço vertical na borda externa a cada quebra de linha.
+    // Empilhado (divisor horizontal) até `md`; de `md` para cima, uma linha só
+    // com colunas iguais, quantos itens forem.
+    <Card className="grid grid-cols-1 divide-y divide-border/40 overflow-hidden md:grid-cols-none md:grid-flow-col md:auto-cols-fr md:divide-x md:divide-y-0">
       {itens.map(({ rotulo, valor, icone: Icone, cor }) => (
-        <div key={rotulo} className="flex items-center gap-2">
-          {Icone && <Icone className={cn('h-4 w-4', cor || 'text-muted-foreground')} />}
-          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
-            {rotulo}
-          </span>
-          <span className={cn('text-lg font-black tabular-nums', cor)}>{valor}</span>
+        <div key={rotulo} className="flex flex-col justify-center p-5">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            {Icone && <Icone className={cn('h-3.5 w-3.5', cor || 'text-muted-foreground')} />}
+            <Rotulo as="span" className="line-clamp-1">{rotulo}</Rotulo>
+          </div>
+          <span className={cn('text-2xl font-black tabular-nums tracking-tight', cor)}>{valor}</span>
         </div>
       ))}
-    </div>
+    </Card>
   );
 }

@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Clock, Ban } from 'lucide-react';
 import { ProvedorAlturaFixa } from '@/hooks/usePaginaAlturaFixa';
 import { cn } from '@/lib/utils';
+import { Rotulo } from '@/components/Rotulo';
 
 interface LayoutProps {
   children: ReactNode;
@@ -121,7 +122,7 @@ export const Layout = memo(({ children }: LayoutProps) => {
               {/* Num produto multi-tenant o cabeçalho trazia um título fixo: o
                   operador não via em qual empresa estava lançando. */}
               <div className="hidden min-w-0 sm:block">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Empresa</p>
+                <Rotulo>Empresa</Rotulo>
                 <h1 className="truncate text-base font-semibold leading-tight text-foreground">
                   {company?.nome ?? '—'}
                 </h1>
