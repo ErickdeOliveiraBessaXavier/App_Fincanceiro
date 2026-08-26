@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -2036,6 +2036,10 @@ export type Database = {
         Returns: Json
       }
       buscar_cliente_arquivado: { Args: { p_cpf_cnpj: string }; Returns: Json }
+      cadastro_incompleto_descartavel: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
       cadastros_incompletos: {
         Args: never
         Returns: {
@@ -2120,6 +2124,10 @@ export type Database = {
         Args: { p_titulo_ids: string[] }
         Returns: Json
       }
+      fechar_retornos_pendentes: {
+        Args: { p_cliente_id: string }
+        Returns: string[]
+      }
       find_or_create_cobrador: { Args: { p_nome: string }; Returns: string }
       find_or_create_vendedor: { Args: { p_nome: string }; Returns: string }
       has_min_role: {
@@ -2171,6 +2179,10 @@ export type Database = {
         Returns: undefined
       }
       marcar_parcelas_acordo_vencidas: { Args: never; Returns: Json }
+      marcar_substituicao: {
+        Args: { p_ids: string[]; p_sucessor: string }
+        Returns: undefined
+      }
       metricas_empresas: {
         Args: never
         Returns: {
