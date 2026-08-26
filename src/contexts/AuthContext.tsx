@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { papeisValidos, papelMaisAlto, type AppRole } from '@/domain/perfis';
+import { traduzirErroSenha } from '@/utils/senha';
 
 interface AuthContextType {
   user: User | null;
@@ -115,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     if (error) {
-      toast({ title: 'Erro no cadastro', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro no cadastro', description: traduzirErroSenha(error.message), variant: 'destructive' });
       return { error, needsConfirmation: false };
     }
 

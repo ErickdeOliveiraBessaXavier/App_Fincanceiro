@@ -4,6 +4,7 @@
 // partir do convite — o cliente nunca se auto-atribui a um tenant.
 // A conta nasce SEM papel: o admin precisa autorizar depois.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { traduzirErroSenha } from "../_shared/senha.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -66,7 +67,7 @@ async function criarConta(admin: Admin, e: Entrada): Promise<Response | { userId
     const msg = createErr?.message ?? "Falha ao criar conta";
     const friendly = /already|exist|registered/i.test(msg)
       ? "Já existe uma conta com este e-mail. Tente entrar ou use outro e-mail."
-      : msg;
+      : traduzirErroSenha(msg);
     return json(400, { error: friendly });
   }
   return { userId: created.user.id };

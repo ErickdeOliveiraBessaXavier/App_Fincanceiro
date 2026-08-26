@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, UserPlus, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { REGRAS_SENHA, SENHA_MIN, traduzirErroSenha, validarSenha } from '@/utils/senha';
 
 // Definido fora do componente: se ficasse dentro, cada re-render (ao digitar)
 // criaria um novo tipo de componente, remontando os inputs e perdendo o foco.
@@ -29,7 +30,8 @@ type ConviteForm = { nome: string; email: string; senha: string; confirma: strin
 function validarConvite(form: ConviteForm): string | null {
   if (form.nome.trim().length < 2) return 'Informe seu nome.';
   if (!form.email.includes('@')) return 'Informe um e-mail válido.';
-  if (form.senha.length < 6) return 'A senha deve ter ao menos 6 caracteres.';
+  const problemaSenha = validarSenha(form.senha);
+  if (problemaSenha) return problemaSenha;
   if (form.senha !== form.confirma) return 'As senhas não conferem.';
   return null;
 }
@@ -56,7 +58,7 @@ export default function Convite() {
         body: { token, nome: form.nome.trim(), email: form.email.trim(), senha: form.senha },
       });
       if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
+      if ((data as any)?.error) throw new Error(traduzirErroSenha(String((data as any).error)));
       setEnviado(true);
     } catch (e: any) {
       setErro(e?.message ?? 'Não foi possível concluir o cadastro. Tente novamente.');
@@ -133,12 +135,15 @@ export default function Convite() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="c-senha">Senha</Label>
-              <Input id="c-senha" type="password" value={form.senha} placeholder="••••••••" minLength={6}
+              <Input id="c-senha" type="password" value={form.senha} placeholder="••••••••" minLength={SENHA_MIN}
                 onChange={(e) => setForm({ ...form, senha: e.target.value })} required className="h-11 rounded-xl" />
+              {/* A exigência aparece ANTES de tentar: o servidor recusa em
+                  inglês, e quem chega aqui é o cobrador, não um técnico. */}
+              <p className="text-xs text-muted-foreground">{REGRAS_SENHA}</p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="c-confirma">Confirmar senha</Label>
-              <Input id="c-confirma" type="password" value={form.confirma} placeholder="••••••••" minLength={6}
+              <Input id="c-confirma" type="password" value={form.confirma} placeholder="••••••••" minLength={SENHA_MIN}
                 onChange={(e) => setForm({ ...form, confirma: e.target.value })} required className="h-11 rounded-xl" />
             </div>
             {erro && <p className="text-sm text-destructive">{erro}</p>}

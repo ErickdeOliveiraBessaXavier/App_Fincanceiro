@@ -2,6 +2,7 @@
 // Cobradores ganham acesso só pelo convite por link (página Cobradores).
 // Usa a service role (disponível no ambiente da função) — nunca exponha no frontend.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { traduzirErroSenha } from "../_shared/senha.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,7 +62,7 @@ async function criarAdmin(admin: Admin, companyId: string, entrada: { email: str
     user_metadata: { nome: entrada.nome },
   });
   if (createErr || !created?.user)
-    return json(400, { error: createErr?.message ?? "Falha ao criar usuário" });
+    return json(400, { error: traduzirErroSenha(createErr?.message ?? "Falha ao criar usuário") });
   const newUserId = created.user.id;
 
   // O trigger já criou o profile; aqui apenas vinculamos empresa + papel.

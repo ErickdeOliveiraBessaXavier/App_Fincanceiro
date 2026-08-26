@@ -7,9 +7,12 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, MailCheck } from 'lucide-react';
+import { REGRAS_SENHA, SENHA_MIN, validarSenha } from '@/utils/senha';
+import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
   const { user, signIn, signUp, loading } = useAuth();
+  const { toast } = useToast();
   const [loginData, setLoginData] = useState({ email: '', password: '' });
   const [signupData, setSignupData] = useState({ email: '', password: '', nome: '' });
   const [isLoading, setIsLoading] = useState(false);
