@@ -3,7 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { hojeNegocio } from '@/domain/telecobranca/statusCobranca';
 import { soDigitos } from '@/utils/format';
-import { derivarStatusCliente, type SituacaoCliente } from '@/domain/clientes/situacao';
+import {
+  derivarStatusCliente,
+  type SituacaoCliente,
+  type TituloSituacao,
+} from '@/domain/clientes/situacao';
 import { titulosKeys } from './titulos';
 
 // Chaves literais das carteiras (evita import circular com cobradores/vendedores,
@@ -116,7 +120,7 @@ export function useClientes() {
         // e traz o status consolidado (a_vencer/vencido/pago/renegociado).
         supabase
           .from('vw_titulos_completos')
-          .select('cliente_id, status, valor_original'),
+          .select('cliente_id, status, acordo_status, valor_original'),
         // Próximos retornos pendentes (RLS já limita à carteira do cobrador).
         supabase
           .from('agendamentos')
@@ -132,29 +136,31 @@ export function useClientes() {
 
       const retornos = mapProximosRetornos(agendamentosRes.data ?? []);
 
-      // Agrega títulos por cliente.
+      // Agrega títulos por cliente. `acordo_status` entra junto porque a situação
+      // depende dele: título renegociado fica com status 'pago' (a novação zerou
+      // o saldo) e, sem o estado do acordo, um acordo QUEBRADO virava "quitado".
       const porCliente = new Map<
         string,
-        { total: number; valor: number; statuses: string[] }
+        { total: number; valor: number; titulos: TituloSituacao[] }
       >();
       (titulosRes.data ?? []).forEach((t: any) => {
         if (!t.cliente_id) return;
-        const agg = porCliente.get(t.cliente_id) ?? { total: 0, valor: 0, statuses: [] };
+        const agg = porCliente.get(t.cliente_id) ?? { total: 0, valor: 0, titulos: [] };
         agg.total += 1;
         agg.valor += Number(t.valor_original || 0);
-        agg.statuses.push(t.status);
+        agg.titulos.push({ status: t.status, acordo_status: t.acordo_status ?? null });
         porCliente.set(t.cliente_id, agg);
       });
 
       const semRetorno: ProximoRetorno = { data: null, status_cobranca: null, atrasado: false };
       return (clientesRes.data || []).map((c: any) => {
-        const { statuses, total, valor } = porCliente.get(c.id) ?? { total: 0, valor: 0, statuses: [] };
+        const { titulos, total, valor } = porCliente.get(c.id) ?? { total: 0, valor: 0, titulos: [] };
         const retorno = retornos.get(c.id) ?? semRetorno;
         return {
           ...c,
           cobrador_nome: c.cobradores?.nome ?? null,
           vendedor_nome: c.vendedores?.nome ?? null,
-          status: derivarStatusCliente(statuses),
+          status: derivarStatusCliente(titulos),
           total_titulos: total,
           total_valor: valor,
           proximo_retorno: retorno.data,

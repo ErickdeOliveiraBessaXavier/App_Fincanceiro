@@ -331,6 +331,20 @@ export function SelecionarTitulosAcordo({
     return <SelecaoSkeleton />;
   }
 
+  // Aberto pela ficha de um cliente que não tem nada a renegociar: o seletor
+  // vazio dava a entender que os dados não carregaram. `clientes` só traz quem
+  // tem título elegível — quem já está todo em acordo, ou pago, fica de fora.
+  if (clienteIdPreSelecionado && !clienteAtual) {
+    return (
+      <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-center">
+        <p className="text-sm font-medium">Nenhum título disponível para acordo</p>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Os títulos deste cliente já estão quitados ou vinculados a um acordo ativo.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <ClienteSelect clientes={clientes} value={clienteSelecionado} onChange={handleClienteChange} />

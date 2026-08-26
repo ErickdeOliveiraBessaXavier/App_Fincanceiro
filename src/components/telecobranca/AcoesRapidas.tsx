@@ -1,37 +1,31 @@
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { soDigitos } from '@/utils/format';
-import {
-  Plus,
-  Calendar,
-  Mail,
-  MessageSquare,
-  Phone,
-  Zap,
-  ClipboardCheck
-} from 'lucide-react';
+import { Mail, MessageSquare, Phone, Zap } from 'lucide-react';
 
+/**
+ * Canais de contato do cliente.
+ *
+ * "Registrar contato" e "Agendar retorno" saíram daqui: o registro virou um
+ * formulário sempre aberto (PainelRegistroContato) e o agendamento avulso ficou
+ * dentro dele. Este card guarda só o que serve para ALCANÇAR o cliente.
+ */
 interface AcoesRapidasProps {
-  onAgendarRetorno: () => void;
-  onRegistrarContato: () => void;
   telefone?: string | null;
   email?: string | null;
+  /** Disparado quando um canal é acionado — a lateral já abre o registro. */
+  onContatoIniciado?: () => void;
 }
 
-export function AcoesRapidas({
-  onAgendarRetorno,
-  onRegistrarContato,
-  telefone,
-  email
-}: AcoesRapidasProps) {
+export function AcoesRapidas({ telefone, email, onContatoIniciado }: AcoesRapidasProps) {
   const { toast } = useToast();
 
   const handleWhatsApp = () => {
     if (telefone) {
       const cleaned = soDigitos(telefone);
       window.open(`https://wa.me/55${cleaned}`, '_blank');
+      onContatoIniciado?.();
     } else {
       toast({
         title: "Ação não disponível",
@@ -44,6 +38,7 @@ export function AcoesRapidas({
   const handleEmail = () => {
     if (email) {
       window.open(`mailto:${email}`, '_blank');
+      onContatoIniciado?.();
     } else {
       toast({
         title: "Ação não disponível",
@@ -56,6 +51,7 @@ export function AcoesRapidas({
   const handleLigar = () => {
     if (telefone) {
       window.open(`tel:${telefone}`, '_blank');
+      onContatoIniciado?.();
     } else {
       toast({
         title: "Ação não disponível",
@@ -70,7 +66,7 @@ export function AcoesRapidas({
       <CardHeader className="pb-3 bg-muted/30">
         <CardTitle className="text-sm font-bold flex items-center gap-2">
           <Zap className="h-4 w-4 text-primary fill-primary/10" />
-          Ações Rápidas
+          Falar com o cliente
         </CardTitle>
       </CardHeader>
       <CardContent className="p-3 space-y-4">
@@ -119,28 +115,6 @@ export function AcoesRapidas({
           </Button>
         </div>
         
-        <Separator className="opacity-50" />
-
-        {/* Porta única: o tipo de registro (cobrança ou administrativo) é
-            escolhido dentro do modal. Antes eram dois botões e o operador
-            precisava saber a diferença antes de clicar. */}
-        <Button
-          size="lg"
-          className="w-full shadow-md hover:shadow-lg transition-all font-bold gap-2 bg-primary hover:bg-primary/90"
-          onClick={onRegistrarContato}
-        >
-          <ClipboardCheck className="h-5 w-5" />
-          Registrar contato
-        </Button>
-
-        <Button
-          variant="outline"
-          className="w-full gap-2 border-dashed hover:border-primary/50 hover:bg-primary/5"
-          onClick={onAgendarRetorno}
-        >
-          <Calendar className="h-4 w-4 text-muted-foreground" />
-          <span className="text-xs font-medium">Agendar retorno</span>
-        </Button>
       </CardContent>
     </Card>
   );

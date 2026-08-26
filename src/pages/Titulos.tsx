@@ -27,6 +27,7 @@ import { GlobalFilter } from '@/components/GlobalFilter';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
+import { estadoDaFila } from '@/hooks/useFilaNavegacao';
 import { TablePagination } from '@/components/TablePagination';
 import { titulosFilterConfig } from '@/constants/filterConfigs';
 import { titulosPresets } from '@/constants/filterPresets';
@@ -119,7 +120,7 @@ function agruparTitulosPorCliente(titulos: TituloConsolidado[]): ClienteAgrupado
   // A situação sai da MESMA regra da tela de Clientes: antes esta tela decidia
   // só entre inadimplente/ativo e o cliente "Em Acordo" aparecia como "Ativo".
   for (const cliente of map.values()) {
-    cliente.situacao = derivarStatusCliente(cliente.titulos.map((t) => t.status || ''));
+    cliente.situacao = derivarStatusCliente(cliente.titulos);
   }
   return Array.from(map.values()).sort((a, b) => b.totalSaldo - a.totalSaldo);
 }
@@ -1242,10 +1243,15 @@ export default function Titulos() {
     );
   };
 
-  // Leva a origem junto para o breadcrumb da ficha voltar a ESTA lista, com os
-  // filtros e a página em que o usuário estava.
+  // Leva a origem e a ordem dos clientes: o breadcrumb da ficha volta a ESTA
+  // lista (com filtros e página) e o Próximo/Anterior segue a mesma sequência.
   const abrirFicha = (clienteId: string) =>
-    navigate(`/clientes/${clienteId}`, { state: { from: location.pathname + location.search } });
+    navigate(`/clientes/${clienteId}`, {
+      state: estadoDaFila(
+        location.pathname + location.search,
+        clientesComTitulosFiltrados.map((c) => c.cliente_id),
+      ),
+    });
 
   const openWhatsApp = (telefone: string | null, nome: string) => {
     if (!telefone) {

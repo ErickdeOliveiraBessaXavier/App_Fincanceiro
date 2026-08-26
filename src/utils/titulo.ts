@@ -50,6 +50,8 @@ export interface TituloConsolidado {
   parcelas_vencidas: number;
   parcelas_pendentes: number;
   status: TituloStatus;
+  /** Estado do acordo não cancelado mais recente ('ativo'/'quebrado'/'cumprido'). */
+  acordo_status: string | null;
   proximo_vencimento: string | null;
 }
 

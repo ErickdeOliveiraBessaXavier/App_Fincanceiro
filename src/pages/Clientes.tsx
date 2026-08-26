@@ -30,6 +30,7 @@ import { ReativarClienteDialog } from '@/components/clientes/ReativarClienteDial
 import { InputDocumento, InputTelefone } from '@/components/InputMascarado';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
+import { estadoDaFila } from '@/hooks/useFilaNavegacao';
 import { TablePagination } from '@/components/TablePagination';
 import { clientesFilterConfig } from '@/constants/filterConfigs';
 import { clientesPresets } from '@/constants/filterPresets';
@@ -635,10 +636,14 @@ export default function Clientes() {
     }
   };
 
-  // Leva a origem junto: o breadcrumb da ficha volta para esta lista com os
-  // filtros e a página que estavam valendo, em vez de um /clientes limpo.
+  // Leva a origem E a ordem da lista: o breadcrumb da ficha volta para esta
+  // lista com os filtros e a página que estavam valendo, e o Próximo/Anterior da
+  // ficha percorre a carteira na mesma ordem que está na tela (todas as páginas,
+  // não só a atual).
   const openDetails = (c: ClienteRow) =>
-    navigate(`/clientes/${c.id}`, { state: { from: location.pathname + location.search } });
+    navigate(`/clientes/${c.id}`, {
+      state: estadoDaFila(location.pathname + location.search, orderedClientes.map((x) => x.id)),
+    });
   const openDelete = (c: ClienteRow) => { setClienteToDelete(c); setIsDeleteModalOpen(true); };
   const openEdit = (c: ClienteRow) => {
     setEditingCliente({

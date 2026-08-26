@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useEventosCliente, useInvalidarEventos } from '@/lib/queries/eventos';
 import { getTipoEvento } from '@/constants/tiposEvento';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -10,138 +11,30 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from '@/hooks/use-toast';
+import { usePagination } from '@/hooks/usePagination';
+import { TablePagination } from '@/components/TablePagination';
 import { Filter, Clock, CheckCircle, XCircle, AlertCircle, MoreHorizontal } from 'lucide-react';
 
-interface Evento {
-  id: string;
-  tipo: string;
-  descricao: string | null;
-  data: string;
-  origem: 'comunicacao' | 'agendamento';
-  status?: string;
-  statusCobranca?: string;
-  operador?: string;
-}
+/**
+ * Aba "Histórico de Eventos": a linha do tempo completa do cliente.
+ *
+ * A busca e a fusão de comunicações + agendamentos vivem em
+ * `@/lib/queries/eventos` — a ficha reaproveita a MESMA consulta para mostrar o
+ * último contato sem precisar abrir esta aba.
+ *
+ * Não recebe mais `refreshTrigger`: quem registra um contato invalida a query
+ * (useInvalidarEventos) e todas as leituras da timeline se atualizam juntas.
+ */
 
 interface EventoTimelineProps {
   clienteId: string;
-  refreshTrigger?: number;
 }
 
-type ComunicacaoRow = { id: string; tipo: string; mensagem: string | null; status_cobranca: string | null; data_contato: string | null; created_at: string; created_by: string | null };
-type AgendamentoRow = { id: string; tipo_evento: string; descricao: string | null; data_agendamento: string; status: string | null; status_cobranca: string | null; created_at: string; created_by: string | null };
-
-// Resolve nomes dos operadores (created_by -> profiles.user_id). O FK aponta para
-// auth.users, então buscamos os nomes à parte e devolvemos um mapa id -> nome.
-async function carregarOperadores(coms: ComunicacaoRow[], ags: AgendamentoRow[]): Promise<Map<string, string>> {
-  const operadorIds = [
-    ...coms.map(c => c.created_by),
-    ...ags.map(a => a.created_by),
-  ].filter((id): id is string => !!id);
-
-  const operadorMap = new Map<string, string>();
-  if (operadorIds.length === 0) return operadorMap;
-
-  const { data: perfis } = await supabase
-    .from('profiles')
-    .select('user_id, nome')
-    .in('user_id', [...new Set(operadorIds)]);
-  perfis?.forEach(p => operadorMap.set(p.user_id, p.nome));
-  return operadorMap;
-}
-
-// Funde comunicações e agendamentos numa linha do tempo única, ordenada por data desc.
-function unificarEventos(coms: ComunicacaoRow[], ags: AgendamentoRow[], operadorMap: Map<string, string>): Evento[] {
-  const eventos: Evento[] = [];
-
-  coms.forEach((com) => {
-    eventos.push({
-      id: com.id,
-      tipo: com.tipo,
-      descricao: com.mensagem,
-      data: com.data_contato || com.created_at,
-      origem: 'comunicacao',
-      statusCobranca: com.status_cobranca ?? undefined,
-      operador: operadorMap.get(com.created_by!) || 'Sistema',
-    });
-  });
-
-  ags.forEach((ag) => {
-    eventos.push({
-      id: ag.id,
-      tipo: ag.tipo_evento,
-      descricao: ag.descricao,
-      data: ag.data_agendamento,
-      origem: 'agendamento',
-      status: ag.status ?? undefined,
-      statusCobranca: ag.status_cobranca ?? undefined,
-      operador: operadorMap.get(ag.created_by!) || 'Sistema',
-    });
-  });
-
-  eventos.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime());
-  return eventos;
-}
-
-export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProps) {
-  const [eventos, setEventos] = useState<Evento[]>([]);
-  const [loading, setLoading] = useState(true);
+export function EventoTimeline({ clienteId }: EventoTimelineProps) {
   const [filtroTipo, setFiltroTipo] = useState<string>('todos');
   const { toast } = useToast();
-
-  useEffect(() => {
-    fetchEventos();
-  }, [clienteId, refreshTrigger]);
-
-  const fetchEventos = async () => {
-    try {
-      setLoading(true);
-
-      // Buscar comunicações
-      const { data: comunicacoes, error: comError } = await supabase
-        .from('comunicacoes')
-        .select(`
-          id,
-          tipo,
-          mensagem,
-          status_cobranca,
-          data_contato,
-          created_at,
-          created_by
-        `)
-        .eq('cliente_id', clienteId)
-        .order('created_at', { ascending: false });
-
-      if (comError) throw comError;
-
-      // Buscar agendamentos
-      const { data: agendamentos, error: agError } = await supabase
-        .from('agendamentos')
-        .select(`
-          id,
-          tipo_evento,
-          descricao,
-          data_agendamento,
-          status,
-          status_cobranca,
-          created_at,
-          created_by
-        `)
-        .eq('cliente_id', clienteId)
-        .order('data_agendamento', { ascending: false });
-
-      if (agError) throw agError;
-
-      const coms = comunicacoes ?? [];
-      const ags = agendamentos ?? [];
-      const operadorMap = await carregarOperadores(coms, ags);
-      setEventos(unificarEventos(coms, ags, operadorMap));
-    } catch (error) {
-      console.error('Erro ao carregar eventos:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: eventos = [], isLoading: loading } = useEventosCliente(clienteId);
+  const invalidarEventos = useInvalidarEventos();
 
   const handleUpdateStatus = async (agendamentoId: string, novoStatus: string) => {
     try {
@@ -160,7 +53,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
         description: `Agendamento ${novoStatus === 'concluido' ? 'concluído' : 'cancelado'} com sucesso`,
       });
       
-      fetchEventos();
+      void invalidarEventos(clienteId);
     } catch (error) {
       console.error('Erro ao atualizar status:', error);
       toast({
@@ -187,6 +80,10 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
   const filteredEventos = filtroTipo === 'todos' 
     ? eventos 
     : eventos.filter(e => e.tipo === filtroTipo);
+
+  // Cliente antigo acumula centenas de eventos; a lista inteira de uma vez
+  // esticava a aba sem fim (mesma regra das outras listagens do app).
+  const pagina = usePagination(filteredEventos, 10, `${filtroTipo}-${filteredEventos.length}`);
 
   const tiposUnicos = [...new Set(eventos.map(e => e.tipo))];
 
@@ -234,7 +131,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredEventos.map((evento, index) => {
+            {pagina.pageItems.map((evento, index) => {
               const tipoInfo = getTipoEvento(evento.tipo);
               const Icon = tipoInfo.icon;
               
@@ -243,7 +140,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
                   key={evento.id}
                   className={cn(
                     "relative pl-8 pb-4",
-                    index < filteredEventos.length - 1 && "border-l-2 border-border ml-3"
+                    index < pagina.pageItems.length - 1 && "border-l-2 border-border ml-3"
                   )}
                 >
                   {/* Ícone do evento */}
@@ -304,6 +201,7 @@ export function EventoTimeline({ clienteId, refreshTrigger }: EventoTimelineProp
                 </div>
               );
             })}
+            {pagina.totalItems > pagina.pageSize && <TablePagination pagination={pagina} />}
           </div>
         )}
       </CardContent>

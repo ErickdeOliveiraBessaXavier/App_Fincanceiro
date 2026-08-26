@@ -1,5 +1,8 @@
+import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { dividaPorCliente, restringirAoUniverso } from '@/domain/metricas';
+import type { DividaCliente } from '@/domain/metricas';
 import type {
   AcordoMetrica,
   BaseMetricas,
@@ -77,7 +80,9 @@ export function useBaseMetricas() {
           supabase.from('vw_parcelas_consolidadas').select(COLUNAS_PARCELA),
           supabase
             .from('vw_recebimentos_tenant')
-            .select('recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento'),
+            .select(
+              'recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento, meio_pagamento',
+            ),
           supabase.from('acordos').select(COLUNAS_ACORDO),
           supabase
             .from('parcelas_acordo')
@@ -94,6 +99,27 @@ export function useBaseMetricas() {
       };
     },
   });
+}
+
+/**
+ * Dívida viva de cada cliente, da base única.
+ *
+ * Existe para as telas que precisam saber "esse cliente ainda deve alguma
+ * coisa?" — a fila, por exemplo. O agregado da lista de clientes soma
+ * `valor_original` de TODOS os títulos (pagos inclusive) e nunca enxergou
+ * parcela de acordo, então não serve para essa pergunta.
+ *
+ * Reaproveita a consulta do Dashboard/Relatórios pela chave de cache.
+ */
+export function useDividaPorCliente() {
+  const { data, isLoading, isError } = useBaseMetricas();
+
+  const divida = useMemo(
+    () => (data ? dividaPorCliente(restringirAoUniverso(data)) : new Map<string, DividaCliente>()),
+    [data],
+  );
+
+  return { divida, isLoading, isError, carregada: !!data };
 }
 
 /**

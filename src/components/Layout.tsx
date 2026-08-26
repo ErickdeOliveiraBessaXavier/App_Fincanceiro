@@ -9,6 +9,8 @@ import { UsuarioMenu } from '@/components/UsuarioMenu';
 import { TelaCarregamento, CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Button } from '@/components/ui/button';
 import { Clock, Ban } from 'lucide-react';
+import { ProvedorAlturaFixa } from '@/hooks/usePaginaAlturaFixa';
+import { cn } from '@/lib/utils';
 
 interface LayoutProps {
   children: ReactNode;
@@ -131,16 +133,34 @@ export const Layout = memo(({ children }: LayoutProps) => {
             </div>
           </header>
           
-          <main className="flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in overflow-y-auto">
-            <div className="mx-auto max-w-7xl">
-              {/* Boundary da rota AQUI dentro: as páginas são lazy e, sem ele,
-                  o Suspense de App.tsx trocaria o app inteiro pelo fallback —
-                  a sidebar sumia e voltava a cada navegação. */}
-              <Suspense fallback={<CarregandoConteudo />}>
-                {children}
-              </Suspense>
-            </div>
-          </main>
+          {/* Por padrão a página cresce e o <main> rola. Uma página pode pedir a
+              altura da área útil (usePaginaAlturaFixa) e cuidar da própria
+              rolagem — é o caso da ficha do cliente. Fixar `h-full` para todas
+              vazava o conteúdo das listas e comia o padding de baixo. */}
+          <ProvedorAlturaFixa>
+            {(alturaFixa) => (
+              <main
+                className={cn(
+                  'flex-1 p-4 sm:p-6 lg:p-8 animate-fade-in',
+                  alturaFixa ? 'overflow-hidden' : 'overflow-y-auto',
+                )}
+              >
+                <div
+                  className={cn(
+                    'mx-auto flex max-w-7xl flex-col',
+                    alturaFixa ? 'h-full min-h-0' : 'min-h-full',
+                  )}
+                >
+                  {/* Boundary da rota AQUI dentro: as páginas são lazy e, sem ele,
+                      o Suspense de App.tsx trocaria o app inteiro pelo fallback —
+                      a sidebar sumia e voltava a cada navegação. */}
+                  <Suspense fallback={<CarregandoConteudo />}>
+                    {children}
+                  </Suspense>
+                </div>
+              </main>
+            )}
+          </ProvedorAlturaFixa>
         </div>
       </div>
     </SidebarProvider>

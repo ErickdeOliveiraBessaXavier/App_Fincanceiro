@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState, type Dispatch, type SetStateAction } from 'react';
+import { useCallback, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
 import { Loader2 } from 'lucide-react';
 import {
   Dialog,
@@ -8,6 +8,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -41,6 +49,61 @@ import { cn } from '@/lib/utils';
 
 // Largura do modal — mesmo token de "modal largo" usado em Clientes.
 const MODAL_LARGO = 'sm:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6';
+// Painel lateral: largo o bastante para as duas colunas, com o cabeçalho e o
+// rodapé fixos e só o meio rolando.
+const PAINEL_LARGO = 'flex w-full flex-col gap-0 p-0 sm:max-w-[min(900px,92vw)]';
+
+/** Como o formulário aparece. 'painel' mantém a ficha do cliente visível atrás. */
+export type ApresentacaoAcordo = 'modal' | 'painel';
+
+interface MolduraProps {
+  apresentacao: ApresentacaoAcordo;
+  open: boolean;
+  onOpenChange: (aberto: boolean) => void;
+  rodape: ReactNode;
+  children: ReactNode;
+}
+
+const TITULO = 'Novo Acordo';
+const SUBTITULO = 'Selecione os títulos e configure o acordo de pagamento';
+
+/**
+ * Moldura do formulário: diálogo centralizado ou painel lateral.
+ *
+ * O conteúdo é o MESMO nos dois — só muda o recipiente. Na ficha do cliente o
+ * painel deslizante é o certo: negociar sem perder de vista a dívida e o
+ * histórico que estão atrás era justamente o que o redirecionamento para
+ * /acordos quebrava.
+ */
+function MolduraNovoAcordo({ apresentacao, open, onOpenChange, rodape, children }: MolduraProps) {
+  if (apresentacao === 'painel') {
+    return (
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="right" className={PAINEL_LARGO}>
+          <SheetHeader className="border-b p-6 pb-4">
+            <SheetTitle>{TITULO}</SheetTitle>
+            <SheetDescription>{SUBTITULO}</SheetDescription>
+          </SheetHeader>
+          <div className="min-h-0 flex-1 overflow-y-auto p-6">{children}</div>
+          <SheetFooter className="gap-2 border-t p-4">{rodape}</SheetFooter>
+        </SheetContent>
+      </Sheet>
+    );
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className={MODAL_LARGO}>
+        <DialogHeader>
+          <DialogTitle>{TITULO}</DialogTitle>
+          <DialogDescription>{SUBTITULO}</DialogDescription>
+        </DialogHeader>
+        {children}
+        <DialogFooter>{rodape}</DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -275,10 +338,12 @@ interface NovoAcordoDialogProps {
   clienteIdPreSelecionado?: string;
   /** Chamado após criar com sucesso — para a tela de origem se atualizar. */
   onCriado?: () => void;
+  /** 'painel' abre como Sheet lateral (ficha do cliente); 'modal' é o padrão. */
+  apresentacao?: ApresentacaoAcordo;
 }
 
 export function NovoAcordoDialog({
-  open, onOpenChange, clienteIdPreSelecionado, onCriado,
+  open, onOpenChange, clienteIdPreSelecionado, onCriado, apresentacao = 'modal',
 }: NovoAcordoDialogProps) {
   const { toast } = useToast();
   const createAcordo = useCreateAcordo();
@@ -405,40 +470,19 @@ export function NovoAcordoDialog({
   // seleção não ficar espremida com metade do modal vazia ao lado.
   const mostrarConfiguracao = !loading && newAcordo.titulo_ids.length > 0;
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={MODAL_LARGO}>
-        <DialogHeader>
-          <DialogTitle>Novo Acordo</DialogTitle>
-          <DialogDescription>
-            Selecione os títulos e configure o acordo de pagamento
-          </DialogDescription>
-        </DialogHeader>
-        <div className={`grid gap-6 ${mostrarConfiguracao ? 'lg:grid-cols-2' : ''}`}>
-          <div className="min-w-0">
-            <SelecionarTitulosAcordo
-              clientes={clientes}
-              clienteIdPreSelecionado={clienteIdPreSelecionado}
-              loading={loading}
-              onSelectionChange={handleSelectionChange}
-            />
-          </div>
+  // No painel a largura útil é menor: as duas colunas só entram a partir de xl,
+  // senão a seleção de títulos e o cronograma ficam espremidos lado a lado.
+  const duasColunas = mostrarConfiguracao
+    ? (apresentacao === 'painel' ? 'xl:grid-cols-2' : 'lg:grid-cols-2')
+    : '';
 
-          {mostrarConfiguracao && (
-            <div className="min-w-0 space-y-4">
-              <ConfiguracaoAcordo
-                newAcordo={newAcordo}
-                setNewAcordo={setNewAcordo}
-                formErrors={formErrors}
-                cronograma={cronograma}
-                temDatasManuais={Object.keys(datasAtivas).length > 0}
-                onDataParcelaChange={handleDataParcelaChange}
-                onResetDatas={() => setDatasManuais({})}
-              />
-            </div>
-          )}
-        </div>
-        <DialogFooter>
+  return (
+    <MolduraNovoAcordo
+      apresentacao={apresentacao}
+      open={open}
+      onOpenChange={onOpenChange}
+      rodape={
+        <>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancelar
           </Button>
@@ -449,8 +493,33 @@ export function NovoAcordoDialog({
             {createAcordo.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Criar Acordo
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </>
+      }
+    >
+      <div className={`grid gap-6 ${duasColunas}`}>
+        <div className="min-w-0">
+          <SelecionarTitulosAcordo
+            clientes={clientes}
+            clienteIdPreSelecionado={clienteIdPreSelecionado}
+            loading={loading}
+            onSelectionChange={handleSelectionChange}
+          />
+        </div>
+
+        {mostrarConfiguracao && (
+          <div className="min-w-0 space-y-4">
+            <ConfiguracaoAcordo
+              newAcordo={newAcordo}
+              setNewAcordo={setNewAcordo}
+              formErrors={formErrors}
+              cronograma={cronograma}
+              temDatasManuais={Object.keys(datasAtivas).length > 0}
+              onDataParcelaChange={handleDataParcelaChange}
+              onResetDatas={() => setDatasManuais({})}
+            />
+          </div>
+        )}
+      </div>
+    </MolduraNovoAcordo>
   );
 }

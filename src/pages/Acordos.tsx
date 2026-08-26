@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2, Trash2 } from 'lucide-react';
+import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2, Trash2, Banknote, Undo2 } from 'lucide-react';
 import { useAcordos, useCancelAcordo, useHardDeleteAcordos, useParcelasAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,6 +33,7 @@ import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
 import { BaixaParcelaAcordoModal, type ModoBaixa } from '@/components/acordos/BaixaParcelaAcordoModal';
+import { OrigemDoAcordo } from '@/components/acordos/OrigemDoAcordo';
 import { cn } from '@/lib/utils';
 import { resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociacao';
 import { codigoAcordo } from '@/domain/acordos/identificacao';
@@ -83,6 +84,11 @@ const PARAM_ACORDO = 'id';
 // (ui/dialog.tsx); aqui só liberamos a largura no desktop — 75vw é o token de
 // "modal largo" já usado em Clientes.tsx — e apertamos o padding no celular.
 const MODAL_LARGO = 'sm:max-w-[75vw] max-h-[90vh] overflow-y-auto p-4 sm:p-6';
+// Detalhes do acordo: altura fixa e SEM rolagem própria — quem rola é a lista de
+// parcelas, dentro do painel dela. Antes o modal inteiro rolava e o cabeçalho do
+// acordo (cliente, valores) saía da tela junto com a lista.
+const MODAL_DETALHES =
+  'sm:max-w-[75vw] max-h-[90vh] xl:h-[90vh] p-4 sm:p-6 flex flex-col overflow-hidden';
 // Modais de confirmação: não esticam no desktop.
 const MODAL_ESTREITO = 'sm:max-w-md p-4 sm:p-6';
 
@@ -110,13 +116,18 @@ function TituloSecao({ children }: { children: ReactNode }) {
  * Um acordo pode consolidar vários títulos; a coluna mostrava só o vínculo
  * legado `titulo_id`. Acima de dois, resume para não estourar a coluna.
  */
-function DocumentosDoAcordo({ acordo }: { acordo: AcordoRow }) {
+function documentosDoAcordo(acordo: AcordoRow): string[] {
   const documentos = (acordo.titulos ?? [])
     .map((t) => t.numero_documento)
     .filter((n): n is string => !!n);
+  if (documentos.length > 0) return documentos;
 
   const legado = acordo.titulo?.numero_documento;
-  const lista = documentos.length > 0 ? documentos : (legado ? [legado] : []);
+  return legado ? [legado] : [];
+}
+
+function DocumentosDoAcordo({ acordo }: { acordo: AcordoRow }) {
+  const lista = documentosDoAcordo(acordo);
 
   if (lista.length === 0) return <span className="text-muted-foreground">-</span>;
   if (lista.length <= 2) return <>{lista.join(', ')}</>;
@@ -197,8 +208,14 @@ interface ParcelaAcordoRowProps {
 /**
  * Ação disponível para a parcela: baixar o que está em aberto, ou desfazer a
  * baixa do que já foi pago. As duas abrem o mesmo modal, em modos diferentes.
+ *
+ * `compacto` troca o rótulo por ícone: com o texto inteiro, a coluna de ações
+ * sozinha levava a tabela a ~150px além da largura do modal, e a linha só cabia
+ * com rolagem horizontal. Nos cards (mobile) o texto continua.
  */
-function AcoesParcelaAcordo({ parcela, podeOperar, podeEstornar, onAcao }: ParcelaAcordoRowProps) {
+function AcoesParcelaAcordo({ parcela, podeOperar, podeEstornar, onAcao, compacto }: ParcelaAcordoRowProps & {
+  compacto?: boolean;
+}) {
   // Com o razão, as duas ações podem coexistir: uma parcela com pagamento
   // parcial ainda recebe baixa E já tem lançamento passível de estorno.
   const temLancamento = parcela.total_pago > 0 || parcela.encargos > 0 || parcela.descontos > 0;
@@ -207,16 +224,47 @@ function AcoesParcelaAcordo({ parcela, podeOperar, podeEstornar, onAcao }: Parce
   return (
     <div className="flex items-center justify-end gap-1">
       {podeOperar && emAberto && (
-        <Button size="sm" variant="outline" className="h-8" onClick={() => onAcao({ parcela, modo: 'pagar' })}>
-          Registrar pagamento
-        </Button>
+        <BotaoAcaoParcela
+          compacto={compacto}
+          rotulo="Registrar pagamento"
+          icone={Banknote}
+          variant="outline"
+          onClick={() => onAcao({ parcela, modo: 'pagar' })}
+        />
       )}
       {podeEstornar && temLancamento && (
-        <Button size="sm" variant="ghost" className="h-8" onClick={() => onAcao({ parcela, modo: 'estornar' })}>
-          Estornar
-        </Button>
+        <BotaoAcaoParcela
+          compacto={compacto}
+          rotulo="Estornar"
+          icone={Undo2}
+          variant="ghost"
+          onClick={() => onAcao({ parcela, modo: 'estornar' })}
+        />
       )}
     </div>
+  );
+}
+
+/** Botão de ação da parcela: ícone com tooltip na tabela, texto no card. */
+function BotaoAcaoParcela({ compacto, rotulo, icone: Icone, variant, onClick }: {
+  compacto?: boolean;
+  rotulo: string;
+  icone: typeof Banknote;
+  variant: 'outline' | 'ghost';
+  onClick: () => void;
+}) {
+  if (!compacto) {
+    return (
+      <Button size="sm" variant={variant} className="h-8" onClick={onClick}>
+        {rotulo}
+      </Button>
+    );
+  }
+  return (
+    <Button size="sm" variant={variant} className="h-8 w-8 p-0" title={rotulo} onClick={onClick}>
+      <Icone className="h-4 w-4" />
+      <span className="sr-only">{rotulo}</span>
+    </Button>
   );
 }
 
@@ -279,7 +327,7 @@ function ParcelaAcordoCard(props: ParcelaAcordoRowProps) {
 function ParcelaAcordoTableRow(props: ParcelaAcordoRowProps) {
   const { parcela, podeOperar, podeEstornar } = props;
   return (
-    <TableRow>
+    <TableRow className="[&>td]:whitespace-nowrap">
       <TableCell className="font-medium">{parcela.numero_parcela}</TableCell>
       <TableCell>{formatData(parcela.data_vencimento)}</TableCell>
       <TableCell>{formatCurrency(parcela.valor_total)}</TableCell>
@@ -292,7 +340,7 @@ function ParcelaAcordoTableRow(props: ParcelaAcordoRowProps) {
       </TableCell>
       {(podeOperar || podeEstornar) && (
         <TableCell className="text-right">
-          <AcoesParcelaAcordo {...props} />
+          <AcoesParcelaAcordo {...props} compacto />
         </TableCell>
       )}
     </TableRow>
@@ -311,10 +359,24 @@ function ParcelasAcordoLista({ parcelas, podeOperar, podeEstornar, onAcao }: Par
 
   return (
     <>
-      <div className="hidden md:block rounded-md border">
+      {/* A tabela só entra a partir de lg. Entre md e lg o modal tem ~530px de
+          conteúdo e a tabela precisa de ~600 — ali os cards cabem melhor do que
+          uma tabela com rolagem horizontal.
+
+          A altura vai para o wrapper interno do <Table> ([&>div]), que é quem
+          tem o overflow: assim a lista rola dentro do painel (um acordo de 24
+          parcelas não empurra mais o modal inteiro) e o cabeçalho pode grudar.
+          Em xl a altura vem do flex — a coluna ocupa o modal todo. */}
+      <div className={cn(
+        'hidden lg:block rounded-md border min-h-0',
+        '[&>div]:max-h-[24rem] xl:flex-1 xl:[&>div]:max-h-none xl:[&>div]:h-full',
+        // Padding menor que o padrão (px-4): são 7 colunas, e só o respiro das
+        // células respondia por ~110px — o bastante para a tabela não caber.
+        '[&_th]:px-2 [&_td]:px-2',
+      )}>
         <Table>
-          <TableHeader>
-            <TableRow>
+          <TableHeader className="sticky top-0 z-10 bg-background">
+            <TableRow className="[&>th]:whitespace-nowrap">
               <TableHead>Parcela</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Previsto</TableHead>
@@ -332,7 +394,7 @@ function ParcelasAcordoLista({ parcelas, podeOperar, podeEstornar, onAcao }: Par
         </Table>
       </div>
 
-      <div className="md:hidden space-y-2">
+      <div className="lg:hidden max-h-[24rem] overflow-y-auto space-y-2">
         {parcelas.map((p) => (
           <ParcelaAcordoCard key={p.id} {...comuns(p)} />
         ))}
@@ -358,7 +420,9 @@ function ParcelasAcordoSecao({ acordoId, open, acordoCancelado }: {
   }
 
   return (
-    <div className="space-y-3">
+    // Em xl a seção herda a altura da coluna: o resumo fica parado no topo e só
+    // a lista rola.
+    <div className="space-y-3 xl:flex xl:h-full xl:min-h-0 xl:flex-col">
       <ResumoParcelasCards resumo={resumoParcelasAcordo(parcelas)} />
       <ParcelasAcordoLista
         parcelas={parcelas}
@@ -391,7 +455,7 @@ const ROTULO_NEGOCIACAO: Record<TipoNegociacao, string> = {
 // Ficha de leitura do acordo (coluna estreita no desktop). Pares rótulo/valor
 // curtos ficam em 2 colunas enquanto a ficha é larga, e empilham quando ela vira
 // sidebar em lg.
-function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
+function FichaAcordo({ acordo, aberto }: { acordo: AcordoRow; aberto: boolean }) {
   // Derivado dos valores gravados, e não da coluna `desconto`: ela é limitada a
   // 0..100 e não representa acordos fechados acima do débito.
   const negociacao = resumoNegociacao(acordo.valor_original, acordo.valor_acordo);
@@ -400,7 +464,7 @@ function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
     <div className="space-y-5">
       <section className="space-y-2">
         <TituloSecao>Negociação</TituloSecao>
-        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <div className="grid grid-cols-2 xl:grid-cols-1 gap-3">
           <CampoDetalhe label="Valor original">{formatCurrency(acordo.valor_original)}</CampoDetalhe>
           <CampoDetalhe label="Valor do acordo">
             <span className="text-primary">{formatCurrency(acordo.valor_acordo)}</span>
@@ -415,7 +479,7 @@ function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
 
       <section className="space-y-2">
         <TituloSecao>Plano de pagamento</TituloSecao>
-        <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
+        <div className="grid grid-cols-2 xl:grid-cols-1 gap-3">
           <CampoDetalhe label="Parcelas">
             {acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}
           </CampoDetalhe>
@@ -424,6 +488,15 @@ function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
             {formatData(acordo.data_vencimento_primeira_parcela)}
           </CampoDetalhe>
         </div>
+      </section>
+
+      <section className="space-y-2">
+        <TituloSecao>Origem (o que foi renegociado)</TituloSecao>
+        <OrigemDoAcordo
+          acordoId={acordo.id}
+          aberto={aberto}
+          documentos={documentosDoAcordo(acordo)}
+        />
       </section>
 
       {acordo.observacoes && (
@@ -439,7 +512,7 @@ function FichaAcordo({ acordo }: { acordo: AcordoRow }) {
 function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={MODAL_LARGO}>
+      <DialogContent className={MODAL_DETALHES}>
         <DialogHeader>
           <DialogTitle>Detalhes do Acordo</DialogTitle>
           <DialogDescription>
@@ -447,7 +520,7 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
           </DialogDescription>
         </DialogHeader>
         {acordo && (
-          <div className="space-y-5">
+          <div className="flex min-h-0 flex-1 flex-col gap-5">
             {/* Identidade do registro: de quem é e em que pé está. */}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b pb-3">
               <div className="min-w-0">
@@ -461,13 +534,20 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
               <StatusBadge domain="acordo" status={acordo.status} />
             </div>
 
-            <div className="grid gap-6 lg:grid-cols-3">
-              <div className="lg:col-span-1">
-                <FichaAcordo acordo={acordo} />
+            {/* A ficha só vira coluna lateral em xl. Abaixo disso ela roubava
+                largura da tabela de parcelas, que tem 7 colunas e é o conteúdo
+                que não cabe — em lg a ficha vai para cima, em largura inteira.
+
+                Em xl as duas colunas têm a altura do modal e cada uma cuida da
+                própria rolagem; empilhado, é o corpo que rola, porque aí a ficha
+                inteira em cima não caberia de jeito nenhum. */}
+            <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto xl:grid-cols-4 xl:overflow-visible">
+              <div className="xl:col-span-1 min-w-0 xl:h-full xl:overflow-y-auto xl:pr-2">
+                <FichaAcordo acordo={acordo} aberto={open} />
               </div>
 
               {/* min-w-0 deixa a tabela encolher dentro do grid em vez de estourar. */}
-              <div className="lg:col-span-2 min-w-0 space-y-2">
+              <div className="xl:col-span-3 min-w-0 space-y-2 xl:flex xl:h-full xl:min-h-0 xl:flex-col">
                 <TituloSecao>Parcelas do acordo</TituloSecao>
                 <ParcelasAcordoSecao
                   acordoId={acordo.id}

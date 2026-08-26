@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/breadcrumb';
 import { Link } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Phone, FileText, Clock, Handshake } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, Phone, FileText, Clock, Handshake } from 'lucide-react';
 import { ClienteResumo } from '@/components/telecobranca/ClienteResumo';
 import { TitulosCliente } from '@/components/telecobranca/TitulosCliente';
 import { AcoesRapidas } from '@/components/telecobranca/AcoesRapidas';
@@ -22,6 +22,9 @@ import { EventoTimeline } from '@/components/telecobranca/EventoTimeline';
 import { MetricasCliente } from '@/components/telecobranca/MetricasCliente';
 import { AgendamentoModal } from '@/components/telecobranca/AgendamentoModal';
 import { RegistrarContatoModal } from '@/components/telecobranca/RegistrarContatoModal';
+import { PainelLateralFicha } from '@/components/telecobranca/PainelLateralFicha';
+import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
+import { UltimoContato } from '@/components/telecobranca/UltimoContato';
 import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
@@ -30,6 +33,9 @@ import { resumoNegociacao } from '@/domain/acordos/negociacao';
 import { derivarStatusCliente } from '@/domain/clientes/situacao';
 import { useBaseMetricasCliente } from '@/lib/queries/metricas';
 import { codigoAcordo } from '@/domain/acordos/identificacao';
+import { useFilaNavegacao } from '@/hooks/useFilaNavegacao';
+import { usePaginaAlturaFixa } from '@/hooks/usePaginaAlturaFixa';
+import { useInvalidarEventos } from '@/lib/queries/eventos';
 import { cn } from '@/lib/utils';
 
 interface Cliente {
@@ -53,7 +59,60 @@ interface Cliente {
  */
 function useSituacaoCliente(clienteId?: string) {
   const { data: base } = useBaseMetricasCliente(clienteId ?? null);
-  return derivarStatusCliente((base?.titulos ?? []).map((t) => t.status));
+  return derivarStatusCliente(base?.titulos ?? []);
+}
+
+/**
+ * Nome da tela na aba do navegador, restaurado ao sair.
+ *
+ * Com várias abas abertas, a ficha só era reconhecível abrindo uma por uma —
+ * todas mostravam o mesmo título do app.
+ */
+function useTituloDaAba(cliente: Cliente | null) {
+  const nome = cliente?.nome;
+  useEffect(() => {
+    if (!nome) return;
+    const anterior = document.title;
+    document.title = `Ficha do Cliente · ${nome}`;
+    return () => { document.title = anterior; };
+  }, [nome]);
+}
+
+/**
+ * Anterior/Próximo da fila. Some quando a ficha foi aberta fora de uma lista
+ * (link direto, favorito): sem a ordem de origem não há "próximo" que faça
+ * sentido para o operador.
+ */
+function NavegacaoFila({ fila }: { fila: ReturnType<typeof useFilaNavegacao> }) {
+  if (fila.total === 0 || fila.posicao === 0) return null;
+
+  return (
+    <div className="flex items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1"
+        disabled={!fila.temAnterior}
+        onClick={fila.irParaAnterior}
+      >
+        <ChevronLeft className="h-4 w-4" />
+        <span className="hidden sm:inline">Anterior</span>
+      </Button>
+      <span className="whitespace-nowrap text-xs font-bold uppercase tracking-widest text-muted-foreground">
+        {fila.posicao} de {fila.total}
+      </span>
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1"
+        disabled={!fila.temProximo}
+        onClick={fila.irParaProximo}
+      >
+        <span className="hidden sm:inline">Próximo</span>
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
 }
 
 export default function Telecobranca() {
@@ -61,9 +120,11 @@ export default function Telecobranca() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
-  // Quem abriu a ficha manda a URL de origem (com filtros e página). Sem ela —
-  // link direto, recarregar — o breadcrumb cai na lista limpa.
-  const voltarPara = (location.state as { from?: string } | null)?.from ?? '/clientes';
+  // Quem abriu a ficha manda a URL de origem (com filtros e página) e a ordem
+  // dos clientes daquela tela. Sem isso — link direto, recarregar — o breadcrumb
+  // cai na lista limpa e a navegação da fila simplesmente não aparece.
+  const fila = useFilaNavegacao(clienteId);
+  const voltarPara = fila.voltarPara;
   // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
   const { isOperador } = useUserRole();
 
@@ -72,14 +133,20 @@ export default function Telecobranca() {
   const [isContatoModalOpen, setIsContatoModalOpen] = useState(false);
   const [isAgendamentoModalOpen, setIsAgendamentoModalOpen] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [abaPrincipal, setAbaPrincipal] = useState('parcelas');
 
   const situacao = useSituacaoCliente(clienteId);
+  const invalidarEventos = useInvalidarEventos();
 
   useEffect(() => {
     if (clienteId) {
       fetchCliente();
     }
   }, [clienteId]);
+
+  useTituloDaAba(cliente);
+  // A ficha ocupa a altura da tela: nada de rolar a página inteira.
+  usePaginaAlturaFixa();
 
   const fetchCliente = async () => {
     try {
@@ -107,6 +174,7 @@ export default function Telecobranca() {
 
   const handleEventoSuccess = () => {
     setRefreshTrigger(prev => prev + 1);
+    void invalidarEventos(clienteId);
   };
 
   const getInitials = (name: string) => {
@@ -132,7 +200,11 @@ export default function Telecobranca() {
   }
 
   return (
-    <div className="space-y-6">
+    // A ficha ocupa a área útil e NÃO rola por inteiro: cabeçalho e indicadores
+    // ficam parados e cada coluna rola por conta. Rolar a página inteira tirava
+    // da vista justamente o nome, a dívida e o formulário de registro.
+    <div className="flex h-full min-h-0 flex-col gap-6">
+      <div className="shrink-0 space-y-6">
       {/* Breadcrumbs: orienta e dá volta em 1 clique para a lista de clientes. */}
       <Breadcrumb>
         <BreadcrumbList>
@@ -143,7 +215,7 @@ export default function Telecobranca() {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{cliente.nome}</BreadcrumbPage>
+            <BreadcrumbPage>Ficha do Cliente · {cliente.nome}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
@@ -161,6 +233,11 @@ export default function Telecobranca() {
           </div>
           
           <div>
+            {/* A tela não se apresentava: quem chegava por um clique no nome do
+                cliente não sabia como ela se chama nem como voltar a ela. */}
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+              Ficha do Cliente
+            </p>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl md:text-2xl font-bold">{cliente.nome}</h1>
               <StatusBadge domain="cliente" status={situacao} />
@@ -177,33 +254,49 @@ export default function Telecobranca() {
             </div>
           </div>
         </div>
+
+        <NavegacaoFila fila={fila} />
       </div>
 
-      {/* Cards de Métricas */}
-      <MetricasCliente clienteId={cliente.id} refreshTrigger={refreshTrigger} />
+      <MetricasCliente clienteId={cliente.id} />
 
       {/* Sem ações de escrita (vendedor/leitura), a coluna lateral ficava com um
           card só e metade do espaço nobre vazia ao lado das abas de cobrança.
           Nesse caso os dados do cliente viram uma faixa de largura inteira. */}
       {!isOperador && <ClienteResumo cliente={cliente} />}
+      </div>
 
-      {/* Layout Principal */}
-      <div className={cn('grid gap-6', isOperador && 'lg:grid-cols-4')}>
+      {/* Corpo: em telas largas cada coluna tem a própria barra de rolagem;
+          empilhado (mobile/tablet) quem rola é o corpo inteiro. */}
+      <div className={cn(
+        'grid min-h-0 flex-1 gap-6 overflow-y-auto lg:overflow-visible',
+        isOperador && 'lg:grid-cols-3',
+      )}>
+        {/* No celular a coluna de ação vem PRIMEIRO: com ela no fim, registrar
+            uma ligação exigia rolar a ficha inteira. No desktop ela volta para a
+            direita, ao lado das parcelas. */}
         {isOperador && (
-          <div className="lg:sticky lg:top-6 space-y-4 lg:self-start order-2 lg:order-1">
-            <AcoesRapidas
-              onRegistrarContato={() => setIsContatoModalOpen(true)}
+          <div className="order-1 lg:order-2 lg:col-span-1 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+            <PainelLateralFicha
+              cliente={cliente}
+              onSucesso={handleEventoSuccess}
+              onSalvarEProximo={fila.temProximo ? fila.irParaProximo : undefined}
+              onEventoAdministrativo={() => setIsContatoModalOpen(true)}
               onAgendarRetorno={() => setIsAgendamentoModalOpen(true)}
-              telefone={cliente.telefone}
-              email={cliente.email}
             />
-            <ClienteResumo cliente={cliente} />
           </div>
         )}
 
         {/* Coluna Principal com Tabs */}
-        <div className={cn(isOperador && 'lg:col-span-3 order-1 lg:order-2')}>
-          <Tabs defaultValue="parcelas" className="w-full">
+        <div className={cn(
+          'order-2 space-y-4',
+          isOperador && 'lg:order-1 lg:col-span-2 lg:h-full lg:min-h-0 lg:overflow-y-auto lg:pr-1',
+        )}>
+          {/* O que foi combinado na última ligação fica junto das parcelas: são
+              as duas informações usadas ao mesmo tempo para negociar. Na aba
+              Histórico ele sai de cena — seria a mesma lista duas vezes. */}
+          {abaPrincipal !== 'historico' && <UltimoContato clienteId={cliente.id} />}
+          <Tabs value={abaPrincipal} onValueChange={setAbaPrincipal} className="w-full">
             <TabsList className="w-full justify-start mb-4 h-auto flex-wrap">
               <TabsTrigger value="parcelas" className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
                 <FileText className="h-4 w-4" />
@@ -224,7 +317,7 @@ export default function Telecobranca() {
             </TabsContent>
             
             <TabsContent value="historico" className="mt-0">
-              <EventoTimeline clienteId={cliente.id} refreshTrigger={refreshTrigger} />
+              <EventoTimeline clienteId={cliente.id} />
             </TabsContent>
             
             <TabsContent value="acordos" className="mt-0">
@@ -281,10 +374,39 @@ function NegociacaoResumo({ valorOriginal, valorAcordo }: { valorOriginal: numbe
   );
 }
 
-// Componente interno para lista de acordos do cliente
+/**
+ * O painel só é montado quando aberto: a busca dos títulos do cliente roda na
+ * montagem, então cada abertura já traz a dívida atualizada.
+ */
+function PainelNovoAcordo({ clienteId, aberto, onAbertoChange, onCriado }: {
+  clienteId: string;
+  aberto: boolean;
+  onAbertoChange: (v: boolean) => void;
+  onCriado: () => void;
+}) {
+  if (!aberto) return null;
+  return (
+    <NovoAcordoDialog
+      open
+      apresentacao="painel"
+      onOpenChange={onAbertoChange}
+      clienteIdPreSelecionado={clienteId}
+      onCriado={onCriado}
+    />
+  );
+}
+
+/**
+ * Acordos do cliente, com a criação em painel lateral.
+ *
+ * "Criar novo acordo" levava para /acordos: o operador saía do atendimento no
+ * meio da negociação e precisava navegar de volta. O Sheet abre por cima da
+ * ficha, com a dívida e o histórico visíveis atrás.
+ */
 function AcordosCliente({ clienteId }: { clienteId: string }) {
   const [acordos, setAcordos] = useState<AcordoResumo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [novoAcordoAberto, setNovoAcordoAberto] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -325,22 +447,40 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
 
   if (acordos.length === 0) {
     return (
-      <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
-        <Handshake className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
-        <p className="text-muted-foreground">Nenhum acordo encontrado</p>
-        <Button 
-          variant="link" 
-          className="mt-2"
-          onClick={() => navigate('/acordos')}
-        >
-          Criar novo acordo
-        </Button>
-      </div>
+      <>
+        <div className="text-center py-12 bg-muted/30 rounded-lg border border-dashed">
+          <Handshake className="h-12 w-12 mx-auto mb-3 text-muted-foreground/50" />
+          <p className="text-muted-foreground">Nenhum acordo encontrado</p>
+          <Button variant="link" className="mt-2" onClick={() => setNovoAcordoAberto(true)}>
+            Criar novo acordo
+          </Button>
+        </div>
+        <PainelNovoAcordo
+          clienteId={clienteId}
+          aberto={novoAcordoAberto}
+          onAbertoChange={setNovoAcordoAberto}
+          onCriado={fetchAcordos}
+        />
+      </>
     );
   }
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <Button size="sm" variant="outline" className="gap-2" onClick={() => setNovoAcordoAberto(true)}>
+          <Handshake className="h-4 w-4" />
+          Novo acordo
+        </Button>
+      </div>
+
+      <PainelNovoAcordo
+        clienteId={clienteId}
+        aberto={novoAcordoAberto}
+        onAbertoChange={setNovoAcordoAberto}
+        onCriado={fetchAcordos}
+      />
+
       {acordos.map((acordo) => (
         <div
           key={acordo.id}

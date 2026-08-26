@@ -105,6 +105,7 @@ export const acordosKeys = {
   lists: () => [...acordosKeys.all, 'list'] as const,
   list: (filters?: Record<string, unknown>) => [...acordosKeys.lists(), filters ?? {}] as const,
   parcelas: (acordoId: string) => [...acordosKeys.all, 'parcelas', acordoId] as const,
+  origem: (acordoId: string) => [...acordosKeys.all, 'origem', acordoId] as const,
   eventosParcela: (parcelaId: string) => [...acordosKeys.all, 'eventos', parcelaId] as const,
 };
 
@@ -159,6 +160,112 @@ export function useAcordos() {
             .filter((t): t is TituloDoAcordo => !!t),
         }));
     },
+  });
+}
+
+/** Uma parcela de título que foi liquidada pela novação do acordo. */
+export interface ParcelaOrigem {
+  parcelaId: string;
+  numeroParcela: number | null;
+  vencimento: string | null;
+  /** Saldo que essa parcela levou para dentro do acordo. */
+  valorLiquidado: number;
+}
+
+/** Um título de origem do acordo, com as parcelas que ele trouxe. */
+export interface TituloOrigem {
+  tituloId: string;
+  numeroDocumento: string | null;
+  valorLiquidado: number;
+  parcelas: ParcelaOrigem[];
+}
+
+/** Agrupa os lançamentos de novação por título, ordenando pela parcela. */
+function agruparOrigemPorTitulo(
+  liquidacoes: Array<{ parcelaId: string; valor: number }>,
+  parcelas: Array<{ id: string; numero_parcela: number | null; vencimento: string | null; titulo_id: string | null }>,
+  documentos: Map<string, string | null>,
+): TituloOrigem[] {
+  const porParcela = new Map(parcelas.map((p) => [p.id, p]));
+  const porTitulo = new Map<string, TituloOrigem>();
+
+  for (const { parcelaId, valor } of liquidacoes) {
+    const parcela = porParcela.get(parcelaId);
+    const tituloId = parcela?.titulo_id;
+    if (!tituloId) continue;
+
+    const atual = porTitulo.get(tituloId) ?? {
+      tituloId,
+      numeroDocumento: documentos.get(tituloId) ?? null,
+      valorLiquidado: 0,
+      parcelas: [],
+    };
+    atual.valorLiquidado += valor;
+    atual.parcelas.push({
+      parcelaId,
+      numeroParcela: parcela?.numero_parcela ?? null,
+      vencimento: parcela?.vencimento ?? null,
+      valorLiquidado: valor,
+    });
+    porTitulo.set(tituloId, atual);
+  }
+
+  porTitulo.forEach((t) => t.parcelas.sort((a, b) => (a.numeroParcela ?? 0) - (b.numeroParcela ?? 0)));
+  return Array.from(porTitulo.values());
+}
+
+/**
+ * De onde veio o acordo: títulos e parcelas que a novação liquidou.
+ *
+ * A tela mostrava só o número do documento. Como o acordo zera as parcelas
+ * originais, sem esta lista não havia como responder "esse acordo cobre qual
+ * parcela?" — pergunta que aparece toda vez que o cliente contesta o valor.
+ *
+ * A fonte é o razão: cada liquidação gravou um lançamento `renegociacao` com o
+ * `acordo_id`, e é ele que amarra parcela -> acordo. Lançamentos estornados
+ * entram de propósito: um acordo cancelado continua tendo uma origem.
+ */
+export function useOrigemAcordo(acordoId: string | null, enabled = true) {
+  return useQuery({
+    queryKey: acordosKeys.origem(acordoId ?? ''),
+    queryFn: async (): Promise<TituloOrigem[]> => {
+      if (!acordoId) return [];
+
+      const { data: movimentos, error: erroMovimentos } = await supabase
+        .from('movimentos_financeiros')
+        .select('id, valor, parcela_titulo_id')
+        .eq('acordo_id', acordoId)
+        .eq('tipo', 'renegociacao');
+      if (erroMovimentos) throw erroMovimentos;
+
+      const liquidacoes = (movimentos ?? [])
+        .filter((m) => !!m.parcela_titulo_id)
+        .map((m) => ({ parcelaId: m.parcela_titulo_id as string, valor: Number(m.valor ?? 0) }));
+      if (liquidacoes.length === 0) return [];
+
+      const { data: parcelas, error: erroParcelas } = await supabase
+        .from('vw_parcelas_consolidadas')
+        .select('id, numero_parcela, vencimento, titulo_id')
+        .in('id', liquidacoes.map((l) => l.parcelaId));
+      if (erroParcelas) throw erroParcelas;
+
+      const tituloIds = Array.from(
+        new Set((parcelas ?? []).map((p) => p.titulo_id).filter((id): id is string => !!id)),
+      );
+      const { data: titulos, error: erroTitulos } = await supabase
+        .from('titulos')
+        .select('id, numero_documento')
+        .in('id', tituloIds);
+      if (erroTitulos) throw erroTitulos;
+
+      const documentos = new Map((titulos ?? []).map((t) => [t.id, t.numero_documento ?? null]));
+      return agruparOrigemPorTitulo(
+        liquidacoes,
+        (parcelas ?? []) as Array<{ id: string; numero_parcela: number | null; vencimento: string | null; titulo_id: string | null }>,
+        documentos,
+      );
+    },
+    enabled: enabled && !!acordoId,
   });
 }
 

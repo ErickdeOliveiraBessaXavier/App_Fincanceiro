@@ -1,16 +1,21 @@
 import { describe, it, expect } from 'vitest';
 import {
+  agruparPagamentosPorCliente,
   calcularAging,
   calcularIndicadores,
   calcularTopDevedores,
   classificarTitulo,
   diasDeAtraso,
+  dividaPorCliente,
   listarItensVencidos,
+  listarRecebimentos,
+  pagoPorTitulo,
   prepararBase,
   recortarPorVencimento,
   restringirAoUniverso,
   serieRecuperacaoMensal,
   situacaoFinanceiraCliente,
+  somarRecebimentos,
 } from './calculo';
 import type { BaseMetricas, TituloMetrica } from './tipos';
 
@@ -68,8 +73,8 @@ describe('restringirAoUniverso', () => {
         { id: 'p2', titulo_id: 't-cancelado', vencimento: '2026-07-01', valor_nominal: 500, saldo_atual: 500, status: 'vencido' },
       ],
       recebimentos: [
-        { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 50, data_recebimento: '2026-08-01' },
-        { recebimento_id: 'r2', origem: 'titulo', titulo_id: 't-cancelado', acordo_id: null, valor: 900, data_recebimento: '2026-08-01' },
+        { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 50, data_recebimento: '2026-08-01', meio_pagamento: null },
+        { recebimento_id: 'r2', origem: 'titulo', titulo_id: 't-cancelado', acordo_id: null, valor: 900, data_recebimento: '2026-08-01', meio_pagamento: null },
       ],
     };
 
@@ -179,9 +184,9 @@ describe('serieRecuperacaoMensal', () => {
   it('usa a data real do recebimento e soma as duas origens', () => {
     const serie = serieRecuperacaoMensal(
       [
-        { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 100, data_recebimento: '2026-07-10' },
-        { recebimento_id: 'r2', origem: 'acordo', titulo_id: 't2', acordo_id: 'a1', valor: 250, data_recebimento: '2026-08-02' },
-        { recebimento_id: 'r3', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 50, data_recebimento: '2026-08-05' },
+        { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 100, data_recebimento: '2026-07-10', meio_pagamento: null },
+        { recebimento_id: 'r2', origem: 'acordo', titulo_id: 't2', acordo_id: 'a1', valor: 250, data_recebimento: '2026-08-02', meio_pagamento: null },
+        { recebimento_id: 'r3', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 50, data_recebimento: '2026-08-05', meio_pagamento: null },
       ],
       ['2026-07', '2026-08'],
     );
@@ -207,7 +212,7 @@ describe('calcularIndicadores', () => {
       { id: 'pa1', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-06-01', status: 'vencida' },
     ],
     recebimentos: [
-      { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't3', acordo_id: null, valor: 600, data_recebimento: '2026-07-15' },
+      { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't3', acordo_id: null, valor: 600, data_recebimento: '2026-07-15', meio_pagamento: null },
     ],
   };
 
@@ -298,5 +303,100 @@ describe('situacaoFinanceiraCliente', () => {
   it('cliente sem dívida devolve zeros', () => {
     const situacao = situacaoFinanceiraCliente(prepararBase(baseDoisClientes()), 'cli-999', HOJE);
     expect(situacao).toEqual({ emAberto: 0, vencido: 0, aVencer: 0, parcelasVencidas: 0, maiorAtraso: 0 });
+  });
+});
+
+describe('dividaPorCliente', () => {
+  const base: BaseMetricas = {
+    ...baseVazia(),
+    titulos: [
+      titulo({ id: 't1', cliente_id: 'cli-1', status: 'vencido' }),
+      // Renegociado: o saldo do titulo esta zerado, a divida vive no acordo.
+      titulo({ id: 't2', cliente_id: 'cli-2', status: 'renegociado', acordo_status: 'quebrado', saldo_devedor: 0 }),
+      titulo({ id: 't3', cliente_id: 'cli-3', status: 'pago', saldo_devedor: 0 }),
+    ],
+    parcelas: [
+      { id: 'p1', titulo_id: 't1', vencimento: '2026-07-07', valor_nominal: 300, saldo_atual: 300, status: 'vencido' },
+      { id: 'p2', titulo_id: 't1', vencimento: '2026-09-07', valor_nominal: 200, saldo_atual: 200, status: 'a_vencer' },
+      { id: 'p3', titulo_id: 't3', vencimento: '2026-07-07', valor_nominal: 900, saldo_atual: 0, status: 'pago' },
+    ],
+    acordos: [
+      { id: 'a1', status: 'quebrado', valor_acordo: 800, valor_original: 1000, data_acordo: '2026-05-01', created_at: '2026-05-01', cliente_id: 'cli-2', cliente_nome: 'Cliente 2' },
+    ],
+    parcelasAcordo: [
+      { id: 'pa1', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-06-06', status: 'pendente' },
+      { id: 'pa2', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-10-06', status: 'pendente' },
+    ],
+  };
+
+  const divida = dividaPorCliente(base, HOJE);
+
+  it('separa vencido de em aberto por cliente', () => {
+    expect(divida.get('cli-1')).toEqual({
+      emAberto: 500,
+      vencido: 300,
+      parcelasVencidas: 1,
+      maiorAtraso: diasDeAtraso('2026-07-07', HOJE),
+    });
+  });
+
+  it('conta a divida que vive na parcela de acordo', () => {
+    // O titulo renegociado tem saldo zero: quem olhava so o titulo via zero.
+    expect(divida.get('cli-2')).toEqual({
+      emAberto: 800,
+      vencido: 400,
+      parcelasVencidas: 1,
+      maiorAtraso: diasDeAtraso('2026-06-06', HOJE),
+    });
+  });
+
+  it('quem pagou tudo fica de fora do mapa', () => {
+    // E o que tira o cliente ja pago da fila de retornos.
+    expect(divida.has('cli-3')).toBe(false);
+  });
+});
+
+describe('listarRecebimentos', () => {
+  const base: BaseMetricas = {
+    ...baseVazia(),
+    titulos: [
+      titulo({ id: 't1', cliente_id: 'cli-1', cliente_nome: 'Ana' }),
+      titulo({ id: 't2', cliente_id: 'cli-2', cliente_nome: 'Bruno' }),
+    ],
+    recebimentos: [
+      { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 100, data_recebimento: '2026-07-10', meio_pagamento: 'pix' },
+      { recebimento_id: 'r2', origem: 'acordo', titulo_id: 't2', acordo_id: 'a1', valor: 250, data_recebimento: '2026-08-02', meio_pagamento: null },
+      { recebimento_id: 'r3', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 50, data_recebimento: '2026-08-05', meio_pagamento: 'dinheiro' },
+    ],
+  };
+
+  it('resolve o cliente pelo titulo e ordena do mais recente', () => {
+    const lista = listarRecebimentos(base);
+    expect(lista.map((r) => r.id)).toEqual(['r3', 'r2', 'r1']);
+    expect(lista[0].clienteNome).toBe('Ana');
+    expect(lista[1].origem).toBe('acordo');
+  });
+
+  it('recorta pela data do recebimento, nao pelo vencimento', () => {
+    const lista = listarRecebimentos(base, { de: '2026-08-01', ate: '2026-08-31' });
+    expect(lista.map((r) => r.id)).toEqual(['r3', 'r2']);
+    expect(somarRecebimentos(lista)).toBe(300);
+  });
+
+  it('soma o pago por titulo somando as duas origens', () => {
+    const pago = pagoPorTitulo(base.recebimentos);
+    expect(pago.get('t1')).toBe(150);
+    expect(pago.get('t2')).toBe(250);
+  });
+
+  it('agrupa por cliente com o saldo que sobrou', () => {
+    const clientes = agruparPagamentosPorCliente(listarRecebimentos(base), base, HOJE);
+    expect(clientes.map((c) => c.clienteNome)).toEqual(['Bruno', 'Ana']);
+    expect(clientes[1]).toMatchObject({
+      valorPago: 150,
+      quantidade: 2,
+      ultimoPagamento: '2026-08-05',
+      emAberto: 0,
+    });
   });
 });

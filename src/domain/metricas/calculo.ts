@@ -69,7 +69,9 @@ const CLASSE_POR_STATUS: Record<string, ClasseTitulo> = {
  * O estado do acordo manda sobre o saldo: a novação zera as parcelas originais,
  * então sem esta precedência um acordo QUEBRADO apareceria como título "pago".
  */
-export function classificarTitulo(titulo: TituloMetrica): ClasseTitulo {
+export function classificarTitulo(
+  titulo: Pick<TituloMetrica, 'status' | 'acordo_status'>,
+): ClasseTitulo {
   const porAcordo = titulo.acordo_status ? CLASSE_POR_ACORDO[titulo.acordo_status] : undefined;
   return porAcordo ?? CLASSE_POR_STATUS[titulo.status] ?? 'a_vencer';
 }
@@ -257,29 +259,185 @@ export function situacaoFinanceiraCliente(
   clienteId: string,
   hoje: string = hojeIso(),
 ): SituacaoFinanceiraCliente {
-  const doCliente = <T extends { clienteId: string | null }>(itens: T[]) =>
-    itens.filter((i) => i.clienteId === clienteId);
-
-  const vencidos = doCliente(listarItensVencidos(base, hoje));
-  const aVencerItens = doCliente(listarAVencer(base, hoje));
-
-  const somar = (itens: Array<{ valor: number }>) =>
-    itens.reduce((total, i) => total + i.valor, 0);
-
-  const vencido = somar(vencidos);
-  const aVencer = somar(aVencerItens);
-  const maiorAtraso = vencidos.reduce(
-    (maior, i) => Math.max(maior, diasDeAtraso(i.vencimento, hoje)),
-    0,
-  );
+  // Recorte do mesmo mapa que a fila usa: a ficha e a fila não podem discordar
+  // sobre quanto um cliente deve nem sobre há quantos dias ele está atrasado.
+  const divida = dividaPorCliente(base, hoje).get(clienteId) ?? SEM_DIVIDA;
 
   return {
-    emAberto: vencido + aVencer,
-    vencido,
-    aVencer,
-    parcelasVencidas: vencidos.length,
-    maiorAtraso,
+    emAberto: divida.emAberto,
+    vencido: divida.vencido,
+    aVencer: divida.emAberto - divida.vencido,
+    parcelasVencidas: divida.parcelasVencidas,
+    maiorAtraso: divida.maiorAtraso,
   };
+}
+
+// ============== Recebimentos (o que JÁ foi pago) ==============
+
+/**
+ * Um recebimento com o cliente resolvido.
+ *
+ * `vw_recebimentos_tenant` só traz ids — o nome vem do título (ou do acordo,
+ * quando o pagamento veio pela parcela renegociada). Sem esta normalização não
+ * havia como o relatório dizer QUEM pagou, que era exatamente a reclamação.
+ */
+export interface RecebimentoDetalhado {
+  id: string;
+  clienteId: string | null;
+  clienteNome: string;
+  valor: number;
+  data: string | null;
+  origem: 'titulo' | 'acordo';
+  meioPagamento: string | null;
+}
+
+/** Consolidado por cliente: o que ele pagou e o que ainda ficou de pé. */
+export interface ClientePago {
+  clienteId: string | null;
+  clienteNome: string;
+  valorPago: number;
+  /** Quantidade de pagamentos no escopo. */
+  quantidade: number;
+  ultimoPagamento: string | null;
+  /** Dívida viva do cliente hoje (vencido + a vencer), pela regra do Dashboard. */
+  emAberto: number;
+}
+
+/**
+ * Pagamentos do escopo, recortados pela DATA DO RECEBIMENTO.
+ *
+ * É o único recorte que faz sentido aqui: o período por vencimento responde "o
+ * que vence no intervalo", não "o que entrou no caixa no intervalo".
+ */
+export function listarRecebimentos(base: BaseMetricas, periodo?: Periodo): RecebimentoDetalhado[] {
+  const porTitulo = new Map(base.titulos.map((t) => [t.id, t]));
+  const porAcordo = new Map(base.acordos.map((a) => [a.id, a]));
+
+  const donoDe = (r: RecebimentoMetrica) =>
+    (r.titulo_id ? porTitulo.get(r.titulo_id) : undefined) ??
+    (r.acordo_id ? porAcordo.get(r.acordo_id) : undefined);
+
+  return base.recebimentos
+    .filter((r) => dentroDoPeriodo(r.data_recebimento, periodo))
+    .map((r) => {
+      const dono = donoDe(r);
+      return {
+        id: r.recebimento_id,
+        clienteId: dono?.cliente_id ?? null,
+        clienteNome: dono?.cliente_nome || 'Desconhecido',
+        valor: Number(r.valor),
+        data: r.data_recebimento,
+        origem: r.origem === 'acordo' ? ('acordo' as const) : ('titulo' as const),
+        meioPagamento: r.meio_pagamento ?? null,
+      };
+    })
+    .sort((a, b) => (b.data ?? '').localeCompare(a.data ?? ''));
+}
+
+export interface DividaCliente {
+  /** Vencido + a vencer, somando parcela de título e parcela de acordo. */
+  emAberto: number;
+  vencido: number;
+  /** Quantidade de parcelas em atraso (título + acordo). */
+  parcelasVencidas: number;
+  /** Maior atraso em dias entre as parcelas vencidas; 0 se não houver. */
+  maiorAtraso: number;
+}
+
+const SEM_DIVIDA: DividaCliente = { emAberto: 0, vencido: 0, parcelasVencidas: 0, maiorAtraso: 0 };
+
+/**
+ * Dívida viva de CADA cliente, pela mesma regra do Dashboard e da ficha.
+ *
+ * Sai dos mesmos itens do aging e do a vencer, então enxerga o que o
+ * `saldo_devedor` do título esconde: a novação zera o título e joga o saldo para
+ * `parcelas_acordo`. Quem olhava só o título via um cliente com acordo (ou com
+ * acordo quebrado) como se não devesse nada.
+ */
+export function dividaPorCliente(
+  base: BaseMetricas,
+  hoje: string = hojeIso(),
+): Map<string, DividaCliente> {
+  const divida = new Map<string, DividaCliente>();
+
+  const acumular = (clienteId: string | null, valor: number, vencido: boolean, atraso: number) => {
+    if (!clienteId) return;
+    const atual = divida.get(clienteId) ?? SEM_DIVIDA;
+    divida.set(clienteId, {
+      emAberto: atual.emAberto + valor,
+      vencido: atual.vencido + (vencido ? valor : 0),
+      parcelasVencidas: atual.parcelasVencidas + (vencido ? 1 : 0),
+      maiorAtraso: Math.max(atual.maiorAtraso, atraso),
+    });
+  };
+
+  listarItensVencidos(base, hoje).forEach((i) =>
+    acumular(i.clienteId, i.valor, true, diasDeAtraso(i.vencimento, hoje)),
+  );
+  listarAVencer(base, hoje).forEach((i) => acumular(i.clienteId, i.valor, false, 0));
+
+  return divida;
+}
+
+function acumularPagamento(atual: ClientePago, recebimento: RecebimentoDetalhado): ClientePago {
+  const data = recebimento.data ?? '';
+  return {
+    ...atual,
+    valorPago: atual.valorPago + recebimento.valor,
+    quantidade: atual.quantidade + 1,
+    ultimoPagamento: data > (atual.ultimoPagamento ?? '') ? recebimento.data : atual.ultimoPagamento,
+  };
+}
+
+/**
+ * Agrupa os pagamentos por cliente, do maior valor para o menor.
+ *
+ * `emAberto` vem da base COMPLETA (não do recorte), porque a pergunta que ele
+ * responde é "esse cliente ainda deve alguma coisa hoje?" — quem pagou tudo sai
+ * com zero e é o que a tela marca como quitado.
+ */
+export function agruparPagamentosPorCliente(
+  recebimentos: RecebimentoDetalhado[],
+  base: BaseMetricas,
+  hoje: string = hojeIso(),
+): ClientePago[] {
+  const saldos = dividaPorCliente(base, hoje);
+  const porCliente = new Map<string, ClientePago>();
+
+  recebimentos.forEach((r) => {
+    const chave = r.clienteId ?? r.clienteNome;
+    const inicial: ClientePago = {
+      clienteId: r.clienteId,
+      clienteNome: r.clienteNome,
+      valorPago: 0,
+      quantidade: 0,
+      ultimoPagamento: null,
+      emAberto: (r.clienteId ? saldos.get(r.clienteId)?.emAberto : 0) ?? 0,
+    };
+    porCliente.set(chave, acumularPagamento(porCliente.get(chave) ?? inicial, r));
+  });
+
+  return Array.from(porCliente.values()).sort((a, b) => b.valorPago - a.valorPago);
+}
+
+export function somarRecebimentos(recebimentos: RecebimentoDetalhado[]): number {
+  return soma(recebimentos.map((r) => r.valor));
+}
+
+/**
+ * Quanto já entrou em cada título, das DUAS origens.
+ *
+ * `vw_titulos_completos.total_pago` ignora o dinheiro que entrou por parcela de
+ * acordo (ver a view de recebimentos), então um título renegociado e pago
+ * aparecia com "pago = 0" na exportação.
+ */
+export function pagoPorTitulo(recebimentos: RecebimentoMetrica[]): Map<string, number> {
+  const pago = new Map<string, number>();
+  recebimentos.forEach((r) => {
+    if (!r.titulo_id) return;
+    pago.set(r.titulo_id, (pago.get(r.titulo_id) ?? 0) + Number(r.valor));
+  });
+  return pago;
 }
 
 // ============== Aging ==============

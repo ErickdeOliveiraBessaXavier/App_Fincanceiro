@@ -46,6 +46,8 @@ export interface RecebimentoMetrica {
   acordo_id: string | null;
   valor: number;
   data_recebimento: string | null;
+  /** Só existe para baixa de parcela de título; parcela de acordo vem nula. */
+  meio_pagamento: string | null;
 }
 
 /** Linha de `acordos`. */
