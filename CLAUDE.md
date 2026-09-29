@@ -1,5 +1,23 @@
 # Instruções do Projeto
 
+## Regra do Projeto — Função nova no banco nasce fechada
+
+Desde a migration `20260929120000`, função criada no schema `public` **não**
+é executável por `anon` nem por `authenticated`. Ao criar uma RPC que o front
+chama, conceda explicitamente na mesma migration:
+
+```sql
+GRANT EXECUTE ON FUNCTION public.minha_rpc(argumentos) TO authenticated;
+```
+
+- Nunca conceda a `anon`. O app não chama RPC antes do login.
+- Função interna (chamada só por outra função, trigger ou Edge Function com
+  service role) não recebe grant nenhum.
+- Toda RPC exposta valida o papel por dentro (`has_min_role`) e a empresa
+  (`current_company_id()`), mesmo que a tela já esconda o botão.
+- Depois de aplicar, confira com `has_function_privilege(...)`, em vez de
+  presumir pelo DDL.
+
 ## Regra do Projeto — Complexidade Ciclomática
 
 Toda alteração ou nova implementação deve considerar a Complexidade Ciclomática como um critério de qualidade do código.

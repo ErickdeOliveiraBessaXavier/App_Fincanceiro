@@ -52,5 +52,10 @@ caminho — ver memória `fila-e-ficha-produtividade`):
 
 ## Auditoria
 
-Roteiro em [`Plano_Auditoria.md`](Plano_Auditoria.md). Nenhuma das 3 rodadas
-foi executada ainda — começar pela Rodada 1.
+Roteiro em [`Plano_Auditoria.md`](Plano_Auditoria.md).
+
+- **Rodada 1** (dinheiro/concorrência) feita em 2026-09-29 —
+  [`AUDITORIA_RODADA_1.md`](AUDITORIA_RODADA_1.md). 18 achados; 1, 2 e 17
+  corrigidos no mesmo dia (grants de funções). Próximos: 3 e 8. O P8 acima
+  **não** deve ser ligado antes do item 8 do relatório.
+- Rodadas 2 e 3: pendentes.
