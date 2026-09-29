@@ -1,79 +1,74 @@
 # Design System & Padrões UI (CobrançaPro)
 
-Este documento estabelece as diretrizes visuais e comportamentais do sistema CobrançaPro, extraídas da modernização do Dashboard. O objetivo é garantir consistência, reduzir a carga cognitiva do usuário e acelerar o desenvolvimento de novas telas.
+Diretrizes visuais do app. A regra de ouro: **o padrão mora no componente base,
+não na tela.** Antes de escrever classe de aparência numa página, veja se o
+componente já resolve; se um padrão novo se repete em 2+ lugares, ele nasce no
+componente base.
 
-## 1. Princípios de Design
+## 1. Princípios
 
-1.  **Contexto sobre Dados Brutos:** Priorize *insights* operacionais. Não exiba números sem referência; use tendências, percentuais de progresso e *benchmarks*.
-2.  **Hierarquia Clara:** Use o tamanho e o peso da fonte, juntamente com o espaçamento, para guiar os olhos do usuário das informações mais críticas (KPIs globais) para os detalhes operacionais (listas e ações).
-3.  **Redução de Ruído:** Oculte frações decimais em valores altos (ex: em totalizadores), limite o uso de cores apenas para significado semântico (alerta, sucesso, informação) e evite bordas pesadas.
-4.  **Ação Imediata:** Agrupe itens que requerem ação do usuário (vencimentos iminentes, top devedores) em zonas de "Ação Prioritária".
+1. **Contexto sobre dado bruto:** número sem referência não ajuda; use tendência,
+   percentual de progresso ou comparação.
+2. **Hierarquia clara:** tamanho, peso e espaçamento levam o olho do mais crítico
+   (KPIs) para o operacional (listas e ações).
+3. **Menos ruído:** cor só com significado semântico; nada de bordas pesadas.
+4. **Ação imediata:** o que exige ação do usuário fica agrupado e visível.
 
-## 2. Tipografia (Tailwind base: Plus Jakarta Sans)
+## 2. Componentes base (use em vez de copiar classes)
 
-A tipografia deve transmitir clareza e autoridade.
+| Precisa de | Use | Onde |
+|---|---|---|
+| Cartão | `<Card>` — já traz `rounded-xl`, `border-none`, `bg-card`, `shadow-card` e transição. Só `hover:shadow-card-hover` precisa ser escrito | `src/components/ui/card.tsx` |
+| Caixa aninhada num cartão | `rounded-lg` (= `var(--radius)`), casa com `p-1` da moldura | — |
+| Rótulo "eyebrow" (texto curto sobre um valor) | `<Rotulo>`; ou `rotuloClasses` quando o elemento vem de outro componente (`CardTitle`, `Label`) | `src/components/Rotulo.tsx` |
+| Cabeçalho de tabela | `<TableHead>` — já nasce no padrão; não passe classes de tipografia | `src/components/ui/table.tsx` |
+| Abas | `<TabsList variant="pill">` — a variante desce por contexto para o `TabsTrigger` | `src/components/ui/tabs.tsx` |
+| Status (título, parcela, acordo…) | `<StatusBadge domain status>` — rótulo, cor e ícone vêm de `statusConfig` | `src/components/StatusBadge.tsx`, `src/constants/statusConfig.ts` |
+| Título da página | `<PageHeader>` | `src/components/PageHeader.tsx` |
+| Faixa de números/KPIs | `<ResumoNumeros>`, `<StatPillar>` | `src/components/` |
+| Paginação de lista | `usePagination` + `<TablePagination>` | `src/components/TablePagination.tsx` |
+| Ação destrutiva | `<ConfirmarAcaoDestrutiva>` | `src/components/` |
+| Carregamento de página | `<TelaCarregamento>` | `src/components/` |
+| Moeda, data, CPF/CNPJ, telefone | `formatMoeda`, `formatData`, `formatCpfCnpj`, `formatTelefone`, máscaras e `InputMoeda`/`InputMascarado` | `src/utils/format.ts` |
 
-*   **Títulos de Seção (Ex: "Resumo Executivo"):** `text-3xl` ou `text-4xl`, `font-black`, `tracking-tighter`.
-*   **Títulos de Cards:** `text-lg` ou `text-xl`, `font-bold`, `tracking-tight`.
-*   **Valores Numéricos (KPIs):** `text-3xl` a `text-4xl`, `font-black`, `tracking-tighter` (usa proporção semântica para saltar aos olhos).
-*   **Subtítulos / Apoio a Valores:** `text-sm`, `font-medium`, `text-muted-foreground`.
-*   **Rótulos de Categoria (Labels de pilares/tabelas):** `text-[10px]` ou `text-xs`, `font-bold`, `uppercase`, `tracking-widest`, `text-muted-foreground`. Utilizado para trazer estrutura sem competir com os dados.
-*   **Texto Geral (Listas, descrições):** `text-sm`, `font-medium` ou `font-semibold` dependendo do destaque.
+Não use `rounded-2xl`/`rounded-3xl` em `<Card>`, não recopie
+`text-[10px] font-bold uppercase tracking-widest` e não formate data com
+`new Date(colunaDate)` — desloca um dia no fuso do Brasil (use `formatData`/
+`parseDataLocal`).
 
-## 3. Espaçamento e Layout (Grids e Gaps)
+## 3. Tipografia (Plus Jakarta Sans)
 
-O respiro (whitespace) é fundamental para o visual limpo.
+- **Título de página:** via `PageHeader` (`text-4xl font-black tracking-tighter`).
+- **Título de card:** `text-lg`/`text-xl`, `font-bold`, `tracking-tight`.
+- **KPI numérico:** `text-3xl`–`text-4xl`, `font-black`, `tracking-tighter`.
+- **Apoio a valores:** `text-sm font-medium text-muted-foreground`.
+- **Texto geral:** `text-sm`, `font-medium` ou `font-semibold` conforme destaque.
 
-*   **Grid Principal (Telas de Dashboard/Overview):** 12 colunas (`grid-cols-12`) no desktop (`xl`). Permite subdivisões flexíveis (ex: 8 colunas para relatórios longos, 4 colunas para *sidebars* de ação).
-*   **Espaçamento entre seções:** `space-y-10` ou `gap-10` entre blocos conceituais distintos.
-*   **Espaçamento interno de Cards:** `p-6` a `p-8`. Evite `p-4` a menos que seja um sub-componente muito denso.
-*   **Bordas e Divisórias:** Substitua linhas sólidas por `bg-border/60` (fina, semi-transparente) ou use o próprio `bg-muted` / `bg-card` para separar elementos.
+## 4. Espaçamento
 
-## 4. Cards e Superfícies
+- **Grid de overview:** 12 colunas no `xl` (ex.: 8 para conteúdo, 4 para ações).
+- **Entre seções:** `space-y-10` / `gap-10`.
+- **Dentro do card:** `p-6` a `p-8`; `p-4` só em sub-componente denso.
+- **Divisórias:** `bg-border/60` ou contraste de superfície (`bg-muted`/`bg-card`)
+  em vez de linha sólida.
 
-*   **Estilo Base:** `border-none`, `shadow-card`, `rounded-2xl` (ou `rounded-3xl` para wrappers externos).
-*   **Interatividade:** Adicione `group`, `hover:shadow-card-hover`, `transition-all` e `duration-300` para cards clicáveis.
-*   **Containers de Destaque:** Para agrupar funcionalidades relacionadas (como a barra lateral "Prioridades de Hoje"), utilize um wrapper de destaque:
-    ```html
-    <div className="bg-primary/5 rounded-3xl p-1 border border-primary/10">
-      <div className="bg-background rounded-[calc(1.5rem-2px)] p-6">...</div>
-    </div>
-    ```
+## 5. Cores semânticas
 
-## 5. Cores Semânticas e Componentes
+- **Primary:** ação afirmativa, link principal, foco.
+- **Success (verde):** pago, meta atingida.
+- **Destructive (vermelho):** inadimplência, atraso grave, erro, exclusão.
+- **Warning (laranja):** alerta, prazo próximo.
 
-Use cores intencionalmente. Não adicione fundos coloridos inteiros; prefira sutileza.
+Badges: `rounded-full`, fundo `bg-[cor]/10`, texto na cor, `text-xs font-bold`.
+Prefira sutileza a fundos coloridos inteiros.
 
-*   **Primary (Roxo/Azul do tema):** Ações afirmativas, links principais, foco.
-*   **Success (Verde):** Metas atingidas, pagamentos realizados, evolução positiva.
-*   **Destructive (Vermelho):** Inadimplência, atrasos graves, erros, exclusões.
-*   **Warning/Orange:** Alertas, proximidade de prazo (ex: "vence em 2 dias").
+## 6. Valores financeiros
 
-### Badges e Status
-*   Prefira *badges* arredondados (`rounded-full`) com fundo com baixa opacidade (`bg-[color]/10`) e texto contrastante (`text-[color]`).
-*   Textos dentro de *badges* analíticos devem ser `text-xs`, `font-bold`, preferencialmente `uppercase` (ex: "ATUALIZADO", "POR VOLUME").
+- Acima de 1 milhão: notação compacta com 1 casa (`R$ 1,5 M`).
+- Centavos: ocultos em totalizadores de dashboard; visíveis em parcela, fatura
+  e conciliação.
 
-### Indicadores Numéricos (Valores Financeiros)
-*   **Acima de 1 Milhão:** Use notação compacta com 1 casa decimal (ex: `R$ 1,5 M`) e evite centavos.
-*   **Centavos:** Oculte em Dashboards globais. Mostre apenas em faturas individuais ou relatórios de conciliação.
+## 7. Carregamento
 
-## 6. Estados de Carregamento (Skeleton)
-
-*   **Abandone o "Spinner" central.** Causa ansiedade e reflow de layout.
-*   **Use `Skeleton` integrado:** A página deve carregar desenhando a estrutura final da tela. Blocos cinzas (`animate-pulse`) devem simular a posição exata de KPIs, gráficos e textos.
-
-## 7. Inconsistências Atuais e Estratégia de Transição
-
-**Inconsistências Identificadas no Código Legado:**
-*   **Excesso de `text-xs` não estruturado:** Muitos componentes (como `GlobalFilter`, `NotificationBell`, Telas de Acordos) usam `text-xs` misturado com peso normal ou sem hierarquia visual clara, tornando a leitura difícil.
-*   **Bordas Padrão vs. Sem Borda:** Há um mix de componentes usando o padrão Radix antigo (`border border-border`) contra o novo padrão do Dashboard (`border-none shadow-card`).
-*   **Paddings Pequenos:** Vários formulários e sub-listas usam `p-4` ou `p-3`, parecendo comprimidos em relação ao novo grid espaçoso.
-
-**Plano de Padronização Gradual:**
-1.  **Fase 1: Envelopamento (Wrappers):** Aplicar a nova padronização de `Layout` e `Cards` nas páginas principais (Acordos, Clientes, Relatórios). Atualizar os imports de Card para garantir que todos usem a sombra customizada (`shadow-card`) e removam a borda dura.
-2.  **Fase 2: Refatoração Tipográfica:** Criar componentes de tipografia padrão (ex: `<Heading />`, `<Metric />`, `<Label />`) e substituir a miscelânea de classes Tailwind soltas.
-3.  **Fase 3: Tabelas e Listas:** Modernizar a UI de `DataTables`, substituindo bordas internas por listras sutis e aplicando a nova hierarquia de tipografia para cabeçalhos de coluna (uppercase, tracking-widest).
-4.  **Fase 4: Formulários:** Aumentar os *inputs*, adotar paddings maiores e usar validação visual alinhada às cores semânticas (vermelho apenas para erro).
-
----
-*Este documento é vivo e deve ser atualizado sempre que um novo padrão comportamental ou visual for consolidado em produção.*
+Prefira `Skeleton` desenhando a estrutura final da tela a spinner central — evita
+reflow e ansiedade.
