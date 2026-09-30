@@ -34,12 +34,16 @@ Pequenos pendentes da Rodada 2:
 
 ## Antes de lançar para cliente externo
 
-- **SMTP próprio** — passo a passo em [`CONFIGURAR_SMTP.md`](CONFIGURAR_SMTP.md).
-- **Confirmação de e-mail ligada** no painel (Auth), se tiver sido desligada para teste.
-- **JWT hook** — `custom_access_token_hook` está declarado em
-  `supabase/config.toml`; confirmar que está habilitado no painel de produção
-  (Auth → Hooks). O app funciona pelo fallback, mas o hook é o caminho certo.
-- **URL Configuration** — Site URL e Redirect URLs com o domínio de produção.
+Conferido em 2026-09-30 pela API: confirmação de e-mail **ligada**; JWT hook **habilitado**;
+Site URL e Redirect = `app-fincanceiro.vercel.app`; regras de senha iguais às do app.
+Feito no mesmo dia: "Reenviar e-mail de confirmação", "Esqueci minha senha" e erros de login em português.
+
+- **SMTP próprio** — passo a passo em [`CONFIGURAR_SMTP.md`](CONFIGURAR_SMTP.md). **Bloqueado por domínio
+  próprio** (decisão/compra do gestor). Até lá o envio embutido aceita 2 e-mails por hora, e
+  confirmação, reenvio e redefinição de senha dividem esse limite.
+- **Domínio próprio** — quando existir, trocar Site URL e Redirect URLs.
+- **Vitrine da tela de entrada** — "98% de satisfação", "+50k títulos", "24/7 suporte" e "© 2024"
+  são textos de modelo; trocar ou tirar antes de mostrar a cliente (decisão do gestor).
 - **Billing/assinatura** das empresas (ex.: Stripe). Nada implementado.
 - **Proteção contra senha vazada** — exige plano Pro do Supabase.
 

@@ -25,6 +25,7 @@ const Relatorios = React.lazy(() => import("./pages/Relatorios"));
 const Telecobranca = React.lazy(() => import("./pages/Telecobranca"));
 const Auth = React.lazy(() => import("./pages/Auth"));
 const Convite = React.lazy(() => import("./pages/Convite"));
+const RedefinirSenha = React.lazy(() => import("./pages/RedefinirSenha"));
 const SetupEmpresa = React.lazy(() => import("./pages/SetupEmpresa"));
 const Plataforma = React.lazy(() => import("./pages/Plataforma"));
 const PlataformaImportar = React.lazy(() => import("./pages/PlataformaImportar"));
@@ -71,6 +72,7 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/convite" element={<Convite />} />
+              <Route path="/redefinir-senha" element={<RedefinirSenha />} />
               <Route path="/setup-empresa" element={<SetupEmpresa />} />
               <Route path="/plataforma" element={<Plataforma />} />
               <Route path="/plataforma/importar" element={<PlataformaImportar />} />

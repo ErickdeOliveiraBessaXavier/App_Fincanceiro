@@ -17,8 +17,9 @@ O problema não é volume, é **entregabilidade**. O serviço embutido da Supaba
 
 E o fluxo do app não perdoa falha de entrega: com "Confirm email" ligado, quem
 se cadastra **não consegue logar** até clicar no link. Se o e-mail não chega, o
-usuário fica preso — e **não existe tela de reenviar confirmação**. Ele desiste e
-você não fica sabendo.
+usuário fica preso. Desde 2026-09-30 existe o botão "Reenviar e-mail de
+confirmação", mas ele usa o mesmo envio: sem SMTP próprio, o reenvio também pode
+não chegar.
 
 Evidência real (consultada em 15/07/2026):
 
@@ -133,6 +134,7 @@ enquanto o domínio não sai. Não é o destino final.
 
 ## Pendências relacionadas
 
-- [ ] **Fluxo de "esqueci minha senha"** — não existe no app. Depende deste SMTP.
-- [ ] **Reenviar confirmação** — não existe. É o que transformaria o softlock em
-      um clique do usuário, em vez de um chamado pra você.
+- [x] **Fluxo de "esqueci minha senha"** — feito em 2026-09-30 (link na tela de
+      entrada + `/redefinir-senha`). A entrega do e-mail depende deste SMTP.
+- [x] **Reenviar confirmação** — feito em 2026-09-30 (na tela de entrada, quando o
+      login recusa por e-mail não confirmado, e depois do cadastro).

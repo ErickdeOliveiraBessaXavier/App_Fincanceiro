@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { papeisValidos, papelMaisAlto, type AppRole } from '@/domain/perfis';
 import { traduzirErroSenha } from '@/utils/senha';
+import { codigoErroAuth, traduzirErroAuth } from '@/utils/erroAuth';
 
 interface AuthContextType {
   user: User | null;
@@ -15,7 +16,12 @@ interface AuthContextType {
   role: AppRole | null;
   isSuperAdmin: boolean;
   signUp: (email: string, password: string, nome: string) => Promise<{ error: any; needsConfirmation: boolean }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  /** `naoConfirmado`: a conta existe, mas o e-mail ainda não foi confirmado. */
+  signIn: (email: string, password: string) => Promise<{ error: any; naoConfirmado: boolean }>;
+  /** Reenvia o link de confirmação do cadastro. Devolve true se enviou. */
+  reenviarConfirmacao: (email: string) => Promise<boolean>;
+  /** Manda o link de redefinição de senha. Devolve true se o pedido foi aceito. */
+  enviarRedefinicaoSenha: (email: string) => Promise<boolean>;
   signOut: () => Promise<void>;
   /** Renova o token para recarregar os claims (ex.: após criar a empresa). */
   refreshClaims: () => Promise<void>;
@@ -128,9 +134,35 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
-      toast({ title: 'Erro no login', description: error.message, variant: 'destructive' });
+      toast({ title: 'Erro no login', description: traduzirErroAuth(error), variant: 'destructive' });
     }
-    return { error };
+    return { error, naoConfirmado: codigoErroAuth(error) === 'email_not_confirmed' };
+  };
+
+  // Sem isto, quem não recebia (ou perdia) o e-mail de confirmação ficava sem
+  // acesso e sem saída: não havia como pedir outro link.
+  const reenviarConfirmacao = async (email: string) => {
+    // Sem emailRedirectTo, como o signUp: o link leva à Site URL do projeto.
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
+    if (error) {
+      toast({ title: 'Não foi possível reenviar', description: traduzirErroAuth(error), variant: 'destructive' });
+      return false;
+    }
+    toast({ title: 'E-mail reenviado', description: `Enviamos um novo link para ${email}. Confira também o spam.` });
+    return true;
+  };
+
+  // O Supabase responde igual exista ou não a conta (não revela quem é
+  // cadastrado); a mensagem de sucesso também não afirma que ela existe.
+  const enviarRedefinicaoSenha = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/redefinir-senha`,
+    });
+    if (error) {
+      toast({ title: 'Não foi possível enviar', description: traduzirErroAuth(error), variant: 'destructive' });
+      return false;
+    }
+    return true;
   };
 
   const signOut = async () => {
@@ -156,6 +188,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isSuperAdmin: role === 'super_admin',
     signUp,
     signIn,
+    reenviarConfirmacao,
+    enviarRedefinicaoSenha,
     signOut,
     refreshClaims,
     loading,
