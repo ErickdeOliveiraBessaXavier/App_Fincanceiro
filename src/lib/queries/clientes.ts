@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
 import { buscarTodas } from '@/lib/buscarTodas';
 import { hojeNegocio } from '@/domain/telecobranca/statusCobranca';
-import { soDigitos } from '@/utils/format';
+import { normalizarDocumento, soDigitos } from '@/utils/format';
 import {
   derivarStatusCliente,
   type SituacaoCliente,
@@ -236,7 +236,7 @@ export function useCreateCliente() {
           {
             ...input,
             company_id: companyId,
-            cpf_cnpj: soDigitos(input.cpf_cnpj),
+            cpf_cnpj: normalizarDocumento(input.cpf_cnpj),
             telefone: soDigitos(input.telefone) || null,
             created_by: user.id,
           },
@@ -280,7 +280,7 @@ export function useUpdateCliente() {
         .from('clientes')
         .update({
           ...rest,
-          cpf_cnpj: soDigitos(rest.cpf_cnpj),
+          cpf_cnpj: normalizarDocumento(rest.cpf_cnpj),
           telefone: soDigitos(rest.telefone) || null,
         })
         .eq('id', id);
@@ -383,7 +383,7 @@ export interface ClienteArquivado {
 
 export async function buscarClienteArquivado(cpfCnpj: string): Promise<ClienteArquivado | null> {
   const { data, error } = await supabase.rpc('buscar_cliente_arquivado', {
-    p_cpf_cnpj: soDigitos(cpfCnpj),
+    p_cpf_cnpj: normalizarDocumento(cpfCnpj),
   });
   if (error) throw error;
   return (data as unknown as ClienteArquivado | null) ?? null;

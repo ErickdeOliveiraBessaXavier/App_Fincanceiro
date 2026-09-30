@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
-import { soDigitos, parseValorPlanilha } from '@/utils/format';
+import { erroCpfCnpj, normalizarDocumento, soDigitos, parseValorPlanilha } from '@/utils/format';
 import { cn } from '@/lib/utils';
 import { rotuloClasses } from '@/components/Rotulo';
 
@@ -167,7 +167,8 @@ function collectGrupos(dataRows: any[][], rowIdx: number, get: Getter) {
   dataRows.forEach((row, idx) => {
     const linha = rowIdx + 2 + idx; // nº da linha na planilha (1-based)
     const cliente = str(row, 'cliente');
-    const cpf = onlyDigits(get(row, 'cpf_cnpj'));
+    // Documento não passa por onlyDigits: o CNPJ alfanumérico tem letras.
+    const cpf = normalizarDocumento(get(row, 'cpf_cnpj'));
     if (!cliente && !cpf) return; // linha vazia
 
     const doc = str(row, 'numero_documento');
@@ -208,9 +209,9 @@ function validarGrupo(g: Grupo): string[] {
   const errs: string[] = [];
   // Sem o número, cada reimportação criaria um título novo e a dívida dobraria.
   if (!g.numero_documento) errs.push(`${ref}: sem Nº do título (coluna numero_documento)`);
-  if (g.cpf_cnpj.length !== 11 && g.cpf_cnpj.length !== 14) {
-    errs.push(`${ref}: CPF/CNPJ inválido (${g.cpf_cnpj || 'vazio'})`);
-  }
+  // Mesma regra do cadastro e do banco: formato + dígito verificador.
+  const erroDocumento = erroCpfCnpj(g.cpf_cnpj);
+  if (erroDocumento) errs.push(`${ref}: ${erroDocumento} (${g.cpf_cnpj || 'vazio'})`);
   if (!g.cliente) errs.push(`${ref}: nome do cliente vazio`);
   for (const p of g.parcelas) errs.push(...validarParcela(p));
   return errs;
@@ -225,7 +226,7 @@ function buildPreview(dataRows: any[][], colMap: ColMap, get: Getter) {
   const previewHeaders = (Object.keys(ALIASES) as (keyof typeof ALIASES)[]).filter(
     (f) => colMap[f] !== undefined,
   );
-  const hasData = (r: any[]) => String(get(r, 'cliente') ?? '').trim() || onlyDigits(get(r, 'cpf_cnpj'));
+  const hasData = (r: any[]) => String(get(r, 'cliente') ?? '').trim() || normalizarDocumento(get(r, 'cpf_cnpj'));
   const cell = (r: any[], f: keyof typeof ALIASES) =>
     f === 'vencimento' ? toISODate(get(r, f)) ?? String(get(r, f) ?? '') : String(get(r, f) ?? '');
   const previewRows = dataRows
@@ -608,9 +609,9 @@ export default function ImportarCSV() {
   const downloadTemplate = () => {
     const csvContent = [
       'cliente,cpf_cnpj,valor,vencimento,numero_documento,parcela,vendedor,cobrador,cidade,estado,descricao,contato,pago',
-      'INVICTA RACOES LTDA,00000000000191,8562.61,2025-12-21,12461,1,AIRTON,,OEIRAS,PI,Safra 2025,,Nao',
-      'F PEREIRA DE LIMA CIA LTDA,00000000000272,1250.00,2026-03-07,12711,2,HELDER,,IGUATU,CE,Safra 2025,,Sim',
-      'F PEREIRA DE LIMA CIA LTDA,00000000000272,1250.00,2026-04-07,12711,3,HELDER,,IGUATU,CE,Safra 2025,,Nao',
+      'INVICTA RACOES LTDA,12345678000195,8562.61,2025-12-21,12461,1,AIRTON,,OEIRAS,PI,Safra 2025,,Nao',
+      'F PEREIRA DE LIMA CIA LTDA,98765432000198,1250.00,2026-03-07,12711,2,HELDER,,IGUATU,CE,Safra 2025,,Sim',
+      'F PEREIRA DE LIMA CIA LTDA,98765432000198,1250.00,2026-04-07,12711,3,HELDER,,IGUATU,CE,Safra 2025,,Nao',
     ].join('\n');
 
     const blob = new Blob(['﻿' + csvContent], { type: 'text/csv;charset=utf-8;' });

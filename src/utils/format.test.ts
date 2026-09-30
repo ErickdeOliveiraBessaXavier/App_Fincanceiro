@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   erroCpfCnpj,
+  normalizarDocumento,
   formatData,
   formatMoeda,
   isoDeData,
@@ -176,5 +177,32 @@ describe('erroCpfCnpj', () => {
     expect(erroCpfCnpj('')).toMatch(/obrigatório/);
     expect(erroCpfCnpj('123')).toMatch(/11 dígitos/);
     expect(erroCpfCnpj('123456789012')).toMatch(/11 dígitos/);
+  });
+});
+
+describe('CNPJ alfanumérico (IN RFB 2.229/2024, desde julho de 2026)', () => {
+  it('aceita o exemplo oficial, com ou sem máscara e em minúsculas', () => {
+    expect(erroCpfCnpj('12.ABC.345/01DE-35')).toBeNull();
+    expect(erroCpfCnpj('12ABC34501DE35')).toBeNull();
+    expect(erroCpfCnpj('12.abc.345/01de-35')).toBeNull();
+  });
+
+  it('recusa DV errado e letra nas posições do DV', () => {
+    expect(erroCpfCnpj('12.ABC.345/01DE-36')).toMatch(/inválido/);
+    expect(erroCpfCnpj('12ABC34501DE3A')).toMatch(/14 caracteres/);
+  });
+
+  it('CPF não aceita letra', () => {
+    expect(erroCpfCnpj('529.982.247-2A')).toMatch(/11 dígitos/);
+  });
+
+  it('normaliza sem apagar as letras (soDigitos apagaria)', () => {
+    expect(normalizarDocumento('12.abc.345/01de-35')).toBe('12ABC34501DE35');
+  });
+
+  it('a máscara de digitação formata como CNPJ assim que aparece letra', () => {
+    expect(mascaraCpfCnpj('12abc')).toBe('12.ABC');
+    expect(mascaraCpfCnpj('12ABC34501DE35')).toBe('12.ABC.345/01DE-35');
+    expect(mascaraCpfCnpj('52998224725')).toBe('529.982.247-25');
   });
 });

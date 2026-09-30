@@ -13,10 +13,22 @@ export function soDigitos(value?: unknown): string {
  */
 export function formatCpfCnpj(value?: string | null): string {
   if (!value) return '';
-  const d = soDigitos(value);
-  if (d.length === 11) return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
-  if (d.length === 14) return d.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+  const d = normalizarDocumento(value);
+  if (d.length === 11) return aplicarMascara(d, MASCARA_CPF);
+  if (d.length === 14) return aplicarMascara(d, MASCARA_CNPJ);
   return value;
+}
+
+/**
+ * CPF/CNPJ só com os caracteres que contam: dígitos e, no CNPJ alfanumérico,
+ * letras maiúsculas. É assim que o documento é gravado.
+ *
+ * Desde julho de 2026 a Receita emite CNPJ com letras nas 12 primeiras
+ * posições (IN RFB 2.229/2024). `soDigitos` apagaria as letras e corromperia
+ * o documento — por isso documento não passa por ele.
+ */
+export function normalizarDocumento(value?: unknown): string {
+  return String(value ?? '').toUpperCase().replace(/[^0-9A-Z]/g, '');
 }
 
 /**
@@ -176,19 +188,33 @@ const MASCARA_CELULAR = '(##) #####-####';
  * gerar um documento inválido.
  */
 export function mascaraCpfCnpj(valor: string): string {
-  const digitos = soDigitos(valor).slice(0, 14);
-  return aplicarMascara(digitos, digitos.length <= 11 ? MASCARA_CPF : MASCARA_CNPJ);
+  const doc = normalizarDocumento(valor).slice(0, 14);
+  // Letra só existe no CNPJ alfanumérico: já formata como CNPJ.
+  const ehCnpj = doc.length > 11 || /[A-Z]/.test(doc);
+  return aplicarMascara(doc, ehCnpj ? MASCARA_CNPJ : MASCARA_CPF);
 }
 
 const PESOS_CPF = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
 const PESOS_CNPJ = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
 
-/** Dígito verificador (módulo 11) dos `n` primeiros dígitos, com os últimos `n` pesos. */
-function digitoVerificador(digitos: string, n: number, pesos: number[]): number {
+/**
+ * Dígito verificador (módulo 11) dos `n` primeiros caracteres, com os últimos
+ * `n` pesos. Cada caractere vale o código ASCII menos 48: '0'..'9' valem 0..9
+ * e 'A'..'Z' valem 17..42 — a regra do CNPJ alfanumérico, que para documento
+ * só de dígitos dá exatamente o cálculo de sempre.
+ */
+function digitoVerificador(doc: string, n: number, pesos: number[]): number {
   const usados = pesos.slice(pesos.length - n);
-  const soma = usados.reduce((total, peso, i) => total + Number(digitos[i]) * peso, 0);
+  const soma = usados.reduce((total, peso, i) => total + (doc.charCodeAt(i) - 48) * peso, 0);
   const resto = soma % 11;
   return resto < 2 ? 0 : 11 - resto;
+}
+
+/** 'cpf', 'cnpj' ou null pelo formato: CPF só dígitos; CNPJ com 12 alfanuméricos + 2 dígitos. */
+function tipoDocumento(doc: string): 'cpf' | 'cnpj' | null {
+  if (/^\d{11}$/.test(doc)) return 'cpf';
+  if (/^[0-9A-Z]{12}\d{2}$/.test(doc)) return 'cnpj';
+  return null;
 }
 
 function dvConfere(digitos: string, pesos: number[]): boolean {
@@ -199,20 +225,20 @@ function dvConfere(digitos: string, pesos: number[]): boolean {
 
 /**
  * Motivo de o CPF/CNPJ ser inválido, ou null se estiver certo (aceita com ou
- * sem máscara). Confere tamanho e dígitos verificadores, e recusa sequência
- * repetida ("111.111.111-11"), que passa no cálculo mas não existe.
+ * sem máscara, e o CNPJ alfanumérico). Confere formato e dígitos
+ * verificadores, e recusa sequência repetida ("111.111.111-11"), que passa no
+ * cálculo mas não existe.
  *
- * Só o cadastro manual usa: o importador e a API aceitam o que o ERP manda
- * (o banco exige apenas 11 ou 14 dígitos), para não travar uma carga inteira
- * por um documento antigo.
+ * Vale em toda porta de entrada (cadastro, planilha, API) — decisão do gestor
+ * de 2026-09-30. O banco confere a mesma regra (public.cpf_cnpj_valido).
  */
 export function erroCpfCnpj(valor: string): string | null {
-  const digitos = soDigitos(valor);
-  if (!digitos) return 'CPF/CNPJ é obrigatório';
-  if (digitos.length !== 11 && digitos.length !== 14) return 'CPF tem 11 dígitos; CNPJ, 14';
-  if (/^(\d)\1+$/.test(digitos)) return 'CPF/CNPJ inválido';
-  const pesos = digitos.length === 11 ? PESOS_CPF : PESOS_CNPJ;
-  return dvConfere(digitos, pesos) ? null : 'CPF/CNPJ inválido: confira os dígitos';
+  const doc = normalizarDocumento(valor);
+  if (!doc) return 'CPF/CNPJ é obrigatório';
+  const tipo = tipoDocumento(doc);
+  if (!tipo) return 'CPF tem 11 dígitos; CNPJ, 14 caracteres';
+  if (/^(.)\1+$/.test(doc)) return 'CPF/CNPJ inválido';
+  return dvConfere(doc, tipo === 'cpf' ? PESOS_CPF : PESOS_CNPJ) ? null : 'CPF/CNPJ inválido: confira os dígitos';
 }
 
 /**

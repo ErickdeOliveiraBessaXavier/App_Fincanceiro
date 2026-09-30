@@ -102,7 +102,7 @@ function textoObrigatorioFaltando(t: TituloEntrada): Response | null {
   return null;
 }
 
-// Valida a forma do corpo. As regras de negócio (CPF com 11/14 dígitos, valor
+// Valida a forma do corpo. As regras de negócio (CPF/CNPJ com dígito verificador, valor
 // positivo, título sem parcelas) continuam no banco — aqui só evitamos ida ao
 // Postgres com um corpo obviamente malformado, e damos uma mensagem melhor.
 function validarTitulo(body: unknown): Response | TituloEntrada {

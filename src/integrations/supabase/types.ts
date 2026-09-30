@@ -2245,6 +2245,7 @@ export type Database = {
         }
         Returns: Json
       }
+      cpf_cnpj_valido: { Args: { p_doc: string }; Returns: boolean }
       criar_acordo: {
         Args: {
           p_cliente_id: string
@@ -2357,6 +2358,7 @@ export type Database = {
         Args: { p_cobrador: string; p_vendedor: string }
         Returns: boolean
       }
+      normalizar_documento: { Args: { p_doc: string }; Returns: string }
       pagar_parcela_acordo: {
         Args: {
           p_data_pagamento?: string

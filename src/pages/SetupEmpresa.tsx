@@ -8,6 +8,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building2 } from 'lucide-react';
+import { erroCpfCnpj, mascaraCpfCnpj, normalizarDocumento } from '@/utils/format';
+
+/** Empresa é pessoa jurídica: só CNPJ (numérico ou alfanumérico), com DV válido. */
+function erroDoCnpj(doc: string): string | null {
+  if (doc.length !== 14) return 'Informe o CNPJ da empresa (14 caracteres).';
+  return erroCpfCnpj(doc);
+}
 
 export default function SetupEmpresa() {
   const { user, companyId, isSuperAdmin, loading, refreshClaims } = useAuth();
@@ -28,11 +35,17 @@ export default function SetupEmpresa() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const doc = normalizarDocumento(cnpj);
+    const erroCnpj = doc ? erroDoCnpj(doc) : null;
+    if (erroCnpj) {
+      toast({ title: 'CNPJ inválido', description: erroCnpj, variant: 'destructive' });
+      return;
+    }
     setSaving(true);
     try {
       const { error } = await supabase.rpc('criar_empresa_e_admin', {
         p_nome: nome.trim(),
-        p_cnpj: cnpj.trim() || undefined,
+        p_cnpj: doc || undefined,
         p_slug: slugify(nome),
       });
       if (error) throw error;
@@ -84,7 +97,7 @@ export default function SetupEmpresa() {
               <Input
                 id="cnpj"
                 value={cnpj}
-                onChange={(e) => setCnpj(e.target.value)}
+                onChange={(e) => setCnpj(mascaraCpfCnpj(e.target.value))}
                 placeholder="00.000.000/0000-00"
                 className="h-11 rounded-xl"
               />
