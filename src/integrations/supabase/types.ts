@@ -110,7 +110,6 @@ export type Database = {
           parcelas: number
           status: string
           taxa_juros: number | null
-          titulo_id: string
           updated_at: string
           valor_acordo: number
           valor_original: number
@@ -133,7 +132,6 @@ export type Database = {
           parcelas?: number
           status?: string
           taxa_juros?: number | null
-          titulo_id: string
           updated_at?: string
           valor_acordo: number
           valor_original: number
@@ -156,7 +154,6 @@ export type Database = {
           parcelas?: number
           status?: string
           taxa_juros?: number | null
-          titulo_id?: string
           updated_at?: string
           valor_acordo?: number
           valor_original?: number
@@ -175,20 +172,6 @@ export type Database = {
             columns: ["company_id"]
             isOneToOne: false
             referencedRelation: "companies"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "acordos_titulo_id_fkey"
-            columns: ["titulo_id"]
-            isOneToOne: false
-            referencedRelation: "titulos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "acordos_titulo_id_fkey"
-            columns: ["titulo_id"]
-            isOneToOne: false
-            referencedRelation: "vw_titulos_completos"
             referencedColumns: ["id"]
           },
         ]
@@ -1995,6 +1978,20 @@ export type Database = {
             referencedRelation: "acordos"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
         ]
       }
       vw_recebimentos_tenant: {
@@ -2024,6 +2021,20 @@ export type Database = {
             columns: ["acordo_id"]
             isOneToOne: false
             referencedRelation: "acordos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
             referencedColumns: ["id"]
           },
         ]

@@ -58,9 +58,9 @@ SMTP fica para depois (gestor, 2026-09-30).
   enquanto os dados forem de teste; rever antes do primeiro cliente real.
 - **P6 (2026-09-30)** — `acordos.titulo_id` aposentada em duas etapas. Etapa 1 (`20260930160000`,
   aplicada): recebimento de acordo ganhou `titulo_pesos` (rateio pelo liquidado de cada título) e a
-  exportação de Relatórios rateia em vez de pôr tudo no primeiro título. **Etapa 2
-  (`20260930170000`) só depois do front do P6 publicado no Vercel** — ela apaga a coluna que o front
-  antigo ainda lê.
+  exportação de Relatórios rateia em vez de pôr tudo no primeiro título. Etapa 2
+  (`20260930170000`) aplicada no mesmo dia, depois de confirmar o front novo servido pelo Vercel:
+  a coluna não existe mais.
 - **P9 (2026-09-30)** — selo "Reimportado" em Títulos e na ficha, com data e motivo dos cancelamentos
   anteriores do mesmo número. Sem link: não existe tela para título cancelado (o histórico fica no
   banco). Se a operação pedir, fazer uma tela de consulta de cancelados.
