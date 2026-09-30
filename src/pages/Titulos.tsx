@@ -1,5 +1,5 @@
 import { PageHeader } from '@/components/PageHeader';
-import { CarregandoConteudo } from '@/components/TelaCarregamento';
+import { CarregandoConteudo, CarregandoSecao } from '@/components/TelaCarregamento';
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -742,7 +742,7 @@ function HistoricoPagamentos({ parcelaIds, isAdmin, onEstornado }: {
     }
   };
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando lançamentos...</p>;
+  if (isLoading) return <CarregandoSecao className="py-4" />;
   if (!pagamentos.length) return <p className="text-sm text-muted-foreground">Nenhum pagamento, desconto ou encargo registrado.</p>;
 
   return (

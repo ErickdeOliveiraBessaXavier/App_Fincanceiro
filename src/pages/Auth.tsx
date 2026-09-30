@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Sparkles, MailCheck, KeyRound } from 'lucide-react';
 import { REGRAS_SENHA, SENHA_MIN, validarSenha } from '@/utils/senha';
 import { useToast } from '@/hooks/use-toast';
+import { TelaCarregamento, SpinnerInline } from '@/components/TelaCarregamento';
 
 const ESPERA_REENVIO_S = 60;
 
@@ -126,14 +127,7 @@ const Auth = () => {
   const [esqueciSenha, setEsqueciSenha] = useState(false);
 
   if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-          <p className="text-sm text-muted-foreground">Carregando...</p>
-        </div>
-      </div>
-    );
+    return <TelaCarregamento />;
   }
 
   if (user) {
@@ -264,7 +258,7 @@ const Auth = () => {
                     <Button type="submit" className="w-full h-11" disabled={isLoading}>
                       {isLoading ? (
                         <span className="flex items-center gap-2">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <SpinnerInline />
                           Entrando...
                         </span>
                       ) : 'Entrar'}
@@ -322,7 +316,7 @@ const Auth = () => {
                     <Button type="submit" className="w-full h-11" disabled={isLoading}>
                       {isLoading ? (
                         <span className="flex items-center gap-2">
-                          <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                          <SpinnerInline />
                           Cadastrando...
                         </span>
                       ) : 'Criar conta'}

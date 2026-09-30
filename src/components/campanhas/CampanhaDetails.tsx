@@ -6,6 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Mail, MessageSquare, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { buscarTodas } from '@/lib/buscarTodas';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 
 interface CampaignLog {
   id: string;
@@ -160,9 +161,7 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-                </div>
+                <CarregandoSecao className="py-8" />
               ) : logs.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   Nenhum envio registrado ainda

@@ -18,6 +18,7 @@ import { getStatusMeta, type StatusMeta } from '@/constants/statusConfig';
 import { useBaseMetricasCliente } from '@/lib/queries/metricas';
 import { prepararBase, situacaoFinanceiraCliente } from '@/domain/metricas';
 import { Rotulo } from '@/components/Rotulo';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 
 interface Parcela {
   id: string;
@@ -406,9 +407,7 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
     return (
       <Card>
         <CardContent className="py-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
+          <CarregandoSecao className="" />
         </CardContent>
       </Card>
     );

@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, type ReactNode } from 'react';
 import { PageHeader } from '@/components/PageHeader';
-import { CarregandoConteudo } from '@/components/TelaCarregamento';
+import { CarregandoConteudo, SpinnerInline, CarregandoSecao } from '@/components/TelaCarregamento';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Loader2, Trash2, Banknote, Undo2 } from 'lucide-react';
+import { Plus, Eye, Ban, FileText, CheckCircle, TrendingUp, Trash2, Banknote, Undo2 } from 'lucide-react';
 import { useAcordos, useCancelAcordo, useHardDeleteAcordos, useParcelasAcordo, type AcordoRow, type ParcelaAcordoRow } from '@/lib/queries/acordos';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -382,7 +382,7 @@ function ParcelasAcordoSecao({ acordoId, open, acordoCancelado }: {
   const [acao, setAcao] = useState<AcaoParcela | null>(null);
 
   if (isLoading) {
-    return <p className="text-sm text-muted-foreground">Carregando parcelas...</p>;
+    return <CarregandoSecao className="py-4" />;
   }
   if (parcelas.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhuma parcela cadastrada para este acordo.</p>;
@@ -579,7 +579,7 @@ function CancelAcordoDialog({ open, onOpenChange, onCancel, onConfirm, isPending
             Voltar
           </Button>
           <Button variant="destructive" onClick={() => onConfirm(motivo.trim())} disabled={isPending || !motivo.trim()}>
-            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending && <SpinnerInline />}
             Cancelar Acordo
           </Button>
         </DialogFooter>

@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePagination } from '@/hooks/usePagination';
 import { TablePagination } from '@/components/TablePagination';
 import { Filter, Clock, CheckCircle, History, XCircle, AlertCircle, MoreHorizontal } from 'lucide-react';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 
 /**
  * Aba "Histórico de Eventos": a linha do tempo completa do cliente.
@@ -93,9 +94,7 @@ export function EventoTimeline({ clienteId }: EventoTimelineProps) {
     return (
       <Card>
         <CardContent className="py-8">
-          <div className="flex items-center justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
+          <CarregandoSecao className="" />
         </CardContent>
       </Card>
     );

@@ -20,6 +20,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { ResumoNumeros } from '@/components/ResumoNumeros';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 
 /**
  * Painel de uma carteira de pessoas (cobradores ou vendedores).
@@ -336,9 +337,7 @@ export function CarteiraPessoas({ config, isAdmin }: { config: CarteiraConfig; i
         </CardHeader>
         <CardContent className="pt-6">
           {config.isLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-            </div>
+            <CarregandoSecao className="h-32" />
           ) : config.pessoas.length === 0 ? (
             <div className="text-center py-10 bg-muted/5 rounded-xl border border-dashed border-border/60">
               <p className="text-sm font-medium text-muted-foreground">{config.vazio}</p>

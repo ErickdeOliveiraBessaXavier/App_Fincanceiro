@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Sparkles, UserPlus, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { REGRAS_SENHA, SENHA_MIN, traduzirErroSenha, validarSenha } from '@/utils/senha';
+import { SpinnerInline } from '@/components/TelaCarregamento';
 
 // Definido fora do componente: se ficasse dentro, cada re-render (ao digitar)
 // criaria um novo tipo de componente, remontando os inputs e perdendo o foco.
@@ -150,7 +151,7 @@ export default function Convite() {
             <Button type="submit" className="w-full h-11" disabled={loading}>
               {loading ? (
                 <span className="flex items-center gap-2">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  <SpinnerInline />
                   Cadastrando...
                 </span>
               ) : 'Criar conta'}

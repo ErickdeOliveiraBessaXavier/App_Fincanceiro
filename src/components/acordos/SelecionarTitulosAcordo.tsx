@@ -5,10 +5,11 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SelecionarCliente } from '@/components/SelecionarCliente';
 import { StatusBadge } from '@/components/StatusBadge';
-import { ChevronDown, ChevronRight, AlertTriangle, FileText, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { TituloAgrupado, TituloItem, ClienteComDividas } from '@/hooks/useTitulosAgrupados';
 import { cn } from '@/lib/utils';
 import { formatData } from '@/utils/format';
+import { SpinnerInline } from '@/components/TelaCarregamento';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -33,7 +34,7 @@ function SelecaoSkeleton() {
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <SpinnerInline />
         Buscando títulos e parcelas do cliente...
       </div>
       <Skeleton className="h-9 w-full" />

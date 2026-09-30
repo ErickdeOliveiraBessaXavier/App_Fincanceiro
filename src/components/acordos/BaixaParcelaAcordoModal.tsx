@@ -34,6 +34,7 @@ import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useConfiguracaoEmpresa, tetoDescontoEmReais } from '@/lib/queries/configuracoes';
 import { Aviso } from '@/components/Aviso';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 
 /**
  * Baixa e estorno de uma parcela de acordo.
@@ -309,7 +310,7 @@ function FormEstorno({ parcelaId, eventoId, motivo, onEvento, onMotivo }: {
   const { data: eventos = [], isLoading } = useEventosParcelaAcordo(parcelaId);
   const estornaveis = eventos.filter((e) => e.tipo !== 'estorno');
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando lançamentos...</p>;
+  if (isLoading) return <CarregandoSecao className="py-4" />;
   if (estornaveis.length === 0) {
     return <p className="text-sm text-muted-foreground">Nenhum lançamento para estornar.</p>;
   }

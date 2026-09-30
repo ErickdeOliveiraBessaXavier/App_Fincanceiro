@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { ChavesApiDialog } from '@/components/plataforma/ChavesApiDialog';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 
 interface CompanyRow {
   id: string;
@@ -195,9 +196,7 @@ function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSe
       <CardHeader><CardTitle>Empresas cadastradas</CardTitle></CardHeader>
       <CardContent>
         {isLoading ? (
-          <div className="flex h-32 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-          </div>
+          <CarregandoSecao className="h-32" />
         ) : companies.length === 0 ? (
           <p className="py-8 text-center text-muted-foreground">Nenhuma empresa cadastrada ainda.</p>
         ) : (

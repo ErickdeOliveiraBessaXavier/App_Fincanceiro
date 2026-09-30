@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, KeyRound, Ban } from 'lucide-react';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 import {
   useChavesApi, useCriarChaveApi, useRevogarChaveApi, type ChaveApi, type ChaveGerada,
 } from '@/lib/queries/chavesApi';
@@ -121,7 +122,7 @@ function ListaChaves({ chaves, carregando, revogando, onRevogar }: ListaChavesPr
   const revogadas = chaves.filter((c) => !c.ativa);
   const visiveis = mostrarRevogadas ? chaves : ativas;
 
-  if (carregando) return <p className="py-4 text-sm text-muted-foreground">Carregando chaves…</p>;
+  if (carregando) return <CarregandoSecao className="py-4" />;
 
   return (
     <div className="min-w-0 space-y-2">

@@ -4,6 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CarteiraPessoas, type CarteiraConfig } from '@/components/equipe/CarteiraPessoas';
 import Usuarios from '@/pages/Usuarios';
 import { useUserRole } from '@/hooks/useUserRole';
+import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import {
   useCobradores, useCreateCobrador, useUpdateCobrador, useDeleteCobrador,
 } from '@/lib/queries/cobradores';
@@ -80,9 +81,7 @@ export default function Equipe() {
 
   if (roleLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-      </div>
+      <CarregandoConteudo />
     );
   }
   if (!isAdmin) {

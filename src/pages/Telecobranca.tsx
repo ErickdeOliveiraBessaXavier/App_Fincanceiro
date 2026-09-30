@@ -25,7 +25,7 @@ import { PainelLateralFicha } from '@/components/telecobranca/PainelLateralFicha
 import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
 import { StatusCobrancaAtual } from '@/components/telecobranca/StatusCobrancaAtual';
 import { StatusBadge } from '@/components/StatusBadge';
-import { CarregandoConteudo } from '@/components/TelaCarregamento';
+import { CarregandoConteudo, CarregandoSecao } from '@/components/TelaCarregamento';
 import { formatCpfCnpj, formatData, formatTelefone } from '@/utils/format';
 import { resumoNegociacao } from '@/domain/acordos/negociacao';
 import { derivarStatusCliente } from '@/domain/clientes/situacao';
@@ -454,7 +454,7 @@ function ParcelasDoAcordo({ acordoId }: { acordoId: string }) {
   const { data: parcelas = [], isLoading } = useParcelasAcordo(acordoId);
 
   if (isLoading) {
-    return <p className="px-4 py-3 text-xs text-muted-foreground">Carregando parcelas...</p>;
+    return <CarregandoSecao className="py-4" />;
   }
   if (parcelas.length === 0) {
     return <p className="px-4 py-3 text-xs text-muted-foreground">Nenhuma parcela neste acordo.</p>;
@@ -606,9 +606,7 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
+      <CarregandoSecao className="py-12" />
     );
   }
 

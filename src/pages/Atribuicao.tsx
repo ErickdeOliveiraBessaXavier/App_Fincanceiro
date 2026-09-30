@@ -27,6 +27,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { formatCpfCnpj } from '@/utils/format';
 import { rotuloClasses } from '@/components/Rotulo';
+import { CarregandoSecao, CarregandoConteudo } from '@/components/TelaCarregamento';
 
 // Sentinela do Radix Select (não aceita value vazio) para "sem vínculo".
 const NONE = 'none';
@@ -234,9 +235,7 @@ export default function Atribuicao() {
 
   if (roleLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-      </div>
+      <CarregandoConteudo />
     );
   }
   if (!isAdmin) {
@@ -293,45 +292,44 @@ export default function Atribuicao() {
           )}
 
           {isLoading ? (
-            <div className="flex h-32 items-center justify-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
-            </div>
+            <CarregandoSecao className="h-32" />
           ) : (
-            <div className="rounded-xl border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <Checkbox checked={todosFiltradosSelecionados} onCheckedChange={toggleTodos} />
-                    </TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>CPF/CNPJ</TableHead>
-                    <TableHead>Cobrador</TableHead>
-                    <TableHead>Vendedor</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagination.pageItems.map((cliente) => (
-                    <AtribuicaoRow
-                      key={cliente.id}
-                      cliente={cliente}
-                      selecionado={selecionados.has(cliente.id)}
-                      cobradores={cobradores}
-                      vendedores={vendedores}
-                      onToggle={toggle}
-                      onCobrador={(id) => aplicar(assignCobrador.mutateAsync, [cliente.id], id, 'Cobrador')}
-                      onVendedor={(id) => aplicar(assignVendedor.mutateAsync, [cliente.id], id, 'Vendedor')}
-                      pending={pending}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            <>
+              <div className="rounded-xl border border-border/50 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead className="w-10">
+                        <Checkbox checked={todosFiltradosSelecionados} onCheckedChange={toggleTodos} />
+                      </TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>CPF/CNPJ</TableHead>
+                      <TableHead>Cobrador</TableHead>
+                      <TableHead>Vendedor</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pagination.pageItems.map((cliente) => (
+                      <AtribuicaoRow
+                        key={cliente.id}
+                        cliente={cliente}
+                        selecionado={selecionados.has(cliente.id)}
+                        cobradores={cobradores}
+                        vendedores={vendedores}
+                        onToggle={toggle}
+                        onCobrador={(id) => aplicar(assignCobrador.mutateAsync, [cliente.id], id, 'Cobrador')}
+                        onVendedor={(id) => aplicar(assignVendedor.mutateAsync, [cliente.id], id, 'Vendedor')}
+                        pending={pending}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {/* Fora da caixa com borda da tabela, como nas demais listagens:
+                  dentro dela a paginação encostava nas laterais e no fundo. */}
+              <TablePagination pagination={pagination} />
+            </>
           )}
-
-          {/* Fora da caixa com borda da tabela, como nas demais listagens:
-              dentro dela a paginação encostava nas laterais e no fundo. */}
-          {!isLoading && <TablePagination pagination={pagination} />}
         </CardContent>
       </Card>
     </div>

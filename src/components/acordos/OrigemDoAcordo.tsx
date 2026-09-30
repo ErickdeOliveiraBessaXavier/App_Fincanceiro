@@ -1,6 +1,7 @@
 import { FileText } from 'lucide-react';
 import { useOrigemAcordo, type TituloOrigem } from '@/lib/queries/acordos';
 import { formatData } from '@/utils/format';
+import { CarregandoSecao } from '@/components/TelaCarregamento';
 
 /**
  * De onde o acordo veio: título e parcelas que a novação liquidou.
@@ -92,7 +93,7 @@ export function OrigemDoAcordo({ acordoId, aberto, documentos }: OrigemDoAcordoP
   const { data: origem = [], isLoading } = useOrigemAcordo(acordoId, aberto);
 
   if (isLoading) {
-    return <p className="text-xs text-muted-foreground">Carregando origem...</p>;
+    return <CarregandoSecao className="py-4" />;
   }
   if (origem.length === 0) {
     return <OrigemSemDetalhe documentos={documentos} />;

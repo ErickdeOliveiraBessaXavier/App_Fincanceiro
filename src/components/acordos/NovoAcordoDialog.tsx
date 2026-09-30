@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react';
-import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -34,6 +33,7 @@ import {
 } from '@/domain/acordos/cronograma';
 import { descontoPercentual, resumoNegociacao } from '@/domain/acordos/negociacao';
 import { cn } from '@/lib/utils';
+import { SpinnerInline } from '@/components/TelaCarregamento';
 
 /**
  * Criação de acordo — autocontido.
@@ -490,7 +490,7 @@ export function NovoAcordoDialog({
             onClick={criar}
             disabled={newAcordo.titulo_ids.length === 0 || createAcordo.isPending}
           >
-            {createAcordo.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {createAcordo.isPending && <SpinnerInline />}
             Criar Acordo
           </Button>
         </>
