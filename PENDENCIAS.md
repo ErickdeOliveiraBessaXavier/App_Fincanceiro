@@ -36,14 +36,14 @@ Pequenos pendentes da Rodada 2:
 
 Conferido em 2026-09-30 pela API: confirmação de e-mail **ligada**; JWT hook **habilitado**;
 Site URL e Redirect = `app-fincanceiro.vercel.app`; regras de senha iguais às do app.
-Feito no mesmo dia: "Reenviar e-mail de confirmação", "Esqueci minha senha" e erros de login em português.
+Feito no mesmo dia: "Reenviar e-mail de confirmação", "Esqueci minha senha", erros de login em português e
+retirada dos números de modelo da tela de entrada ("98% de satisfação" etc.; ano do rodapé automático).
+SMTP fica para depois (gestor, 2026-09-30).
 
 - **SMTP próprio** — passo a passo em [`CONFIGURAR_SMTP.md`](CONFIGURAR_SMTP.md). **Bloqueado por domínio
   próprio** (decisão/compra do gestor). Até lá o envio embutido aceita 2 e-mails por hora, e
   confirmação, reenvio e redefinição de senha dividem esse limite.
 - **Domínio próprio** — quando existir, trocar Site URL e Redirect URLs.
-- **Vitrine da tela de entrada** — "98% de satisfação", "+50k títulos", "24/7 suporte" e "© 2024"
-  são textos de modelo; trocar ou tirar antes de mostrar a cliente (decisão do gestor).
 - **Billing/assinatura** das empresas (ex.: Stripe). Nada implementado.
 - **Proteção contra senha vazada** — exige plano Pro do Supabase.
 

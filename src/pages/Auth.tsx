@@ -194,24 +194,10 @@ const Auth = () => {
             Simplifique o processo de cobrança, acompanhe títulos, gerencie acordos e maximize sua recuperação de crédito.
           </p>
           
-          <div className="grid grid-cols-3 gap-4 pt-8">
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-              <div className="text-3xl font-bold text-white">98%</div>
-              <div className="text-sm text-white/70">Taxa de satisfação</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-              <div className="text-3xl font-bold text-white">+50k</div>
-              <div className="text-sm text-white/70">Títulos gerenciados</div>
-            </div>
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
-              <div className="text-3xl font-bold text-white">24/7</div>
-              <div className="text-sm text-white/70">Suporte ativo</div>
-            </div>
-          </div>
         </div>
         
         <div className="relative z-10 text-sm text-white/60">
-          © 2024 CobrançaPro. Todos os direitos reservados.
+          © {new Date().getFullYear()} CobrançaPro. Todos os direitos reservados.
         </div>
       </div>
 
