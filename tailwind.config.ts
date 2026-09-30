@@ -46,6 +46,7 @@ export default {
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
+          strong: "hsl(var(--warning-strong))",
         },
         muted: {
           DEFAULT: "hsl(var(--muted))",
@@ -54,6 +55,10 @@ export default {
         accent: {
           DEFAULT: "hsl(var(--accent))",
           foreground: "hsl(var(--accent-foreground))",
+        },
+        destaque: {
+          DEFAULT: "hsl(var(--destaque))",
+          foreground: "hsl(var(--destaque-foreground))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

@@ -22,7 +22,7 @@ const GATILHO: Record<VarianteTabs, string> = {
   default:
     "rounded-sm px-3 py-1.5 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm",
   pill:
-    "rounded-full px-5 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-muted/50 data-[state=inactive]:hover:bg-muted",
+    "rounded-full px-5 py-2.5 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=inactive]:bg-secondary/60 data-[state=inactive]:hover:bg-secondary data-[state=inactive]:hover:text-secondary-foreground",
 };
 
 const GATILHO_BASE =

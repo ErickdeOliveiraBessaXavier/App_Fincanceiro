@@ -213,7 +213,7 @@ function ResumoNegociacaoHint({ valorOriginal, valorAcordo }: { valorOriginal: n
 
   const acrescimo = resumo.tipo === 'acrescimo';
   return (
-    <span className={cn('block text-xs', acrescimo ? 'text-amber-600' : 'text-muted-foreground')}>
+    <span className={cn('block text-xs', acrescimo ? 'text-warning-strong' : 'text-muted-foreground')}>
       {acrescimo ? 'Acréscimo' : 'Desconto'} de {formatCurrency(resumo.valor)}
       {' '}({resumo.percentual.toFixed(1)}%) sobre o débito
     </span>

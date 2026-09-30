@@ -179,7 +179,7 @@ export default function Telecobranca() {
   // dos clientes daquela tela. Sem isso — link direto, recarregar — o breadcrumb
   // cai na lista limpa e a navegação da fila simplesmente não aparece.
   const fila = useFilaNavegacao(clienteId);
-  const voltarPara = fila.voltarPara;
+  const { voltarPara, voltarRotulo } = fila;
   // Vendedor (e leitura) é read-only: escondemos as ações de escrita.
   const { isOperador } = useUserRole();
 
@@ -221,7 +221,7 @@ export default function Telecobranca() {
         description: "Não foi possível carregar os dados do cliente",
         variant: "destructive",
       });
-      navigate('/clientes');
+      navigate(voltarPara);
     } finally {
       setLoading(false);
     }
@@ -247,8 +247,8 @@ export default function Telecobranca() {
     return (
       <div className="text-center py-8">
         <p className="text-muted-foreground">Cliente não encontrado</p>
-        <Button variant="link" onClick={() => navigate('/clientes')}>
-          Voltar para Clientes
+        <Button variant="link" asChild>
+          <Link to={voltarPara}>Voltar para {voltarRotulo}</Link>
         </Button>
       </div>
     );
@@ -260,12 +260,14 @@ export default function Telecobranca() {
     // da vista justamente o nome, a dívida e o formulário de registro.
     <div className="flex h-full min-h-0 flex-col gap-6">
       <div className="shrink-0 space-y-6">
-      {/* Breadcrumbs: orienta e dá volta em 1 clique para a lista de clientes. */}
+      {/* Breadcrumb: a volta é para a tela de ORIGEM (com filtros e página), e o
+          rótulo diz qual — "Clientes" fixo, vindo de Relatórios, anunciava uma
+          tela e levava a outra. Sem origem conhecida, cai em Clientes. */}
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={voltarPara}>Clientes</Link>
+              <Link to={voltarPara}>{voltarRotulo}</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
@@ -278,8 +280,13 @@ export default function Telecobranca() {
       {/* Header Aprimorado */}
       <div className="flex items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0 mt-2 sm:mt-0">
-            <ArrowLeft className="h-5 w-5" />
+          {/* Mesmo destino do breadcrumb. navigate(-1) saía do app para quem abriu
+              a ficha por link, e depois de "Próximo" voltava ao cliente anterior
+              em vez da lista. */}
+          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-2 sm:mt-0">
+            <Link to={voltarPara} aria-label={`Voltar para ${voltarRotulo}`}>
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
           </Button>
           
           {/* Avatar com iniciais */}
@@ -408,7 +415,7 @@ function NegociacaoResumo({ valorOriginal, valorAcordo }: { valorOriginal: numbe
   return (
     <div>
       <Rotulo>{acrescimo ? 'Acréscimo' : 'Desconto'}</Rotulo>
-      <p className={cn('font-semibold text-base mt-1', acrescimo ? 'text-amber-600' : 'text-green-600')}>
+      <p className={cn('font-semibold text-base mt-1', acrescimo ? 'text-warning-strong' : 'text-green-600')}>
         {percentual.toFixed(1)}%
       </p>
     </div>

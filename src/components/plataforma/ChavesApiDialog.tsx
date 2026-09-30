@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { Aviso } from '@/components/Aviso';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from '@/components/ui/dialog';
@@ -54,9 +55,9 @@ function BlocoCopiavel({ valor, rotulo }: { valor: string; rotulo: string }) {
 // A chave recém-criada, com o aviso de que é a única vez que ela aparece.
 function ChaveRecemGerada({ chave }: { chave: ChaveGerada }) {
   return (
-    <div className="min-w-0 space-y-3 rounded-md border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
+    <Aviso className="min-w-0 space-y-3 p-4 text-foreground">
       <div>
-        <p className="text-sm font-semibold">Copie a chave agora</p>
+        <p className="text-sm font-semibold text-warning-strong">Copie a chave agora</p>
         <p className="text-xs text-muted-foreground">
           Ela não volta a ser exibida. Se perder, gere outra e revogue esta.
         </p>
@@ -66,7 +67,7 @@ function ChaveRecemGerada({ chave }: { chave: ChaveGerada }) {
         <p className="mb-1 text-xs font-medium text-muted-foreground">Endereço da API</p>
         <BlocoCopiavel valor={ENDPOINT_BASE} rotulo="Endereço" />
       </div>
-    </div>
+    </Aviso>
   );
 }
 

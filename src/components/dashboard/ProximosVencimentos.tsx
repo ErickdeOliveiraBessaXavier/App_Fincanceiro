@@ -52,7 +52,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
 
   const getUrgencyStyles = (dias: number) => {
     if (dias <= 1) return "border-destructive/20 bg-destructive/5 text-destructive";
-    if (dias <= 3) return "border-orange-500/20 bg-orange-500/5 text-orange-600";
+    if (dias <= 3) return "border-warning/25 bg-warning/5 text-warning-strong";
     return "border-border/50 bg-muted/30 text-muted-foreground";
   };
 
@@ -85,7 +85,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
             <CalendarClock className="h-5 w-5 text-primary" />
             Próximos Vencimentos
           </CardTitle>
-          <Badge className="bg-primary hover:bg-primary/90 rounded-full px-3">{vencimentos.length}</Badge>
+          <Badge>{vencimentos.length}</Badge>
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-4">

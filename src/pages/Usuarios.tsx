@@ -43,43 +43,43 @@ interface PendingConvitesCardProps {
 function PendingConvitesCard({ isAdmin, pendentes, busy, onAutorizar, onRecusar }: PendingConvitesCardProps) {
   if (!isAdmin || pendentes.length === 0) return null;
   return (
-    <Card className="border-2 border-amber-500/20 bg-amber-500/5 overflow-hidden">
-      <CardHeader className="pb-4 border-b border-amber-500/10 bg-amber-500/10">
-        <CardTitle className="flex items-center gap-3 text-amber-700">
+    <Card className="border border-warning/25 bg-warning/5 overflow-hidden">
+      <CardHeader className="pb-4 border-b border-warning/15">
+        <CardTitle className="flex items-center gap-3 text-warning-strong">
           <Clock className="h-5 w-5" />
           <span className="font-semibold tracking-tight">Aguardando Autorização</span>
-          <Badge className="bg-amber-600 text-white rounded-full px-2.5">{pendentes.length}</Badge>
+          <Badge className="bg-warning-strong text-white">{pendentes.length}</Badge>
         </CardTitle>
-        <CardDescription className="text-amber-600/80 font-medium">
+        <CardDescription className="text-warning-strong/80 font-medium">
           Novos membros aguardando liberação de acesso à plataforma.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        <div className="rounded-xl border border-amber-500/20 overflow-hidden bg-white/50">
+        <div className="rounded-xl border border-warning/20 overflow-hidden bg-card/60">
           <Table>
-            <TableHeader className="bg-amber-500/10">
+            <TableHeader className="bg-warning/10">
               <TableRow>
-                <TableHead className="text-amber-800">Nome</TableHead>
-                <TableHead className="text-amber-800">Email</TableHead>
-                <TableHead className="text-amber-800">Tipo</TableHead>
-                <TableHead className="text-amber-800">Carteira</TableHead>
-                <TableHead className="text-right text-amber-800">Ações</TableHead>
+                <TableHead className="text-warning-strong">Nome</TableHead>
+                <TableHead className="text-warning-strong">Email</TableHead>
+                <TableHead className="text-warning-strong">Tipo</TableHead>
+                <TableHead className="text-warning-strong">Carteira</TableHead>
+                <TableHead className="text-right text-warning-strong">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {pendentes.map((c) => (
-                <TableRow key={c.id} className="hover:bg-amber-500/5 transition-colors">
-                  <TableCell className="font-semibold text-sm text-amber-900">{c.nome ?? '—'}</TableCell>
-                  <TableCell className="text-xs font-medium text-amber-800/70">{c.email ?? '—'}</TableCell>
+                <TableRow key={c.id} className="hover:bg-warning/5">
+                  <TableCell className="font-semibold text-sm text-foreground">{c.nome ?? '—'}</TableCell>
+                  <TableCell className="text-xs font-medium text-muted-foreground">{c.email ?? '—'}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="capitalize rounded-lg font-semibold text-[10px] bg-amber-200 text-amber-900">{c.tipo}</Badge>
+                    <Badge variant="warning">{c.tipo}</Badge>
                   </TableCell>
-                  <TableCell className="text-xs font-medium text-amber-800/70">{c.carteira_nome ?? '—'}</TableCell>
+                  <TableCell className="text-xs font-medium text-muted-foreground">{c.carteira_nome ?? '—'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         size="sm"
-                        className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 font-semibold h-8"
+                        className="bg-warning-strong hover:bg-warning-strong/90 text-white rounded-lg px-4 font-semibold h-8"
                         onClick={() => onAutorizar(c)}
                         disabled={busy}
                       >
@@ -301,11 +301,11 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
   };
 
   const roleBadge = (role: AppRole | null) => {
-    if (role === 'super_admin') return { cls: 'bg-purple-100 text-purple-800', icon: <Shield className="h-4 w-4" />, label: 'admin mestre' };
-    if (role === 'admin') return { cls: 'bg-red-100 text-red-800', icon: <Shield className="h-4 w-4" />, label: 'admin' };
-    if (role === 'operador') return { cls: 'bg-blue-100 text-blue-800', icon: <UserCog className="h-4 w-4" />, label: 'cobrador' };
-    if (role === 'vendedor') return { cls: 'bg-teal-100 text-teal-800', icon: <Store className="h-4 w-4" />, label: 'vendedor' };
-    return { cls: 'bg-gray-100 text-gray-800', icon: <User className="h-4 w-4" />, label: 'sem papel' };
+    if (role === 'super_admin') return { cls: 'bg-purple-100 text-purple-800', icon: <Shield className="h-3 w-3" />, label: 'admin mestre' };
+    if (role === 'admin') return { cls: 'bg-red-100 text-red-800', icon: <Shield className="h-3 w-3" />, label: 'admin' };
+    if (role === 'operador') return { cls: 'bg-blue-100 text-blue-800', icon: <UserCog className="h-3 w-3" />, label: 'cobrador' };
+    if (role === 'vendedor') return { cls: 'bg-teal-100 text-teal-800', icon: <Store className="h-3 w-3" />, label: 'vendedor' };
+    return { cls: 'bg-gray-100 text-gray-800', icon: <User className="h-3 w-3" />, label: 'sem papel' };
   };
 
   const formatDate = (date: string) => new Date(date).toLocaleDateString('pt-BR');
@@ -422,7 +422,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
                       <TableCell className="font-semibold text-sm text-foreground">{u.nome}</TableCell>
                       <TableCell className="text-xs font-medium text-muted-foreground">{u.email}</TableCell>
                       <TableCell>
-                        <Badge className={`${b.cls} rounded-lg border-none font-medium text-xs py-1`}>
+                        <Badge className={`${b.cls} gap-1`}>
                           <div className="flex items-center gap-1.5">
                             {b.icon}
                             <span>{b.label}</span>

@@ -1,19 +1,5 @@
 import { memo } from 'react';
-import {
-  Home,
-  FileText,
-  Handshake,
-  Megaphone,
-  BarChart3,
-  Upload,
-  UserCheck,
-  Users,
-  Shuffle,
-  ListChecks,
-  Settings,
-  Sparkles,
-  type LucideIcon,
-} from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { useUserRole } from "@/hooks/useUserRole";
 import {
@@ -30,56 +16,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-/**
- * Navegação agrupada por finalidade.
- *
- * Eram 11 itens numa lista plana: "Importar CSV", usado uma vez por mês, tinha
- * o mesmo peso visual que "Clientes". Os grupos separam o trabalho do dia da
- * análise e da administração.
- */
-
-interface MenuItem {
-  title: string;
-  url: string;
-  icon: LucideIcon;
-  /** Só admin vê. */
-  admin?: boolean;
-}
-
-interface MenuGrupo {
-  label: string;
-  itens: MenuItem[];
-}
-
-const GRUPOS: MenuGrupo[] = [
-  {
-    label: 'Operação',
-    itens: [
-      { title: "Minha fila", url: "/fila", icon: ListChecks },
-      { title: "Clientes", url: "/clientes", icon: UserCheck },
-      { title: "Títulos", url: "/titulos", icon: FileText },
-      { title: "Acordos", url: "/acordos", icon: Handshake },
-      { title: "Campanhas", url: "/campanhas", icon: Megaphone },
-    ],
-  },
-  {
-    label: 'Análise',
-    itens: [
-      { title: "Resumo executivo", url: "/", icon: Home },
-      { title: "Relatórios", url: "/relatorios", icon: BarChart3 },
-    ],
-  },
-  {
-    label: 'Gestão',
-    itens: [
-      { title: "Equipe", url: "/equipe", icon: Users, admin: true },
-      { title: "Atribuição", url: "/atribuicao", icon: Shuffle, admin: true },
-      { title: "Importar CSV", url: "/importar", icon: Upload, admin: true },
-      { title: "Configurações", url: "/configuracoes", icon: Settings, admin: true },
-    ],
-  },
-];
+import { GRUPOS_MENU as GRUPOS, type MenuGrupo, type MenuItem } from "@/constants/navegacao";
 
 // Vendedor (read-only) só precisa da própria carteira de clientes —
 // o restante do menu de cobrança não se aplica a ele.

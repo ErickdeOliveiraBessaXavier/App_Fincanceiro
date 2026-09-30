@@ -249,7 +249,7 @@ function ValorRecebido({ parcela }: { parcela: ParcelaAcordoRow }) {
     <div>
       <div className="font-medium">{formatCurrency(parcela.total_pago)}</div>
       {parcela.encargos > 0 && (
-        <div className="text-[11px] text-amber-600">
+        <div className="text-[11px] text-warning-strong">
           inclui {formatCurrency(parcela.encargos)} de encargo
         </div>
       )}

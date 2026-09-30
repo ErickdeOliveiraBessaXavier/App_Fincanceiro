@@ -32,9 +32,17 @@
     --muted: 240 10% 94%;
     --muted-foreground: 240 5% 46%;
 
-    /* Accent - Warm Orange */
-    --accent: 25 95% 53%;
-    --accent-foreground: 0 0% 100%;
+    /* Accent - realce de interação (hover/foco de menu, select, calendário).
+       Os componentes do shadcn usam --accent para isso; quando ele era o
+       laranja da marca, todo item destacado virava laranja sólido — e laranja,
+       num app de cobrança, lê como alerta. Fica um lilás da própria marca. */
+    --accent: 262 60% 96%;
+    --accent-foreground: 262 60% 45%;
+
+    /* Destaque - o laranja da marca, agora com nome próprio e uso deliberado
+       (marca, login, conquista). Nunca para status: atenção é --warning. */
+    --destaque: 25 95% 53%;
+    --destaque-foreground: 0 0% 100%;
 
     /* Status colors */
     --destructive: 0 84% 60%;
@@ -43,6 +51,9 @@
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
+    /* Texto de atenção sobre fundo claro: o --warning puro não tem contraste
+       para leitura (≈2:1 no branco). Mesmo tom do amber-700 que as telas usavam. */
+    --warning-strong: 26 90% 37%;
 
     /* Borders and inputs */
     --border: 240 10% 90%;
@@ -89,8 +100,11 @@
     --muted: 240 10% 18%;
     --muted-foreground: 240 5% 60%;
 
-    --accent: 25 95% 58%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 262 30% 20%;
+    --accent-foreground: 262 30% 85%;
+
+    --destaque: 25 95% 58%;
+    --destaque-foreground: 0 0% 100%;
 
     --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;

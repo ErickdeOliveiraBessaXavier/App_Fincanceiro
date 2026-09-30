@@ -47,10 +47,10 @@ interface MetricaEmpresa {
 }
 
 const statusBadge: Record<string, string> = {
-  pendente: 'bg-amber-100 text-amber-800',
-  ativa: 'bg-green-100 text-green-800',
-  suspensa: 'bg-red-100 text-red-800',
-  cancelada: 'bg-gray-200 text-gray-700',
+  pendente: 'bg-warning/15 text-warning-strong',
+  ativa: 'bg-success/10 text-success',
+  suspensa: 'bg-destructive/10 text-destructive',
+  cancelada: 'bg-muted text-muted-foreground',
 };
 
 const fmtDate = (d: string) => new Date(d).toLocaleDateString('pt-BR');
@@ -253,10 +253,10 @@ function CadastrosIncompletosCard({ cadastros, onExcluir }: CadastrosIncompletos
     : `${cadastros.length} cadastros incompletos`;
 
   return (
-    <Card className="border-amber-300/60">
+    <Card className="border border-warning/40">
       <CardHeader className="pb-3">
         <div className="flex items-center gap-2">
-          <UserX className="h-4 w-4 text-amber-600" />
+          <UserX className="h-4 w-4 text-warning-strong" />
           <CardTitle className="text-sm font-medium">{titulo}</CardTitle>
         </div>
         <p className="text-xs text-muted-foreground">
@@ -475,7 +475,7 @@ export default function Plataforma() {
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Pendentes</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-semibold text-amber-600">{count('pendente')}</div></CardContent>
+            <CardContent><div className="text-2xl font-semibold text-warning-strong">{count('pendente')}</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ativas</CardTitle></CardHeader>

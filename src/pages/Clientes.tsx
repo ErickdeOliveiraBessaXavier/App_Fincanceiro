@@ -739,7 +739,7 @@ export default function Clientes() {
           { rotulo: 'Total', valor: statusCounts.total, icone: User },
           { rotulo: 'Ativos', valor: statusCounts.ativo, icone: CheckCircle, cor: 'text-success' },
           { rotulo: 'Inadimplentes', valor: statusCounts.inadimplente, icone: AlertTriangle, cor: 'text-destructive' },
-          { rotulo: 'Em acordo', valor: statusCounts.em_acordo, icone: FileText, cor: 'text-blue-600' },
+          { rotulo: 'Em acordo', valor: statusCounts.em_acordo, icone: FileText, cor: 'text-primary' },
           { rotulo: 'Quitados', valor: statusCounts.quitado, icone: CheckCircle },
         ]}
       />

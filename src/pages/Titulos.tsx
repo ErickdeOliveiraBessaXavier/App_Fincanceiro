@@ -180,7 +180,7 @@ function ParcelaRow({ parcela, isOperador, isAdmin, onPagamento, onEncargo, onDe
           <span className="text-xs text-muted-foreground font-mono">
             {FormatUtils.shortId(parcela.id)}
           </span>
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="outline">
             Venc: {FormatUtils.date(parcela.vencimento)}
           </Badge>
         </div>
@@ -347,7 +347,7 @@ function TituloRow({ titulo, actions }: { titulo: TituloConsolidado; actions: Ti
   const parcelas = actions.parcelasTitulo.filter(p => p.titulo_id === titulo.id);
   return (
     <React.Fragment>
-      <TableRow className="hover:bg-accent/50">
+      <TableRow>
         <TableCell className="pl-8">
           {v.temMultiplas && (
             <Button
@@ -480,7 +480,7 @@ function ClienteRow({ cliente, expanded, onToggleCliente, onOpenFicha, onWhatsAp
           </div>
         </TableCell>
         <TableCell className="hidden lg:table-cell">
-          <Badge variant="outline">{cliente.qtdTitulos} título(s)</Badge>
+          <Badge variant="secondary">{cliente.qtdTitulos} título(s)</Badge>
         </TableCell>
         <TableCell>
           <StatusBadge domain="cliente" status={cliente.situacao} />
@@ -634,7 +634,7 @@ function PagamentoAcao({ estornado, podeEstornar, onIniciarEstorno }: {
   podeEstornar: boolean;
   onIniciarEstorno: () => void;
 }) {
-  if (estornado) return <Badge variant="outline" className="text-xs">Estornado</Badge>;
+  if (estornado) return <Badge variant="outline">Estornado</Badge>;
   if (podeEstornar) {
     return (
       <Button variant="ghost" size="sm" className="h-8" onClick={onIniciarEstorno}>

@@ -610,20 +610,39 @@ export const ROTULO_CLASSE: Record<ClasseTitulo, string> = {
 };
 
 /**
+ * Ordem fixa de exibição: primeiro o que ainda é dívida, do mais urgente ao
+ * mais tranquilo; depois o resolvido. Fixa (e não por quantidade) para que
+ * posição e cor de cada situação não mudem quando os números mudam.
+ */
+export const ORDEM_CLASSE: ClasseTitulo[] = [
+  'vencido', 'acordo_quebrado', 'em_acordo', 'a_vencer', 'pago', 'acordo_cumprido',
+];
+
+export interface FatiaSituacao {
+  classe: ClasseTitulo;
+  name: string;
+  value: number;
+}
+
+/**
  * Distribuição dos títulos pela classificação única. Substitui a contagem por
  * `titulo.status` crua, que juntava num só "Pago" a dívida realmente quitada e
  * a que só está zerada por causa da novação.
+ *
+ * Traz todas as classes, inclusive as zeradas, na ORDEM_CLASSE.
  */
-export function distribuicaoPorClasse(titulos: TituloMetrica[]): Array<{ name: string; value: number }> {
+export function distribuicaoPorClasse(titulos: TituloMetrica[]): FatiaSituacao[] {
   const porClasse = new Map<ClasseTitulo, number>();
   titulos.forEach((t) => {
     const classe = classificarTitulo(t);
     porClasse.set(classe, (porClasse.get(classe) ?? 0) + 1);
   });
 
-  return Array.from(porClasse.entries())
-    .map(([classe, value]) => ({ name: ROTULO_CLASSE[classe], value }))
-    .sort((a, b) => b.value - a.value);
+  return ORDEM_CLASSE.map((classe) => ({
+    classe,
+    name: ROTULO_CLASSE[classe],
+    value: porClasse.get(classe) ?? 0,
+  }));
 }
 
 export interface Comparativos {

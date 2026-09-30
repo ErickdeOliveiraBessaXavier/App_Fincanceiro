@@ -19,7 +19,8 @@ export type BadgeVariant =
   | 'outline'
   | 'success'
   | 'warning'
-  | 'accent';
+  | 'destaque'
+  | 'primaria';
 
 export type StatusDomain =
   | 'titulo'
@@ -46,7 +47,7 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     vencido: { label: 'Vencido', variant: 'destructive' },
     // Unificado com o domínio "cliente" (era "Renegociado"): o mesmo fato —
     // existe acordo ativo — agora tem um único rótulo em todo o app.
-    renegociado: { label: 'Em Acordo', variant: 'accent' },
+    renegociado: { label: 'Em Acordo', variant: 'primaria' },
     pendente: { label: 'A Vencer', variant: 'warning' }, // legado
   },
   // Situação do título que está vinculado a um acordo (acordos.status).
@@ -56,7 +57,9 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
   // indistinguível de uma dívida realmente quitada em dinheiro. Enquanto houver
   // acordo não cancelado, quem manda no rótulo do título é o estado do ACORDO.
   titulo_acordo: {
-    ativo: { label: 'Em Acordo', variant: 'accent' },
+    // Violeta, não laranja: acordo em dia é dívida sendo tratada, não alerta.
+    // Mesma cor de "Em acordo" no gráfico de situação dos Relatórios.
+    ativo: { label: 'Em Acordo', variant: 'primaria' },
     cumprido: { label: 'Acordo Cumprido', variant: 'success' },
     quebrado: { label: 'Acordo Quebrado', variant: 'destructive' },
     // 'cancelado' não entra: o cancelamento estorna a liquidação e o título
@@ -79,14 +82,14 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
   cliente: {
     ativo: { label: 'Ativo', variant: 'success' },
     inadimplente: { label: 'Inadimplente', variant: 'destructive' },
-    em_acordo: { label: 'Em Acordo', variant: 'accent' },
+    em_acordo: { label: 'Em Acordo', variant: 'primaria' },
     // Verde (como o Título "Pago"): "dívida resolvida" tem a mesma cor em todo
     // o app — antes era cinza (secondary), quebrando a âncora visual.
     quitado: { label: 'Quitado', variant: 'success' },
   },
   // Status do acordo (acordos.status)
   acordo: {
-    ativo: { label: 'Ativo', variant: 'accent' },
+    ativo: { label: 'Ativo', variant: 'primaria' },
     cumprido: { label: 'Cumprido', variant: 'success' },
     quebrado: { label: 'Quebrado', variant: 'destructive' },
     cancelado: { label: 'Cancelado', variant: 'secondary' },
@@ -111,19 +114,19 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     agendamento_pagamento: { label: 'Promessa de Pagamento', variant: 'success' },
     // Cliente afirma que já pagou (pendente de verificação) — accent (info) para
     // distinguir do verde da "Promessa", que é um compromisso futuro.
-    alega_pagamento: { label: 'Alega Pagamento', variant: 'accent' },
+    alega_pagamento: { label: 'Alega Pagamento', variant: 'destaque' },
     sem_previsao_pagamento: { label: 'Sem Previsão de Pagamento', variant: 'warning' },
     recado: { label: 'Recado', variant: 'secondary' },
     nao_atende: { label: 'Não Atende', variant: 'secondary' },
     sem_contato_incorreto: { label: 'Contato inexistente/inválido', variant: 'destructive' },
-    devolucao: { label: 'Devolução', variant: 'accent' },
+    devolucao: { label: 'Devolução', variant: 'destaque' },
   },
   // Status da campanha (campanhas.status)
   campanha: {
     ativa: { label: 'Ativa', variant: 'success' },
     pausada: { label: 'Pausada', variant: 'warning' },
     finalizada: { label: 'Finalizada', variant: 'secondary' },
-    rascunho: { label: 'Rascunho', variant: 'accent' },
+    rascunho: { label: 'Rascunho', variant: 'destaque' },
   },
 };
 

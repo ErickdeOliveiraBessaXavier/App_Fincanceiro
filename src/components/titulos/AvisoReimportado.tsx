@@ -19,7 +19,7 @@ export function AvisoReimportado({ numeroDocumento }: { numeroDocumento?: string
       {/* span: o Badge não repassa ref, e o gatilho da dica precisa dela. */}
       <TooltipTrigger asChild>
         <span tabIndex={0} className="inline-flex">
-          <Badge variant="outline" className="gap-1 text-xs font-normal cursor-help">
+          <Badge variant="outline" className="gap-1 cursor-help">
             <History className="h-3 w-3" />
             Reimportado
           </Badge>

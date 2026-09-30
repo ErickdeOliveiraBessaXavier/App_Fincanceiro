@@ -50,7 +50,7 @@ function LinhaDesconto({ desconto }: { desconto: DescontoConcedido }) {
         {desconto.descricao ?? '—'}
       </TableCell>
       <TableCell>
-        {desconto.estornado && <Badge variant="outline" className="text-[10px]">Estornado</Badge>}
+        {desconto.estornado && <Badge variant="outline">Estornado</Badge>}
       </TableCell>
     </TableRow>
   );
@@ -70,13 +70,13 @@ export function DescontosConcedidos({ descontos }: { descontos: DescontoConcedid
             rotulo: 'Acima do teto',
             valor: resumo.excecoes,
             icone: AlertTriangle,
-            cor: resumo.excecoes > 0 ? 'text-amber-600' : undefined,
+            cor: resumo.excecoes > 0 ? 'text-warning-strong' : undefined,
           },
           {
             rotulo: 'Valor das exceções',
             valor: formatCurrency(resumo.valorExcecoes),
             icone: AlertTriangle,
-            cor: resumo.excecoes > 0 ? 'text-amber-600' : undefined,
+            cor: resumo.excecoes > 0 ? 'text-warning-strong' : undefined,
           },
         ]}
       />

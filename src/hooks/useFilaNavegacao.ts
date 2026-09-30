@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { rotuloDaRota } from '@/constants/navegacao';
 
 /**
  * Navegação entre clientes sem voltar para a lista.
@@ -30,6 +31,11 @@ export interface FilaNavegacao {
   irParaProximo: () => void;
   /** Rota de origem (lista) para o breadcrumb e o botão voltar. */
   voltarPara: string;
+  /**
+   * Nome da tela de origem ("Relatórios", "Minha fila"...), para o breadcrumb
+   * dizer para onde o link leva. Sem origem conhecida, "Clientes".
+   */
+  voltarRotulo: string;
 }
 
 /** Monta o state a ser passado ao navegar para a ficha, preservando a fila. */
@@ -66,6 +72,7 @@ export function useFilaNavegacao(clienteId?: string): FilaNavegacao {
 
   const fila = useMemo(() => estado?.fila ?? [], [estado]);
   const voltarPara = estado?.from ?? '/clientes';
+  const voltarRotulo = rotuloDaRota(voltarPara) ?? 'Clientes';
   const indice = clienteId ? fila.indexOf(clienteId) : -1;
 
   const irPara = useCallback(
@@ -86,5 +93,6 @@ export function useFilaNavegacao(clienteId?: string): FilaNavegacao {
     irParaAnterior: () => irPara(indice - 1),
     irParaProximo: () => irPara(indice + 1),
     voltarPara,
+    voltarRotulo,
   };
 }

@@ -33,6 +33,7 @@ import { MEIOS_PAGAMENTO } from '@/constants/meiosPagamento';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useConfiguracaoEmpresa, tetoDescontoEmReais } from '@/lib/queries/configuracoes';
+import { Aviso } from '@/components/Aviso';
 
 /**
  * Baixa e estorno de uma parcela de acordo.
@@ -149,15 +150,15 @@ function DiferencaParaMenos({
               <Label htmlFor="quitar-desconto" className="text-sm font-normal leading-snug cursor-pointer">
                 Quitar a parcela com <strong>desconto de {formatCurrency(faltante)}</strong> por
                 antecipação
-                {excedeTeto && <span className="text-amber-700 dark:text-amber-300"> (acima do teto)</span>}
+                {excedeTeto && <span className="text-warning-strong"> (acima do teto)</span>}
               </Label>
             </div>
             {quitarComDesconto && excedeTeto && (
-              <p className="rounded-md border border-amber-300 bg-amber-50 p-2 text-xs text-amber-800 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200">
+              <Aviso as="p" className="p-2">
                 Acima do teto de {formatCurrency(teto)} nesta parcela. Será registrado como
                 <strong> exceção</strong>, com o seu nome e o motivo, e aparecerá em
                 Relatórios › Descontos.
-              </p>
+              </Aviso>
             )}
             {quitarComDesconto && (
               <div className="space-y-2">
@@ -291,7 +292,7 @@ function LinhaLancamento({ evento, selecionado, onSelecionar }: {
         <div className="text-xs text-muted-foreground">{formatData(evento.data_evento)}</div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        {evento.estornado && <Badge variant="outline" className="text-[10px]">Estornado</Badge>}
+        {evento.estornado && <Badge variant="outline">Estornado</Badge>}
         <span className="font-medium tabular-nums">{formatCurrency(evento.valor)}</span>
       </div>
     </button>

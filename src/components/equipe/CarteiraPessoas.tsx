@@ -88,12 +88,12 @@ function LinhaPessoa({ pessoa, isAdmin, gerando, onGerarLink, onEdit, onDelete, 
       <TableCell>
         {pessoa.carteira > 0 ? (
           <button type="button" onClick={() => onVerCarteira(pessoa)} title="Ver clientes desta carteira">
-            <Badge variant="secondary" className="rounded-lg font-medium text-xs cursor-pointer hover:bg-primary/10 transition-colors">
+            <Badge variant="secondary" className="cursor-pointer hover:bg-primary/10">
               {pessoa.carteira} clientes
             </Badge>
           </button>
         ) : (
-          <Badge variant="outline" className="rounded-lg font-medium text-xs text-muted-foreground">
+          <Badge variant="outline" className="text-muted-foreground">
             0 clientes
           </Badge>
         )}

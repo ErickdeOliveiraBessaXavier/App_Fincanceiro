@@ -252,7 +252,7 @@ function TituloGrupoCard({ grupo, isExpanded, onToggle, onAcordo, onPagar }: Tit
                 Título {grupo.numeroDocumento ? `#${grupo.numeroDocumento}` : 'avulso'}
               </span>
               <AvisoReimportado numeroDocumento={grupo.numeroDocumento} />
-              <Badge variant={situacao.variant} className="text-xs">
+              <Badge variant={situacao.variant}>
                 {grupo.temVencido && <AlertTriangle className="h-3 w-3 mr-1" />}
                 {situacao.label}
               </Badge>

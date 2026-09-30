@@ -139,7 +139,7 @@ function DividaCard({ divida, isSelected, isExpanded, onToggleSelect, onToggleEx
               <span className="text-sm font-semibold">
                 Título {divida.numero_documento ? `#${divida.numero_documento}` : 'avulso'}
               </span>
-              <Badge variant={situacao.variant} className="text-xs">
+              <Badge variant={situacao.variant}>
                 {divida.tem_vencido && <AlertTriangle className="h-3 w-3 mr-1" />}
                 {situacao.label}
               </Badge>

@@ -176,7 +176,7 @@ function LinhaCliente({ cliente, atrasado, divida, onAbrir }: {
         {cliente.retorno_status_cobranca && (
           <StatusBadge domain="status_cobranca" status={cliente.retorno_status_cobranca} />
         )}
-        <Badge variant={atrasado ? 'destructive' : 'secondary'} className="text-[11px]">
+        <Badge variant={atrasado ? 'destructive' : 'secondary'}>
           {formatData(soData(cliente.proximo_retorno) ?? '')}
         </Badge>
         {/* Zerado aqui só acontece quando a dívida não pôde ser lida — quem
@@ -300,11 +300,11 @@ function LinhaEmAtraso({ item, onAbrir }: { item: EmAtraso; onAbrir: (c: Cliente
 
       <div className="flex flex-wrap items-center gap-2">
         {retorno ? (
-          <Badge variant="secondary" className="text-[11px]">
+          <Badge variant="secondary">
             Retorno {formatData(retorno)}
           </Badge>
         ) : (
-          <Badge variant="warning" className="text-[11px]">Sem retorno</Badge>
+          <Badge variant="warning">Sem retorno</Badge>
         )}
         <span className="w-28 text-right">
           <span className="block text-sm font-semibold text-destructive">
@@ -437,7 +437,7 @@ function QuitadosDaFila({ clientes, onAbrir }: {
               </button>
               <div className="flex items-center gap-2">
                 <Badge variant="success">Quitado</Badge>
-                <Badge variant="secondary" className="text-[11px]">
+                <Badge variant="secondary">
                   {formatData(soData(cliente.proximo_retorno) ?? '')}
                 </Badge>
               </div>

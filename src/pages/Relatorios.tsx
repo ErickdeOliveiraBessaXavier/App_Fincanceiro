@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Download, TrendingUp, TrendingDown, DollarSign, FileText, FileSpreadsheet, FileIcon, Wallet } from 'lucide-react';
@@ -8,10 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DatePickerWithRange } from '@/components/ui/date-picker';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
-import { COR_GRAFICO, CORES_SERIES, CURSOR_BARRA, TOOLTIP_GRAFICO, pontoDaLinha } from '@/lib/graficos';
-import { formatCpfCnpj, formatData } from '@/utils/format';
+import { COR_GRAFICO, CURSOR_BARRA, TOOLTIP_GRAFICO, pontoDaLinha } from '@/lib/graficos';
+import { SituacaoTitulos } from '@/components/relatorios/SituacaoTitulos';
+import { formatCpfCnpj, formatData, isoDeData, parseDataLocal } from '@/utils/format';
+import { useSearchParams } from 'react-router-dom';
+import { PARAM_PAGINA } from '@/hooks/usePagination';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { useBaseMetricas } from '@/lib/queries/metricas';
 import { useDescontosConcedidos, type DescontoConcedido } from '@/lib/queries/descontos';
@@ -54,6 +57,48 @@ import { cn } from '@/lib/utils';
 
 type ExportOptions = Parameters<typeof exportToCSV>[0];
 type TipoRelatorio = 'geral' | 'titulos' | 'acordos' | 'recebimentos' | 'descontos';
+const TIPOS_RELATORIO: TipoRelatorio[] = ['geral', 'titulos', 'acordos', 'recebimentos', 'descontos'];
+
+type Intervalo = { from: Date; to: Date };
+
+/**
+ * Visão e período moram na URL (?visao=&de=&ate=), como os filtros das outras
+ * listagens. Em estado local eles se perdiam ao abrir a ficha de um cliente:
+ * o "voltar" da ficha devolvia /relatorios sem a visão, e "Pagamentos
+ * recebidos" reabria como "Relatório Geral". `replace` para não empilhar uma
+ * entrada de histórico a cada troca.
+ */
+function useFiltroRelatorio() {
+  const [params, setParams] = useSearchParams();
+  const visao = params.get('visao');
+  const de = params.get('de');
+  const ate = params.get('ate');
+
+  const reportType: TipoRelatorio = TIPOS_RELATORIO.includes(visao as TipoRelatorio) ? (visao as TipoRelatorio) : 'geral';
+  const dateRange = useMemo<Intervalo | undefined>(
+    () => (de && ate ? { from: parseDataLocal(de), to: parseDataLocal(ate) } : undefined),
+    [de, ate],
+  );
+
+  const atualizar = (mudar: (p: URLSearchParams) => void) =>
+    setParams((atual) => {
+      const p = new URLSearchParams(atual);
+      mudar(p);
+      p.delete(PARAM_PAGINA); // outro recorte: a página antiga não faz sentido
+      return p;
+    }, { replace: true });
+
+  const setReportType = (tipo: TipoRelatorio) =>
+    atualizar((p) => (tipo === 'geral' ? p.delete('visao') : p.set('visao', tipo)));
+  const setDateRange = (intervalo: Intervalo | undefined) =>
+    atualizar((p) => {
+      if (!intervalo) { p.delete('de'); p.delete('ate'); return; }
+      p.set('de', isoDeData(intervalo.from));
+      p.set('ate', isoDeData(intervalo.to));
+    });
+
+  return { reportType, setReportType, dateRange, setDateRange };
+}
 
 /** O que já foi pago, pronto para a tela e para a exportação. */
 interface Pagamentos {
@@ -70,6 +115,13 @@ function exportarComFormato(format: 'csv' | 'excel' | 'pdf', options: ExportOpti
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+
+/**
+ * Valor de indicador: inteiro, como no Resumo executivo. Centavos num total
+ * agregado são ruído e estouravam o card; o exato fica no hover (title).
+ */
+const formatInteiro = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value);
 
 const ComparisonIndicator = ({ value }: { value: number }) => {
   const isPositive = value >= 0;
@@ -89,9 +141,11 @@ interface IndicadorCardProps {
   comparacao?: number;
   /** Linha curta de escopo, para número cujo recorte não é óbvio. */
   nota?: string;
+  /** Valor completo exibido no hover quando `valor` está arredondado. */
+  valorExato?: string;
 }
 
-const IndicadorCard = ({ titulo, valor, icone: Icone, corIcone, comparacao, nota }: IndicadorCardProps) => (
+const IndicadorCard = ({ titulo, valor, icone: Icone, corIcone, comparacao, nota, valorExato }: IndicadorCardProps) => (
   <Card className="relative overflow-hidden group">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
@@ -101,7 +155,7 @@ const IndicadorCard = ({ titulo, valor, icone: Icone, corIcone, comparacao, nota
       </div>
     </CardHeader>
     <CardContent className="relative z-10">
-      <div className="text-3xl font-semibold tracking-tight">{valor}</div>
+      <div className="text-3xl font-semibold tracking-tight tabular-nums whitespace-nowrap" title={valorExato}>{valor}</div>
       {comparacao !== undefined && (
         <div className="mt-2">
           <ComparisonIndicator value={comparacao} />
@@ -315,56 +369,53 @@ interface CardsProps {
   notaRecebido?: string;
 }
 
+/** Colunas por quantidade de cards na faixa (1 a 3). */
+const COLUNAS: Record<number, string> = {
+  1: '',
+  2: 'sm:grid-cols-2',
+  // Em sm o terceiro ocupa a linha toda, para não sobrar órfão (2+1).
+  3: 'sm:grid-cols-2 lg:grid-cols-3 sm:[&>*:last-child]:col-span-2 lg:[&>*:last-child]:col-span-1',
+};
+
 const CardsIndicadores = ({ dados, mostraTitulos, mostraAcordos, comparacaoVisivel, notaRecebido }: CardsProps) => {
   const { indicadores, comparativos, base, valorAcordado } = dados;
   const comparacao = (valor: number) => (comparacaoVisivel ? valor : undefined);
 
-  // auto-fit em vez de 4 colunas fixas: a faixa fecha certo com 2, 3 ou 5 cards.
+  const dinheiro = (valor: number) => ({ valor: formatInteiro(valor), valorExato: formatCurrency(valor) });
+
+  // Duas faixas, cada uma com exatamente as colunas dos seus cards: valores em
+  // R$ em cima, contagens embaixo. O auto-fit anterior deixava card órfão (4+1,
+  // 3+2) e espremia os valores na largura mínima.
+  const valores = [
+    mostraTitulos && (
+      <IndicadorCard key="valor" titulo="Valor Total" {...dinheiro(indicadores.valorTotal)} icone={DollarSign}
+        corIcone="bg-primary/10 text-primary" comparacao={comparacao(comparativos.valor)} />
+    ),
+    mostraTitulos && (
+      <IndicadorCard key="recebido" titulo="Já Recebido" {...dinheiro(indicadores.valorRecuperado)} icone={Wallet}
+        corIcone="bg-success/10 text-success" nota={notaRecebido} />
+    ),
+    mostraAcordos && (
+      <IndicadorCard key="acordado" titulo="Valor Acordado" {...dinheiro(valorAcordado)} icone={DollarSign}
+        corIcone="bg-success/10 text-success" comparacao={comparacao(comparativos.valorAcordos)} />
+    ),
+  ].filter(Boolean);
+
+  const contagens = [
+    mostraTitulos && (
+      <IndicadorCard key="titulos" titulo="Total de Títulos" valor={String(indicadores.totalTitulos)} icone={FileText}
+        corIcone="bg-primary/10 text-primary" comparacao={comparacao(comparativos.titulos)} />
+    ),
+    mostraAcordos && (
+      <IndicadorCard key="acordos" titulo="Total de Acordos" valor={String(base.acordos.length)} icone={FileText}
+        corIcone="bg-blue-500/10 text-blue-600" comparacao={comparacao(comparativos.acordos)} />
+    ),
+  ].filter(Boolean);
+
   return (
-    <div className="grid gap-6 grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(220px,1fr))]">
-      {mostraTitulos && (
-        <>
-          <IndicadorCard
-            titulo="Total de Títulos"
-            valor={String(indicadores.totalTitulos)}
-            icone={FileText}
-            corIcone="bg-primary/10 text-primary"
-            comparacao={comparacao(comparativos.titulos)}
-          />
-          <IndicadorCard
-            titulo="Valor Total"
-            valor={formatCurrency(indicadores.valorTotal)}
-            icone={DollarSign}
-            corIcone="bg-primary/10 text-primary"
-            comparacao={comparacao(comparativos.valor)}
-          />
-          <IndicadorCard
-            titulo="Já Recebido"
-            valor={formatCurrency(indicadores.valorRecuperado)}
-            icone={Wallet}
-            corIcone="bg-success/10 text-success"
-            nota={notaRecebido}
-          />
-        </>
-      )}
-      {mostraAcordos && (
-        <>
-          <IndicadorCard
-            titulo="Total de Acordos"
-            valor={String(base.acordos.length)}
-            icone={FileText}
-            corIcone="bg-blue-500/10 text-blue-600"
-            comparacao={comparacao(comparativos.acordos)}
-          />
-          <IndicadorCard
-            titulo="Valor Acordado"
-            valor={formatCurrency(valorAcordado)}
-            icone={DollarSign}
-            corIcone="bg-success/10 text-success"
-            comparacao={comparacao(comparativos.valorAcordos)}
-          />
-        </>
-      )}
+    <div className="space-y-6">
+      <div className={cn('grid gap-6 grid-cols-1', COLUNAS[valores.length])}>{valores}</div>
+      <div className={cn('grid gap-6 grid-cols-1', COLUNAS[contagens.length])}>{contagens}</div>
     </div>
   );
 };
@@ -375,25 +426,11 @@ const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
       <CardHeader variant="faixa">
         <CardTitle className="text-lg font-semibold tracking-tight">Títulos por Situação</CardTitle>
         <CardDescription className="text-xs font-medium">
-          Acordo cumprido e quebrado aparecem separados de "Pago"
+          Situação atual de cada título do período: o que ainda é dívida e o que já foi resolvido
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
-        <ResponsiveContainer width="100%" height={320}>
-          <PieChart>
-            <Pie data={dados.distribuicao} cx="50%" cy="50%" innerRadius={60} outerRadius={90} paddingAngle={8} dataKey="value">
-              {dados.distribuicao.map((entry, index) => (
-                <Cell
-                  key={entry.name}
-                  fill={CORES_SERIES[index % CORES_SERIES.length]}
-                  className="stroke-background hover:opacity-80 transition-opacity outline-none"
-                  strokeWidth={4}
-                />
-              ))}
-            </Pie>
-            <Tooltip contentStyle={TOOLTIP_GRAFICO} />
-          </PieChart>
-        </ResponsiveContainer>
+        <SituacaoTitulos distribuicao={dados.distribuicao} />
       </CardContent>
     </Card>
 
@@ -495,8 +532,7 @@ const BlocosDoRelatorio = ({ blocos, dados, pagamentos, descontos }: BlocosProps
 );
 
 export default function Relatorios() {
-  const [reportType, setReportType] = useState<TipoRelatorio>('geral');
-  const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | undefined>();
+  const { reportType, setReportType, dateRange, setDateRange } = useFiltroRelatorio();
   const { data: baseBruta, isLoading, isError } = useBaseMetricas();
 
   const periodo: Periodo | undefined = useMemo(

@@ -31,7 +31,7 @@ function SituacaoBadge({ pronto }: { pronto: boolean }) {
     );
   }
   return (
-    <Badge variant="outline" className="gap-1 border-amber-300 bg-amber-50/60 text-amber-700">
+    <Badge variant="warning" className="gap-1">
       <AlertTriangle className="h-3 w-3" /> Não configurado
     </Badge>
   );

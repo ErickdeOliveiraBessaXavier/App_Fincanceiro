@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import type { ClasseTitulo } from '@/domain/metricas';
 
 /**
  * Aparência compartilhada dos gráficos (recharts).
@@ -23,17 +24,23 @@ export const COR_GRAFICO = {
 } as const;
 
 /**
- * Séries categóricas (pizza por situação). A ordem acompanha a das classes da
- * distribuição; azul, violeta e cinza ainda não têm token próprio.
+ * Cor de cada situação do título. Presa ao ESTADO, nunca à posição no ranking
+ * — a pizza antiga pintava pela ordem de tamanho, e "Pago" podia sair vermelho.
+ *
+ * Pares da mesma família (vencido/quebrado, pago/cumprido) se separam pelo tom
+ * escuro. "Em acordo" é o violeta da marca (dívida sendo tratada); "a vencer"
+ * é azul-céu (informativo, sem urgência). Validada com o validate_palette do
+ * guia de dataviz: passa CVD e o piso de visão normal; o verde fica abaixo de
+ * 3:1 contra o fundo, por isso o rótulo e o número são sempre visíveis.
  */
-export const CORES_SERIES = [
-  COR_GRAFICO.alerta,
-  COR_GRAFICO.sucesso,
-  COR_GRAFICO.perigo,
-  '#3b82f6',
-  '#8b5cf6',
-  '#64748b',
-];
+export const COR_SITUACAO: Record<ClasseTitulo, string> = {
+  vencido: COR_GRAFICO.perigo,
+  acordo_quebrado: '#991b1b',
+  em_acordo: COR_GRAFICO.primaria,
+  a_vencer: '#0284c7',
+  pago: COR_GRAFICO.sucesso,
+  acordo_cumprido: '#15803d',
+};
 
 /** Tooltip com a cara de um cartão: mesmo fundo, raio e sombra do <Card>. */
 export const TOOLTIP_GRAFICO: CSSProperties = {

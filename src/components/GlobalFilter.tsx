@@ -137,7 +137,7 @@ function PresetBar({ presets, filters, onPresetSelect }: {
       {presets.map((preset) => (
         <Button
           key={preset.id}
-          variant={activePresetId === preset.id ? "default" : "outline"}
+          variant={activePresetId === preset.id ? "default" : "secondary"}
           size="sm"
           onClick={() => onPresetSelect?.(preset)}
           className="h-7 text-xs"
@@ -332,7 +332,7 @@ export function GlobalFilter({
                 <Filter className="h-4 w-4" />
                 <span className="font-medium">Filtros</span>
                 {activeFiltersCount > 0 && (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-xs">
+                  <Badge variant="secondary" className="h-5 px-1.5">
                     {activeFiltersCount}
                   </Badge>
                 )}
