@@ -10,8 +10,9 @@ no histórico do git). Item feito sai daqui.
 
 Ordem recomendada, da mais urgente à menos urgente. Os detalhes de cada item estão nas seções abaixo.
 
-1. **Rodada 2 da auditoria** — já tem um item conhecido: o status `vencido` da MV e de
-   `vw_parcelas_acordo_consolidadas` usa `CURRENT_DATE` em UTC (entre 21h e meia-noite, a parcela do dia aparece vencida).
+1. **Corrigir a Rodada 2** — relatório em [`AUDITORIA_RODADA_2.md`](AUDITORIA_RODADA_2.md) (2026-09-30):
+   7 achados, 4 altos (carteira do cobrador, admin por fora do razão, status 'vencido' congelado).
+   Três dúvidas aguardam o gestor (fim de semana/feriado, cobrador ver fora da carteira, papel do usuário criado).
 2. **Pré-lançamento** (seção abaixo): SMTP, confirmação de e-mail, hook, URLs. Billing pode esperar.
 3. **P6 + P9** — aproveitar que os dados ainda são de teste (tirar a coluna agora é barato).
 4. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
@@ -94,4 +95,6 @@ Roteiro em [`Plano_Auditoria.md`](Plano_Auditoria.md).
 - **Rodada 1** (dinheiro/concorrência) feita em 2026-09-29 —
   [`AUDITORIA_RODADA_1.md`](AUDITORIA_RODADA_1.md). Os 18 achados foram
   corrigidos no mesmo dia. Com o item 8 resolvido, o P8 pode ser ligado.
-- Rodadas 2 e 3: pendentes.
+- **Rodada 2** (regra de negócio/estados impossíveis) feita em 2026-09-30 —
+  [`AUDITORIA_RODADA_2.md`](AUDITORIA_RODADA_2.md). Correções pendentes.
+- Rodada 3: truncamento resolvido; volume pendente (seção "Volume").
