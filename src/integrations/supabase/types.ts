@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -94,6 +94,7 @@ export type Database = {
       }
       acordos: {
         Row: {
+          cancelado_em: string | null
           cliente_id: string
           company_id: string
           created_at: string
@@ -104,6 +105,7 @@ export type Database = {
           deleted_at: string | null
           desconto: number
           id: string
+          motivo_cancelamento: string | null
           observacoes: string | null
           parcelas: number
           status: string
@@ -115,6 +117,7 @@ export type Database = {
           valor_parcela: number
         }
         Insert: {
+          cancelado_em?: string | null
           cliente_id: string
           company_id: string
           created_at?: string
@@ -125,6 +128,7 @@ export type Database = {
           deleted_at?: string | null
           desconto?: number
           id?: string
+          motivo_cancelamento?: string | null
           observacoes?: string | null
           parcelas?: number
           status?: string
@@ -136,6 +140,7 @@ export type Database = {
           valor_parcela: number
         }
         Update: {
+          cancelado_em?: string | null
           cliente_id?: string
           company_id?: string
           created_at?: string
@@ -146,6 +151,7 @@ export type Database = {
           deleted_at?: string | null
           desconto?: number
           id?: string
+          motivo_cancelamento?: string | null
           observacoes?: string | null
           parcelas?: number
           status?: string
@@ -1887,6 +1893,7 @@ export type Database = {
           origem: string | null
           recebimento_id: string | null
           titulo_id: string | null
+          titulo_ids: string[] | null
           valor: number | null
         }
         Relationships: [
@@ -1916,6 +1923,7 @@ export type Database = {
           origem: string | null
           recebimento_id: string | null
           titulo_id: string | null
+          titulo_ids: string[] | null
           valor: number | null
         }
         Relationships: [
@@ -2002,6 +2010,33 @@ export type Database = {
       }
     }
     Functions: {
+      _creditar_pagamentos_acordo: {
+        Args: { p_acordo_id: string; p_motivo: string; p_valor: number }
+        Returns: number
+      }
+      _importar_baixa: {
+        Args: {
+          p_actor: string
+          p_company: string
+          p_doc: string
+          p_numero: number
+          p_origem: string
+          p_titulo_id: string
+        }
+        Returns: string
+      }
+      _importar_parcela: {
+        Args: {
+          p_company: string
+          p_doc: string
+          p_numero: number
+          p_titulo_id: string
+          p_travado: boolean
+          p_valor: number
+          p_vencimento: string
+        }
+        Returns: boolean
+      }
       _importar_titulo_completo: {
         Args: {
           p_actor: string
@@ -2020,6 +2055,21 @@ export type Database = {
         }
         Returns: Json
       }
+      _saldo_parcela_titulo: { Args: { p_parcela_id: string }; Returns: number }
+      _saldo_titulo: { Args: { p_titulo_id: string }; Returns: number }
+      _titulo_em_acordo_vigente: {
+        Args: { p_titulo_id: string }
+        Returns: boolean
+      }
+      _titulo_tem_historico: { Args: { p_titulo_id: string }; Returns: boolean }
+      _travar_parcela_titulo: {
+        Args: { p_parcela_id: string }
+        Returns: string
+      }
+      _validar_cronograma: {
+        Args: { p_cronograma: Json; p_parcelas: number; p_valor_acordo: number }
+        Returns: undefined
+      }
       agendar_retorno: {
         Args: {
           p_acordo_id?: string
@@ -2033,9 +2083,7 @@ export type Database = {
       }
       aplicar_encargo_parcela: {
         Args: {
-          p_created_by?: string
           p_descricao?: string
-          p_motivo?: string
           p_parcela_id: string
           p_tipo: string
           p_valor: number
@@ -2067,7 +2115,10 @@ export type Database = {
           user_id: string
         }[]
       }
-      cancelar_acordo: { Args: { p_acordo_id: string }; Returns: Json }
+      cancelar_acordo: {
+        Args: { p_acordo_id: string; p_motivo: string }
+        Returns: Json
+      }
       cancelar_titulo: {
         Args: { p_motivo?: string; p_titulo_id: string }
         Returns: Json
@@ -2085,9 +2136,8 @@ export type Database = {
       company_id_do_usuario: { Args: never; Returns: string }
       conceder_desconto_parcela: {
         Args: {
-          p_created_by?: string
           p_descricao?: string
-          p_motivo?: string
+          p_motivo: string
           p_parcela_id: string
           p_valor: number
         }
@@ -2159,20 +2209,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      importar_titulo: {
-        Args: {
-          p_cliente_nome: string
-          p_cobrador?: string
-          p_company_id: string
-          p_contato?: string
-          p_cpf_cnpj: string
-          p_descricao?: string
-          p_valor: number
-          p_vencimento: string
-          p_vendedor?: string
-        }
-        Returns: Json
-      }
+      hoje_br: { Args: never; Returns: string }
       importar_titulo_completo: {
         Args: {
           p_cidade?: string
@@ -2231,7 +2268,7 @@ export type Database = {
       refresh_mv_parcelas: { Args: never; Returns: undefined }
       registrar_pagamento_parcela: {
         Args: {
-          p_created_by?: string
+          p_data_pagamento?: string
           p_descricao?: string
           p_meio_pagamento: string
           p_parcela_id: string
@@ -2288,12 +2325,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2317,11 +2354,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2342,11 +2379,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2367,11 +2404,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -2384,11 +2421,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }

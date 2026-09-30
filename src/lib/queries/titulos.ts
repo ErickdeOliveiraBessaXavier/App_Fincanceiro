@@ -22,8 +22,19 @@ export interface PagamentoEvento {
   meio_pagamento: string | null;
   descricao: string | null;
   created_at: string | null;
+  /** Data em que o dinheiro entrou (pode ser anterior ao registro). */
+  data_evento: string | null;
   estornado: boolean | null;
 }
+
+/**
+ * Lançamentos que o admin pode estornar numa parcela de título. Desconto e
+ * encargo entram junto: antes só pagamento aparecia, e um desconto lançado
+ * errado não tinha como ser desfeito pela tela (no acordo sempre teve).
+ */
+export const TIPOS_ESTORNAVEIS_TITULO = [
+  'pagamento_total', 'pagamento_parcial', 'desconto_concedido', 'juros_aplicado', 'multa_aplicada',
+] as const;
 
 // ============== Queries ==============
 
@@ -95,9 +106,9 @@ export function usePagamentosByParcelas(parcelaIds: string[], enabled = true) {
       if (!parcelaIds.length) return [];
       const { data, error } = await supabase
         .from('movimentos_financeiros')
-        .select('id, parcela_titulo_id, tipo, valor, meio_pagamento, descricao, created_at, estornado')
+        .select('id, parcela_titulo_id, tipo, valor, meio_pagamento, descricao, created_at, data_evento, estornado')
         .in('parcela_titulo_id', parcelaIds)
-        .in('tipo', ['pagamento_total', 'pagamento_parcial'])
+        .in('tipo', [...TIPOS_ESTORNAVEIS_TITULO])
         .order('created_at', { ascending: false });
 
       if (error) throw error;

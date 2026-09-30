@@ -48,6 +48,12 @@ export interface RecebimentoMetrica {
   data_recebimento: string | null;
   /** Só existe para baixa de parcela de título; parcela de acordo vem nula. */
   meio_pagamento: string | null;
+  /**
+   * Todos os títulos a que o dinheiro se refere: o próprio título, ou todos os
+   * títulos do acordo. `titulo_id` é só o "principal" do acordo — filtrar por
+   * ele tirava do relatório o recebimento de acordo multi-título.
+   */
+  titulo_ids?: string[] | null;
 }
 
 /** Linha de `acordos`. */
@@ -62,11 +68,16 @@ export interface AcordoMetrica {
   cliente_nome: string | null;
 }
 
-/** Linha de `parcelas_acordo` — o saldo vivo de um título renegociado. */
+/**
+ * Linha de `vw_parcelas_acordo_tenant` — o saldo vivo de um título renegociado.
+ * `valor_total` é o PREVISTO no cronograma; o que ainda se deve é `saldo_atual`
+ * (previsto + encargos − pagamentos − descontos, do razão).
+ */
 export interface ParcelaAcordoMetrica {
   id: string;
   acordo_id: string;
   valor_total: number;
+  saldo_atual: number;
   data_vencimento: string;
   status: string;
 }

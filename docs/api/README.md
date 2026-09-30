@@ -29,8 +29,14 @@ sem alteração.
 ## `POST /titulos` — enviar ou atualizar um título
 
 Um título por requisição. O `numero_documento` é o que identifica o título:
-enviar de novo o mesmo número **corrige o título existente em vez de duplicar**.
-Isso torna o reenvio seguro — se a rede cair no meio, basta repetir a chamada.
+enviar de novo o mesmo número **nunca duplica**. Isso torna o reenvio seguro —
+se a rede cair no meio, basta repetir a chamada.
+
+Até o título ter movimentação do nosso lado (pagamento, desconto, encargo ou
+acordo), o reenvio **corrige** valor e vencimento das parcelas. Depois disso, as
+parcelas ficam fixas: reenviar os mesmos valores é aceito sem mudar nada;
+reenviar valores diferentes ou uma parcela nova devolve `422` dizendo qual
+parcela divergiu.
 
 ```bash
 curl -X POST "$BASE/titulos" \
@@ -70,12 +76,21 @@ curl -X POST "$BASE/titulos" \
 **Resposta `200`**
 
 ```json
-{ "sucesso": true, "titulo_id": "…", "cliente_id": "…", "parcelas_processadas": 3 }
+{
+  "sucesso": true, "titulo_id": "…", "cliente_id": "…",
+  "novo": false, "parcelas_processadas": 3, "avisos": []
+}
 ```
 
 O cliente é localizado pelo CPF/CNPJ: se já existir, é reaproveitado; se não,
-é criado. `pago: true` só registra a baixa se ainda não houver pagamento
-naquela parcela, então reenviar não duplica pagamento.
+é criado. `novo` diz se o título foi criado agora ou já existia.
+
+`pago: true` quita o que ainda resta da parcela; reenviar não duplica
+pagamento. A baixa **não** é lançada — e o motivo vem em `avisos` — quando:
+
+- o título está em acordo: o pagamento acontece nas parcelas do acordo;
+- a baixa daquela parcela foi estornada do nosso lado: o estorno prevalece
+  sobre o reenvio.
 
 ---
 
@@ -157,7 +172,7 @@ a `mensagem` é para leitura humana e pode mudar.
 | 401 | `chave_ausente`, `chave_invalida` | Chave não enviada, inválida ou revogada |
 | 404 | `titulo_nao_encontrado`, `rota_desconhecida` | |
 | 405 | `metodo_nao_permitido` | |
-| 422 | `regra_de_negocio` | O corpo está bem formado, mas o conteúdo não passa numa regra (ex.: CPF/CNPJ com quantidade de dígitos inválida) |
+| 422 | `regra_de_negocio` | O corpo está bem formado, mas o conteúdo não passa numa regra (ex.: CPF/CNPJ com quantidade de dígitos inválida, parcela com movimentação reenviada com outro valor, número de título já usado por outro cliente) |
 | 500 | `erro_interno`, `falha_consulta`, `falha_autenticacao` | Falha nossa — pode repetir a chamada |
 
 Em `500`, repetir é seguro: a ingestão é idempotente.

@@ -32,10 +32,47 @@ alterando.
 
 ## Status das correções
 
-| Item | Status |
+Todos os 18 achados foram corrigidos em **2026-09-29**, em três migrations e nas
+telas correspondentes. A Dúvida 1 foi resolvida parcialmente, e a 2 ficou
+decidida (ver abaixo).
+
+| Item | Correção |
 |---|---|
-| 1, 2, 17 | ✅ **Corrigidos em 2026-09-29** — migration `20260929120000_fechar_execute_de_funcoes_internas.sql`. `anon` não executa nenhuma função do `public`; `authenticated` só as 31 da lista (RPCs do app + helpers de RLS); função nova nasce fechada (default privileges). Verificado: advisor `anon_security_definer_function_executable` 35 → 0; chamada a `liquidar_parcelas_titulo` como admin logado → `permission denied`; telas continuam lendo (smoke com usuário simulado). |
-| Demais | Em aberto. |
+| 1, 2, 17 | `20260929120000`: `anon` não executa nenhuma função do `public`; `authenticated` executa só as RPCs do app e os helpers de RLS. Advisor: 35 → 0 (anon). |
+| — | `20260929130000`: fechado o default **global** de funções (o default por schema da migration anterior não tirava o `PUBLIC`: função nova ainda nascia aberta, e a conferência embutida pegou). `20260929140000`: `anon` sem acesso a nenhuma tabela, view ou sequence, e o default também fechado. |
+| 3 | `cancelar_acordo(acordo, motivo)`: só cancela acordo `ativo` ou `quebrado`, com motivo obrigatório. Desfaz a novação com um estorno registrado por liquidação e **credita no título o que foi pago no acordo** (tipo `credito_acordo`, da parcela mais antiga para a mais nova). Os pagamentos continuam em `vw_recebimentos`. Tela: botão só para ativo/quebrado; o diálogo pede motivo e explica o crédito. |
+| 4 | Reenvio pela API/planilha: título com histórico não tem parcela reescrita (divergência → 422 dizendo qual parcela); `pago` quita só o saldo restante, e não lança em título em acordo nem em parcela com baixa estornada. Esses casos voltam em `avisos`. `valor_original` só acompanha as parcelas enquanto o título não tem histórico. |
+| 5 | Nº do título obrigatório no banco e na validação da planilha. A função antiga `importar_titulo`, que não tinha número, foi removida. |
+| 6 | `parseValorPlanilha` em `src/utils/format.ts`, com testes ("1.500" → 1500). |
+| 7, 18 | Toda RPC financeira trava o título (ou o acordo e a parcela) antes de ler o saldo, e lê o saldo direto do razão, não da MV. `criar_acordo` trava os títulos em ordem de id. `estornar_movimento` trava o lançamento. |
+| 8 | Trigger não mexe em acordo cancelado e só grava quando o status muda; baixa e estorno recusam acordo cancelado; `marcar_parcelas_acordo_vencidas` filtra acordos vigentes e usa a data de Brasília. O P8 agora pode ser ligado com segurança. |
+| 9 | Cronograma e título manual: parcelas em centavos, com o resíduo na última; o banco confere que a soma bate com o valor do acordo. |
+| 10 | Métricas leem `vw_parcelas_acordo_tenant` (`saldo_atual` do razão) em vez de `valor_total`. |
+| 11 | `vw_recebimentos.titulo_ids`: o recebimento de acordo liga-se a todos os títulos do acordo; o recorte usa qualquer um deles. |
+| 12 | `hoje_br()` no default de `data_evento` e nas RPCs; a baixa de título aceita a data do pagamento (não pode ser futura). |
+| 13 | `src/constants/meiosPagamento.ts`, fonte única, espelho do CHECK. |
+| 14 | Desconto de título com motivo obrigatório e teto registrado em `metadata` (exceção, não bloqueio, como no acordo). Desconto e encargo recusam título em acordo. O histórico do título lista e estorna desconto e encargo. |
+| 15 | `criar_acordo` valida empresa, cliente, duplicidade, saldo em aberto, a soma do cronograma e se o saldo mudou desde a tela. |
+| 16 | Autoria sempre `auth.uid()`; `p_created_by` removido das RPCs de baixa, desconto e encargo. |
+| — | **Bug achado durante a correção:** o modal de encargo mandava `'juros'`/`'multa'` e a RPC exigia `'juros_aplicado'`/`'multa_aplicada'`: nenhum encargo de título funcionava. Corrigido. |
+
+**Decisões tomadas junto:**
+- **Quebra (Dúvida 2):** o acordo quebrado continua travando o título; para renegociar, cancela-se o quebrado (a dívida volta abatida do que foi pago) e cria-se um acordo novo.
+- **Exclusão (Dúvida 1, parcial):** acordo com pagamento ou outro lançamento financeiro não é mais excluído definitivamente. A exclusão definitiva de **título** com pagamento continua como estava (decisão de 2026-08-03).
+
+**Verificação:** as migrations foram ensaiadas em `BEGIN … ROLLBACK` e depois
+submetidas a 21 cenários com um admin simulado: centavos, baixa parcial, data
+futura, desconto sem motivo, acordo com saldo desatualizado, soma errada,
+novação, baixa em título renegociado, cancelamento com crédito, pagamento e
+estorno em acordo cancelado, trigger após o P8, exclusão com dinheiro, reenvio
+idêntico, reenvio divergente e reenvio após estorno. Tudo passou, sem deixar
+dado gravado. O teste achou um bug na própria correção: um `f() OR v` que o
+planner pode dobrar sem chamar a função; corrigido antes de aplicar. Front:
+`tsc` limpo, 129 testes, build OK.
+
+**Dados antigos não reescritos:** os 4 acordos com diferença de centavos e as 17
+parcelas de acordo com a coluna `status` parada continuam como estavam. São
+histórico de teste gravado antes da correção.
 
 ## Achados
 

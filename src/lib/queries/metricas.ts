@@ -23,7 +23,9 @@ const COLUNAS_TITULO =
 const COLUNAS_PARCELA = 'id, titulo_id, vencimento, valor_nominal, saldo_atual, status';
 const COLUNAS_ACORDO =
   'id, status, valor_acordo, valor_original, data_acordo, created_at, cliente_id, cliente:clientes(nome)';
-const COLUNAS_PARCELA_ACORDO = 'id, acordo_id, valor_total, data_vencimento, status';
+// Da view, não da tabela: o saldo vem do razão e o status 'vencida' é calculado
+// pela data (a coluna da tabela só muda quando alguém sincroniza).
+const COLUNAS_PARCELA_ACORDO = 'id, acordo_id, valor_total, saldo_atual, data_vencimento, status';
 
 /** Propaga o erro da consulta ou devolve as linhas — evita 5 `if` seguidos. */
 function linhasDe<T>(resultado: { data: T[] | null; error: { message: string } | null }): T[] {
@@ -68,7 +70,8 @@ function mapearAcordo(a: AcordoRow): AcordoMetrica {
  *    está fora da carteira do cobrador/vendedor — nada a acrescentar.
  *  * `acordos` NÃO tem esse filtro, então o cancelado é descartado no domínio
  *    (`restringirAoUniverso`), junto com o cruzamento por titulo_id.
- *  * `parcelas_acordo` traz só o que não foi excluído.
+ *  * `vw_parcelas_acordo_tenant` já exclui parcela apagada e traz o saldo do razão.
+ *  * `titulo_ids` do recebimento liga o dinheiro de acordo a TODOS os títulos dele.
  */
 export function useBaseMetricas() {
   return useQuery({
@@ -81,13 +84,10 @@ export function useBaseMetricas() {
           supabase
             .from('vw_recebimentos_tenant')
             .select(
-              'recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento, meio_pagamento',
+              'recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento, meio_pagamento, titulo_ids',
             ),
           supabase.from('acordos').select(COLUNAS_ACORDO),
-          supabase
-            .from('parcelas_acordo')
-            .select(COLUNAS_PARCELA_ACORDO)
-            .is('deleted_at', null),
+          supabase.from('vw_parcelas_acordo_tenant').select(COLUNAS_PARCELA_ACORDO),
         ]);
 
       return {
@@ -156,10 +156,9 @@ export function useBaseMetricasCliente(clienteId: string | null) {
           : Promise.resolve({ data: [], error: null }),
         acordoIds.length
           ? supabase
-              .from('parcelas_acordo')
+              .from('vw_parcelas_acordo_tenant')
               .select(COLUNAS_PARCELA_ACORDO)
               .in('acordo_id', acordoIds)
-              .is('deleted_at', null)
           : Promise.resolve({ data: [], error: null }),
       ]);
 

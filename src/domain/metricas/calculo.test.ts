@@ -91,8 +91,8 @@ describe('restringirAoUniverso', () => {
         { id: 'a2', status: 'cancelado', valor_acordo: 5000, valor_original: 6000, data_acordo: '2026-07-01', created_at: '2026-07-01T00:00:00Z', cliente_id: 'cli-2', cliente_nome: 'Cliente 2' },
       ],
       parcelasAcordo: [
-        { id: 'pa1', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-09-01', status: 'pendente' },
-        { id: 'pa2', acordo_id: 'a2', valor_total: 2500, data_vencimento: '2026-09-01', status: 'pendente' },
+        { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-09-01', status: 'pendente' },
+        { id: 'pa2', acordo_id: 'a2', valor_total: 2500, saldo_atual: 2500, data_vencimento: '2026-09-01', status: 'pendente' },
       ],
     };
 
@@ -146,7 +146,7 @@ describe('aging e top devedores', () => {
       { id: 'a1', status: 'quebrado', valor_acordo: 300, valor_original: 400, data_acordo: '2026-05-01', created_at: '2026-05-01T00:00:00Z', cliente_id: 'cli-1', cliente_nome: 'Ana' },
     ],
     parcelasAcordo: [
-      { id: 'pa1', acordo_id: 'a1', valor_total: 300, data_vencimento: '2026-06-20', status: 'vencida' },
+      { id: 'pa1', acordo_id: 'a1', valor_total: 300, saldo_atual: 300, data_vencimento: '2026-06-20', status: 'vencida' },
     ],
   };
 
@@ -209,7 +209,7 @@ describe('calcularIndicadores', () => {
       { id: 'a1', status: 'quebrado', valor_acordo: 400, valor_original: 400, data_acordo: '2026-05-01', created_at: '2026-05-01T00:00:00Z', cliente_id: 'cli-1', cliente_nome: 'Ana' },
     ],
     parcelasAcordo: [
-      { id: 'pa1', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-06-01', status: 'vencida' },
+      { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-06-01', status: 'vencida' },
     ],
     recebimentos: [
       { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't3', acordo_id: null, valor: 600, data_recebimento: '2026-07-15', meio_pagamento: null },
@@ -271,8 +271,8 @@ describe('situacaoFinanceiraCliente', () => {
         { id: 'a1', status: 'quebrado', valor_acordo: 800, valor_original: 1000, data_acordo: '2026-05-01', created_at: '2026-05-01', cliente_id: 'cli-2', cliente_nome: 'Cliente 2' },
       ],
       parcelasAcordo: [
-        { id: 'pa1', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-06-06', status: 'pendente' },
-        { id: 'pa2', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-10-06', status: 'pendente' },
+        { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-06-06', status: 'pendente' },
+        { id: 'pa2', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-10-06', status: 'pendente' },
       ],
     };
   }
@@ -324,8 +324,8 @@ describe('dividaPorCliente', () => {
       { id: 'a1', status: 'quebrado', valor_acordo: 800, valor_original: 1000, data_acordo: '2026-05-01', created_at: '2026-05-01', cliente_id: 'cli-2', cliente_nome: 'Cliente 2' },
     ],
     parcelasAcordo: [
-      { id: 'pa1', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-06-06', status: 'pendente' },
-      { id: 'pa2', acordo_id: 'a1', valor_total: 400, data_vencimento: '2026-10-06', status: 'pendente' },
+      { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-06-06', status: 'pendente' },
+      { id: 'pa2', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-10-06', status: 'pendente' },
     ],
   };
 
@@ -398,5 +398,62 @@ describe('listarRecebimentos', () => {
       ultimoPagamento: '2026-08-05',
       emAberto: 0,
     });
+  });
+});
+
+describe('acordo medido pelo razão (auditoria, itens 10 e 11)', () => {
+  const acordo = {
+    id: 'a1', status: 'ativo', valor_acordo: 1000, valor_original: 1000, data_acordo: '2026-05-01',
+    created_at: '2026-05-01T00:00:00Z', cliente_id: 'cli-1', cliente_nome: 'Ana',
+  };
+
+  it('parcela paga pela metade conta só o que falta, em aberto e em vencido', () => {
+    const base: BaseMetricas = {
+      ...baseVazia(),
+      titulos: [titulo({ id: 't1', status: 'renegociado', acordo_status: 'ativo' })],
+      acordos: [acordo],
+      parcelasAcordo: [
+        { id: 'pa1', acordo_id: 'a1', valor_total: 1000, saldo_atual: 500, data_vencimento: '2026-07-01', status: 'vencida' },
+      ],
+      recebimentos: [
+        { recebimento_id: 'r1', origem: 'acordo', titulo_id: 't1', acordo_id: 'a1', valor: 500, data_recebimento: '2026-07-01', meio_pagamento: 'pix', titulo_ids: ['t1'] },
+      ],
+    };
+
+    const ind = calcularIndicadores(prepararBase(base), HOJE);
+    expect(ind.valorEmAberto).toBe(500);
+    expect(ind.valorVencido).toBe(500);
+    expect(ind.valorRecuperado).toBe(500);
+    // Antes: 500 / (500 + 1000) = 33%. O pago contava também como "em aberto".
+    expect(ind.taxaRecuperacao).toBe(50);
+  });
+
+  it('recebimento de acordo multi-título entra no período de qualquer um dos títulos', () => {
+    const base: BaseMetricas = {
+      ...baseVazia(),
+      titulos: [titulo({ id: 't1' }), titulo({ id: 't2' })],
+      parcelas: [
+        { id: 'p1', titulo_id: 't1', vencimento: '2026-01-10', valor_nominal: 500, saldo_atual: 0, status: 'pago' },
+        { id: 'p2', titulo_id: 't2', vencimento: '2026-08-10', valor_nominal: 500, saldo_atual: 0, status: 'pago' },
+      ],
+      recebimentos: [
+        // titulo_id é o "principal" (t1), fora do período; t2 está dentro.
+        { recebimento_id: 'r1', origem: 'acordo', titulo_id: 't1', acordo_id: 'a1', valor: 900, data_recebimento: '2026-08-15', meio_pagamento: null, titulo_ids: ['t1', 't2'] },
+      ],
+    };
+
+    const agosto = recortarPorVencimento(restringirAoUniverso(base), { de: '2026-08-01', ate: '2026-08-31' });
+    expect(agosto.recebimentos.map((r) => r.recebimento_id)).toEqual(['r1']);
+  });
+
+  it('recebimento sem titulo_ids (formato antigo) continua usando o titulo_id', () => {
+    const base: BaseMetricas = {
+      ...baseVazia(),
+      titulos: [titulo({ id: 't1' })],
+      recebimentos: [
+        { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 100, data_recebimento: '2026-08-01', meio_pagamento: null },
+      ],
+    };
+    expect(restringirAoUniverso(base).recebimentos).toHaveLength(1);
   });
 });

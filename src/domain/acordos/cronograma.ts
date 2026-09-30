@@ -55,10 +55,29 @@ export function somarMesesAncorado(baseIso: string, meses: number): string {
   return formatarDataIso(alvo);
 }
 
+/** Arredonda para centavos — a precisão com que o banco grava cada parcela. */
+export function emCentavos(valor: number): number {
+  return Math.round((valor + Number.EPSILON) * 100) / 100;
+}
+
+/**
+ * Valor base da parcela N: todas arredondadas a centavos e o resíduo na
+ * última, para a soma fechar exatamente no valor combinado.
+ *
+ * Sem isso, 8.000,10 em 8x virava 8 × 1.000,0125; o banco arredondava cada
+ * uma para 1.000,01 e o cliente pagava 8.000,08 — 2 centavos a menos do que
+ * o acordo dizia.
+ */
+function valorBaseDaParcela(valorAcordo: number, parcelas: number, numero: number): number {
+  const base = emCentavos(valorAcordo / parcelas);
+  if (numero < parcelas) return base;
+  return emCentavos(valorAcordo - base * (parcelas - 1));
+}
+
 /**
  * Monta o cronograma completo. Os juros são simples e progressivos
  * (parcela N paga N vezes a taxa sobre o valor base) — comportamento
- * preservado da implementação anterior.
+ * preservado da implementação anterior. Todo valor sai em centavos.
  */
 export function gerarCronograma(
   { valorAcordo, parcelas, taxaJuros, primeiroVencimento }: ParametrosCronograma,
@@ -66,17 +85,18 @@ export function gerarCronograma(
 ): CronogramaParcela[] {
   if (!valorAcordo || !parcelas || parcelas < 1 || !primeiroVencimento) return [];
 
-  const valorBase = valorAcordo / parcelas;
   const taxa = (taxaJuros || 0) / 100;
+  const baseSemResiduo = emCentavos(valorAcordo / parcelas);
 
   return Array.from({ length: parcelas }, (_, i) => {
     const numero = i + 1;
-    const valorJuros = valorBase * taxa * numero;
+    const valor = valorBaseDaParcela(valorAcordo, parcelas, numero);
+    const valorJuros = emCentavos(baseSemResiduo * taxa * numero);
     return {
       numero,
-      valor: valorBase,
+      valor,
       valor_juros: valorJuros,
-      valor_total: valorBase + valorJuros,
+      valor_total: emCentavos(valor + valorJuros),
       data_vencimento: datasManuais[numero] ?? somarMesesAncorado(primeiroVencimento, i),
       status: 'pendente' as const,
     };
@@ -85,10 +105,11 @@ export function gerarCronograma(
 
 /**
  * Soma das parcelas já com juros. É este total — e não o valor digitado — que
- * o cliente vai pagar e que fica gravado em `acordos.valor_acordo`.
+ * o cliente vai pagar e que fica gravado em `acordos.valor_acordo`. O banco
+ * confere que ele bate com a soma das parcelas.
  */
 export function totalCronograma(cronograma: CronogramaParcela[]): number {
-  return cronograma.reduce((soma, p) => soma + p.valor_total, 0);
+  return emCentavos(cronograma.reduce((soma, p) => soma + p.valor_total, 0));
 }
 
 /** Descarta sobrescritas de parcelas que não existem mais (ex.: 6 -> 3 parcelas). */

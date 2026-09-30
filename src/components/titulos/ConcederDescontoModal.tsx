@@ -38,11 +38,21 @@ export function ConcederDescontoModal({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const valorCalculado = modoValor === 'percentual'
+  // Centavos: o banco grava com 2 casas; percentual gera dízima.
+  const valorCalculado = Math.round((modoValor === 'percentual'
     ? (saldoAtual * (parseFloat(percentual) || 0)) / 100
-    : parseFloat(valor) || 0;
+    : parseFloat(valor) || 0) * 100) / 100;
 
   const handleSubmit = async () => {
+    if (!descricao.trim()) {
+      toast({
+        title: "Informe o motivo",
+        description: "O motivo do desconto fica registrado no histórico da parcela.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (valorCalculado <= 0) {
       toast({
         title: "Erro",
@@ -66,7 +76,7 @@ export function ConcederDescontoModal({
       const { error } = await supabase.rpc('conceder_desconto_parcela', {
         p_parcela_id: parcelaId,
         p_valor: valorCalculado,
-        p_descricao: descricao || 'Desconto concedido'
+        p_motivo: descricao.trim(),
       });
 
       if (error) throw error;
@@ -78,11 +88,11 @@ export function ConcederDescontoModal({
 
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao conceder desconto:', error);
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível conceder o desconto",
+        description: (error as { message?: string })?.message || "Não foi possível conceder o desconto",
         variant: "destructive",
       });
     } finally {
@@ -180,7 +190,7 @@ export function ConcederDescontoModal({
           )}
 
           <div className="space-y-2">
-            <Label>Motivo do Desconto</Label>
+            <Label>Motivo do desconto (obrigatório)</Label>
             <Input
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}

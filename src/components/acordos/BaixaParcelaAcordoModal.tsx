@@ -29,6 +29,7 @@ import {
 } from '@/lib/queries/acordos';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { formatData } from '@/utils/format';
+import { MEIOS_PAGAMENTO } from '@/constants/meiosPagamento';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useConfiguracaoEmpresa, tetoDescontoEmReais } from '@/lib/queries/configuracoes';
@@ -48,15 +49,6 @@ export type ModoBaixa = 'pagar' | 'estornar';
 
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value ?? 0);
-
-const MEIOS_PAGAMENTO = [
-  { value: 'pix', label: 'PIX' },
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'boleto', label: 'Boleto' },
-  { value: 'transferencia', label: 'Transferência' },
-  { value: 'cartao', label: 'Cartão' },
-  { value: 'outro', label: 'Outro' },
-];
 
 const ROTULO_TIPO: Record<EventoParcelaAcordo['tipo'], string> = {
   pagamento_total: 'Pagamento',

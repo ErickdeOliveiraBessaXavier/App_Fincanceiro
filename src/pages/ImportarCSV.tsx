@@ -13,7 +13,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useUserRole } from '@/hooks/useUserRole';
 import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
-import { soDigitos } from '@/utils/format';
+import { soDigitos, parseValorPlanilha } from '@/utils/format';
 import { cn } from '@/lib/utils';
 import { rotuloClasses } from '@/components/Rotulo';
 
@@ -50,6 +50,7 @@ const ALIASES: Record<string, string[]> = {
 
 type ColMap = Partial<Record<keyof typeof ALIASES, number>>;
 type Getter = (row: any[], f: keyof typeof ALIASES) => unknown;
+type TextGetter = (row: any[], f: keyof typeof ALIASES) => string;
 
 function buildColMap(headerRow: any[]): ColMap {
   const map: ColMap = {};
@@ -97,17 +98,6 @@ function toISODate(v: unknown): string | null {
   return dateFromString(String(v).trim());
 }
 
-// Aceita número ou texto "1.250,50" / "1250,50" / "1250.50".
-function toNumber(v: unknown): number | null {
-  if (v === null || v === undefined || v === '') return null;
-  if (typeof v === 'number') return v;
-  let s = String(v).trim().replace(/[^\d.,-]/g, '');
-  if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(',', '.');
-  else if (s.includes(',')) s = s.replace(',', '.');
-  const n = parseFloat(s);
-  return isNaN(n) ? null : n;
-}
-
 const onlyDigits = soDigitos;
 
 interface Parcela {
@@ -152,7 +142,7 @@ function cellGetter(colMap: ColMap): Getter {
 }
 
 // Monta um novo grupo (cabeçalho do título) a partir da primeira linha encontrada.
-function buildGrupo(row: any[], str: Getter, base: { doc: string; cliente: string; cpf: string }): Grupo {
+function buildGrupo(row: any[], str: TextGetter, base: { doc: string; cliente: string; cpf: string }): Grupo {
   return {
     numero_documento: base.doc || null,
     cliente: base.cliente,
@@ -169,7 +159,7 @@ function buildGrupo(row: any[], str: Getter, base: { doc: string; cliente: strin
 
 // Agrupa as linhas de dados em títulos (mesmo Nº TITULO => mesmo grupo).
 function collectGrupos(dataRows: any[][], rowIdx: number, get: Getter) {
-  const str: Getter = (row, f) => String(get(row, f) ?? '').trim();
+  const str: TextGetter = (row, f) => String(get(row, f) ?? '').trim();
   const gruposMap = new Map<string, Grupo>();
   let totalParcelas = 0;
 
@@ -188,13 +178,13 @@ function collectGrupos(dataRows: any[][], rowIdx: number, get: Getter) {
       gruposMap.set(key, g);
     }
 
-    const numRaw = toNumber(get(row, 'numero_parcela'));
+    const numRaw = parseValorPlanilha(get(row, 'numero_parcela'));
     const statusRaw = str(row, 'pago').toLowerCase();
     const isPago = ['pago', 'paga', 'sim', 'yes', 'true', '1', 'liquidado', 'quitado'].includes(statusRaw);
 
     g.parcelas.push({
       numero: numRaw && numRaw > 0 ? Math.round(numRaw) : g.parcelas.length + 1,
-      valor: toNumber(get(row, 'valor')),
+      valor: parseValorPlanilha(get(row, 'valor')),
       vencimento: toISODate(get(row, 'vencimento')),
       pago: isPago,
       linha,
@@ -215,6 +205,8 @@ function validarParcela(p: Parcela): string[] {
 function validarGrupo(g: Grupo): string[] {
   const ref = g.numero_documento ? `Título ${g.numero_documento}` : `Linha ${g.parcelas[0]?.linha}`;
   const errs: string[] = [];
+  // Sem o número, cada reimportação criaria um título novo e a dívida dobraria.
+  if (!g.numero_documento) errs.push(`${ref}: sem Nº do título (coluna numero_documento)`);
   if (g.cpf_cnpj.length !== 11 && g.cpf_cnpj.length !== 14) {
     errs.push(`${ref}: CPF/CNPJ inválido (${g.cpf_cnpj || 'vazio'})`);
   }
@@ -268,10 +260,12 @@ interface ImportResult {
   parcelas: number;
   clientes: number;
   errors: string[];
+  /** O que o banco deixou de fazer de propósito (ex.: baixa estornada não relançada). */
+  avisos: string[];
 }
 
-type RpcResposta = { error?: string; parcelas_inseridas?: number };
-type ImportOutcome = { parcelas: number } | { error: string };
+type RpcResposta = { error?: string; parcelas_processadas?: number; avisos?: string[] };
+type ImportOutcome = { parcelas: number; avisos: string[] } | { error: string };
 
 // Parâmetros da RPC importar_titulo_completo para um grupo.
 function rpcParams(g: Grupo, companyId: string | null) {
@@ -310,7 +304,7 @@ function interpretarResposta(
   if (error || resErro) {
     return { error: `${refDoGrupo(g)}: ${error?.message ?? resErro}` };
   }
-  return { parcelas: res?.parcelas_inseridas ?? g.parcelas.length };
+  return { parcelas: res?.parcelas_processadas ?? g.parcelas.length, avisos: res?.avisos ?? [] };
 }
 
 function erroInesperado(g: Grupo, e: unknown): string {
@@ -463,6 +457,20 @@ function ResultCard({ result }: { result: ImportResult | null }) {
           ))}
         </div>
 
+        {result.avisos.length > 0 && (
+          <Alert className="rounded-xl">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              <p className="text-sm font-semibold mb-2">
+                {result.avisos.length} baixa(s) informada(s) no arquivo não foram lançadas:
+              </p>
+              <ul className="max-h-40 overflow-y-auto text-xs space-y-1">
+                {result.avisos.map((a, i) => <li key={i}>• {a}</li>)}
+              </ul>
+            </AlertDescription>
+          </Alert>
+        )}
+
         {result.errors.length > 0 && (
           <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
             <AlertCircle className="h-4 w-4" />
@@ -568,7 +576,7 @@ export default function ImportarCSV() {
 
     const grupos = parsed!.grupos;
     const companyId = isSuperAdmin ? selectedCompany : null;
-    const result: ImportResult = { titulos: 0, parcelas: 0, clientes: 0, errors: [] };
+    const result: ImportResult = { titulos: 0, parcelas: 0, clientes: 0, errors: [], avisos: [] };
     const clientesVistos = new Set<string>();
 
     for (let i = 0; i < grupos.length; i++) {
@@ -581,6 +589,7 @@ export default function ImportarCSV() {
       }
       result.titulos++;
       result.parcelas += r.parcelas;
+      result.avisos.push(...r.avisos);
       if (!clientesVistos.has(g.cpf_cnpj)) {
         clientesVistos.add(g.cpf_cnpj);
         result.clientes++;
@@ -702,7 +711,7 @@ export default function ImportarCSV() {
                 Colunas obrigatórias
               </h4>
               <div className="grid grid-cols-2 gap-2">
-                {['cliente', 'cpf_cnpj', 'valor', 'vencimento'].map(col => (
+                {['cliente', 'cpf_cnpj', 'valor', 'vencimento', 'numero_documento'].map(col => (
                   <div key={col} className="p-3 bg-background rounded-xl border border-border/50 text-xs font-mono font-bold flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
                     {col}
@@ -717,7 +726,7 @@ export default function ImportarCSV() {
                 Colunas opcionais
               </h4>
               <div className="grid grid-cols-2 gap-2">
-                {['numero_documento', 'parcela', 'vendedor', 'cobrador', 'cidade', 'estado', 'pago'].map(col => (
+                {['parcela', 'vendedor', 'cobrador', 'cidade', 'estado', 'pago'].map(col => (
                   <div key={col} className="p-3 bg-background/50 rounded-xl border border-border/30 text-[10px] font-mono font-medium truncate">
                     {col}
                   </div>
@@ -730,6 +739,8 @@ export default function ImportarCSV() {
                 <AlertCircle className="h-5 w-5 text-primary shrink-0" />
                 <p className="text-xs font-medium text-primary/80 leading-relaxed">
                   Linhas com o mesmo <strong>Nº TITULO</strong> serão agrupadas automaticamente.
+                  Reimportar o mesmo arquivo não duplica nada: o Nº TITULO identifica o título, e
+                  título que já tem pagamento ou acordo não muda pela planilha.
                   Certifique-se de que os nomes de vendedores e cobradores estejam padronizados.
                 </p>
               </div>

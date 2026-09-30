@@ -7,6 +7,7 @@ import {
   mascaraTelefone,
   parseDataLocal,
   parseMoeda,
+  parseValorPlanilha,
 } from './format';
 
 describe('formatData', () => {
@@ -118,5 +119,36 @@ describe('mascaraTelefone', () => {
 
   it('corta em 11 dígitos', () => {
     expect(mascaraTelefone('859999999991234')).toBe('(85) 99999-9999');
+  });
+});
+
+describe('parseValorPlanilha', () => {
+  it('lê o ponto como milhar no padrão brasileiro', () => {
+    expect(parseValorPlanilha('1.500')).toBe(1500);
+    expect(parseValorPlanilha('R$ 1.500')).toBe(1500);
+    expect(parseValorPlanilha('1.234.567')).toBe(1234567);
+  });
+
+  it('lê vírgula como decimal', () => {
+    expect(parseValorPlanilha('1.500,50')).toBe(1500.5);
+    expect(parseValorPlanilha('1500,5')).toBe(1500.5);
+    expect(parseValorPlanilha('R$ 1.234.567,89')).toBe(1234567.89);
+  });
+
+  it('aceita ponto decimal quando não tem cara de milhar', () => {
+    expect(parseValorPlanilha('12.5')).toBe(12.5);
+    expect(parseValorPlanilha('1500.50')).toBe(1500.5);
+    expect(parseValorPlanilha('1,234.56')).toBe(1234.56);
+  });
+
+  it('número do Excel passa direto', () => {
+    expect(parseValorPlanilha(1500.5)).toBe(1500.5);
+  });
+
+  it('devolve null para o que não é valor', () => {
+    expect(parseValorPlanilha('')).toBeNull();
+    expect(parseValorPlanilha(null)).toBeNull();
+    expect(parseValorPlanilha('abc')).toBeNull();
+    expect(parseValorPlanilha(Number.NaN)).toBeNull();
   });
 });

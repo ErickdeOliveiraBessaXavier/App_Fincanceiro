@@ -85,9 +85,23 @@ export function estaEmAberto(titulo: TituloMetrica): boolean {
 // ============== Recortes ==============
 
 /**
+ * O recebimento pertence ao recorte se QUALQUER título a que ele se refere
+ * estiver nele. Pagamento de acordo multi-título traz todos em `titulo_ids`;
+ * olhar só o `titulo_id` (o "principal") tirava o dinheiro do relatório quando
+ * o principal ficava fora do período.
+ */
+function recebimentoToca(r: RecebimentoMetrica, titulos: Set<string>): boolean {
+  const ids = r.titulo_ids ?? (r.titulo_id ? [r.titulo_id] : []);
+  return ids.some((id) => titulos.has(id));
+}
+
+/**
  * Cruza parcelas, recebimentos e acordos contra o universo de títulos e descarta
  * acordo cancelado. É o passo que impede o vazamento entre carteiras e o que
  * tirava do Dashboard as parcelas de títulos que a view já havia excluído.
+ *
+ * O recebimento de acordo cancelado FICA: foi dinheiro que entrou, e o
+ * cancelamento o credita no título (a dívida volta abatida dele).
  */
 export function restringirAoUniverso(base: BaseMetricas): BaseMetricas {
   const titulosValidos = new Set(base.titulos.map((t) => t.id));
@@ -99,7 +113,7 @@ export function restringirAoUniverso(base: BaseMetricas): BaseMetricas {
     acordos,
     parcelas: base.parcelas.filter((p) => titulosValidos.has(p.titulo_id)),
     parcelasAcordo: base.parcelasAcordo.filter((p) => acordosValidos.has(p.acordo_id)),
-    recebimentos: base.recebimentos.filter((r) => !!r.titulo_id && titulosValidos.has(r.titulo_id)),
+    recebimentos: base.recebimentos.filter((r) => recebimentoToca(r, titulosValidos)),
   };
 }
 
@@ -124,7 +138,7 @@ export function recortarPorVencimento(base: BaseMetricas, periodo?: Periodo): Ba
     parcelasAcordo,
     titulos: base.titulos.filter((t) => titulosNoPeriodo.has(t.id)),
     acordos: base.acordos.filter((a) => acordosNoPeriodo.has(a.id)),
-    recebimentos: base.recebimentos.filter((r) => !!r.titulo_id && titulosNoPeriodo.has(r.titulo_id)),
+    recebimentos: base.recebimentos.filter((r) => recebimentoToca(r, titulosNoPeriodo)),
   };
 }
 
@@ -169,7 +183,8 @@ function itensVencidosDeAcordos(
         clienteId: acordo?.cliente_id ?? null,
         clienteNome: acordo?.cliente_nome || 'Desconhecido',
         vencimento: p.data_vencimento,
-        valor: Number(p.valor_total),
+        // O que ainda se deve, não o previsto: parcela paga pela metade vence pela metade.
+        valor: Number(p.saldo_atual),
         origem: 'acordo' as const,
       };
     });
@@ -213,7 +228,7 @@ export function listarAVencer(
       id: p.id,
       clienteId: porAcordo.get(p.acordo_id)?.cliente_id ?? null,
       clienteNome: porAcordo.get(p.acordo_id)?.cliente_nome || 'Desconhecido',
-      valor: Number(p.valor_total),
+      valor: Number(p.saldo_atual),
       vencimento: p.data_vencimento,
       origem: 'acordo' as const,
     }));
@@ -639,8 +654,12 @@ function saldoTitulosEmAberto(parcelas: ParcelaMetrica[]): number {
   return soma(parcelas.filter((p) => p.status !== 'pago').map((p) => Number(p.saldo_atual)));
 }
 
+/**
+ * Saldo do razão, não o valor previsto: com `valor_total`, um pagamento parcial
+ * contava duas vezes — inteiro "em aberto" e a parte paga em "recuperado".
+ */
 function saldoAcordosEmAberto(parcelasAcordo: ParcelaAcordoMetrica[]): number {
-  return soma(parcelasAcordo.filter((p) => p.status !== 'paga').map((p) => Number(p.valor_total)));
+  return soma(parcelasAcordo.filter((p) => p.status !== 'paga').map((p) => Number(p.saldo_atual)));
 }
 
 function contarClasse(titulos: TituloMetrica[], classe: ClasseTitulo): number {

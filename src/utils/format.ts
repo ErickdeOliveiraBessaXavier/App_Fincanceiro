@@ -84,6 +84,51 @@ export function parseMoeda(texto: string): number {
   return digitos ? Number(digitos) / 100 : 0;
 }
 
+// Quando os dois separadores aparecem, o último é o decimal: "1.234,56" e
+// "1,234.56" viram 1234.56.
+function comDoisSeparadores(s: string): string {
+  const decimalEhVirgula = s.lastIndexOf(',') > s.lastIndexOf('.');
+  return decimalEhVirgula ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+}
+
+// Só vírgula: uma é decimal ("1500,50"); várias são milhar ("1,234,567").
+function soVirgula(s: string): string {
+  return (s.match(/,/g) ?? []).length > 1 ? s.replace(/,/g, '') : s.replace(',', '.');
+}
+
+// Só ponto: vários são milhar ("1.234.567"); um só com exatamente 3 dígitos
+// depois é milhar no padrão brasileiro ("1.500"); fora isso é decimal ("12.5").
+function soPonto(s: string): string {
+  if ((s.match(/\./g) ?? []).length > 1) return s.replace(/\./g, '');
+  return /\.\d{3}$/.test(s) ? s.replace('.', '') : s;
+}
+
+function normalizarSeparadores(s: string): string {
+  const temVirgula = s.includes(',');
+  const temPonto = s.includes('.');
+  if (temVirgula && temPonto) return comDoisSeparadores(s);
+  if (temVirgula) return soVirgula(s);
+  if (temPonto) return soPonto(s);
+  return s;
+}
+
+/**
+ * Valor monetário lido de planilha ou CSV -> número, ou `null` se ilegível.
+ *
+ * Célula numérica do Excel já chega como número. Texto chega como o usuário
+ * escreveu, e no Brasil o ponto é milhar: o parser antigo lia "1.500" como
+ * 1,5 e a dívida entrava mil vezes menor, sem aviso nenhum.
+ */
+export function parseValorPlanilha(valor: unknown): number | null {
+  if (valor === null || valor === undefined || valor === '') return null;
+  if (typeof valor === 'number') return Number.isFinite(valor) ? valor : null;
+
+  const limpo = String(valor).trim().replace(/[^\d.,-]/g, '');
+  if (!/\d/.test(limpo)) return null;
+  const numero = Number(normalizarSeparadores(limpo));
+  return Number.isFinite(numero) ? numero : null;
+}
+
 /**
  * Formata telefone BR: (00) 00000-0000 (celular) ou (00) 0000-0000 (fixo).
  * Fora de 10/11 dígitos, devolve o valor original.

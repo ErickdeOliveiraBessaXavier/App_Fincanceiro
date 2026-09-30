@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { somarMesesAncorado, gerarCronograma, podarDatasManuais } from './cronograma';
+import {
+  somarMesesAncorado, gerarCronograma, podarDatasManuais, totalCronograma, emCentavos,
+} from './cronograma';
 
 const datas = (parcelas: ReturnType<typeof gerarCronograma>) => parcelas.map((p) => p.data_vencimento);
 
@@ -72,6 +74,37 @@ describe('gerarCronograma', () => {
     expect(gerarCronograma({ ...base, valorAcordo: 0 })).toEqual([]);
     expect(gerarCronograma({ ...base, parcelas: 0 })).toEqual([]);
     expect(gerarCronograma({ ...base, primeiroVencimento: '' })).toEqual([]);
+  });
+});
+
+describe('centavos do cronograma', () => {
+  const gerar = (valorAcordo: number, parcelas: number, taxaJuros = 0) =>
+    gerarCronograma({ valorAcordo, parcelas, taxaJuros, primeiroVencimento: '2026-08-10' });
+
+  it('joga o resíduo na última parcela: 100 em 3 = 33,33 + 33,33 + 33,34', () => {
+    expect(gerar(100, 3).map((p) => p.valor)).toEqual([33.33, 33.33, 33.34]);
+    expect(totalCronograma(gerar(100, 3))).toBe(100);
+  });
+
+  it('a soma fecha no valor combinado (casos que divergiam em produção)', () => {
+    // 8.000,10 em 8x virava 8.000,08; 228.502,93 em 5x virava 228.502,95.
+    expect(totalCronograma(gerar(8000.1, 8))).toBe(8000.1);
+    expect(totalCronograma(gerar(228502.93, 5))).toBe(228502.93);
+    expect(totalCronograma(gerar(7339.79, 2))).toBe(7339.79);
+  });
+
+  it('toda parcela sai com no máximo 2 casas', () => {
+    const temMaisDeDuasCasas = (v: number) => Math.abs(v * 100 - Math.round(v * 100)) > 1e-6;
+    const parcelas = gerar(25951.33, 8, 1.7);
+    expect(parcelas.some((p) => temMaisDeDuasCasas(p.valor))).toBe(false);
+    expect(parcelas.some((p) => temMaisDeDuasCasas(p.valor_juros))).toBe(false);
+    expect(parcelas.some((p) => temMaisDeDuasCasas(p.valor_total))).toBe(false);
+  });
+
+  it('o total é a soma exata das parcelas, com juros', () => {
+    const parcelas = gerar(1000, 3, 2.5);
+    const soma = emCentavos(parcelas.reduce((s, p) => s + p.valor_total, 0));
+    expect(totalCronograma(parcelas)).toBe(soma);
   });
 });
 

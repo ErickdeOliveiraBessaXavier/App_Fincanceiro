@@ -564,29 +564,49 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
   );
 }
 
-interface ConfirmAcordoActionDialogProps {
+/** Só acordo que ainda responde pela dívida pode ser desfeito. Cumprido não. */
+const podeCancelarAcordo = (status: string) => status === 'ativo' || status === 'quebrado';
+
+interface CancelAcordoDialogProps {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onCancel: () => void;
-  onConfirm: () => void;
+  onConfirm: (motivo: string) => void;
   isPending: boolean;
 }
-function CancelAcordoDialog({ open, onOpenChange, onCancel, onConfirm, isPending }: ConfirmAcordoActionDialogProps) {
+function CancelAcordoDialog({ open, onOpenChange, onCancel, onConfirm, isPending }: CancelAcordoDialogProps) {
+  const [motivo, setMotivo] = useState('');
+  useEffect(() => { if (open) setMotivo(''); }, [open]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={MODAL_ESTREITO}>
         <DialogHeader>
           <DialogTitle>Cancelar Acordo</DialogTitle>
-          <DialogDescription>
-            O acordo será marcado como <strong>cancelado</strong> e os títulos vinculados
-            voltarão a ficar disponíveis. O registro permanece no histórico.
+          <DialogDescription asChild>
+            <div className="space-y-2">
+              <p>
+                A dívida original dos títulos volta a valer, <strong>abatido o que o cliente já
+                pagou neste acordo</strong>. Os pagamentos continuam nos relatórios de recebimento.
+              </p>
+              <p>O acordo fica no histórico como cancelado e não pode ser reaberto.</p>
+            </div>
           </DialogDescription>
         </DialogHeader>
+        <div className="space-y-2">
+          <Label htmlFor="motivo-cancelamento">Motivo do cancelamento</Label>
+          <Input
+            id="motivo-cancelamento"
+            value={motivo}
+            onChange={(e) => setMotivo(e.target.value)}
+            placeholder="Ex.: cliente não cumpriu as parcelas"
+          />
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel} disabled={isPending}>
             Voltar
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+          <Button variant="destructive" onClick={() => onConfirm(motivo.trim())} disabled={isPending || !motivo.trim()}>
             {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Cancelar Acordo
           </Button>
@@ -682,25 +702,27 @@ export default function Acordos() {
     }
   };
 
-  const handleCancelAcordo = async () => {
+  const handleCancelAcordo = async (motivo: string) => {
     if (!acordoToCancel) return;
 
     try {
-      await cancelAcordoMutation.mutateAsync(acordoToCancel.id);
+      const resultado = await cancelAcordoMutation.mutateAsync({ acordoId: acordoToCancel.id, motivo });
 
       setIsCancelModalOpen(false);
       setAcordoToCancel(null);
 
       toast({
-        title: "Sucesso",
-        description: "Acordo cancelado com sucesso",
+        title: "Acordo cancelado",
+        description: resultado.creditado > 0
+          ? `A dívida voltou aos títulos, abatidos ${formatCurrency(resultado.creditado)} já pagos no acordo.`
+          : 'A dívida voltou aos títulos.',
       });
 
     } catch (error) {
       console.error('Erro ao cancelar acordo:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível cancelar o acordo",
+        description: error instanceof Error ? error.message : "Não foi possível cancelar o acordo",
         variant: "destructive",
       });
     }
@@ -850,7 +872,7 @@ export default function Acordos() {
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
-                        {isAdmin && acordo.status !== 'cancelado' && (
+                        {isAdmin && podeCancelarAcordo(acordo.status) && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -928,11 +950,11 @@ export default function Acordos() {
             <p>
               Isto <strong>apaga do banco</strong> o acordo de{' '}
               <span className="font-medium">{acordoToHardDelete?.cliente?.nome}</span> e todas as
-              suas parcelas, inclusive as já pagas.
+              suas parcelas.
             </p>
             <p>
-              O acordo já está cancelado, então a dívida original do título permanece como está.
-              O que se perde é o <strong>histórico da negociação</strong>.
+              Só é possível quando o acordo não recebeu nenhum pagamento: dinheiro recebido
+              fica sempre no histórico. O que se perde é o <strong>registro da negociação</strong>.
             </p>
             <p><strong>Não dá para desfazer.</strong></p>
           </>

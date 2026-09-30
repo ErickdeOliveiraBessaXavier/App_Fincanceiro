@@ -20,9 +20,13 @@ no histórico do git). Item feito sai daqui.
 ## Acordos
 
 - **P8 — acordo nunca vira "quebrado".** A RPC
-  `marcar_parcelas_acordo_vencidas()` existe, mas nada a chama. Opções: chamar
-  ao abrir a tela de Acordos (como `refresh_mv_parcelas`) ou agendar via pg_cron.
-  Enquanto isso, o status `quebrado` praticamente não acontece.
+  `marcar_parcelas_acordo_vencidas()` existe, mas nada a chama. Opções: agendar
+  via pg_cron (preferível: ela não tem grant para o app) ou uma Edge Function.
+  Já é segura: só mexe em acordo vigente e usa a data de Brasília. **Decisão de
+  negócio antes de ligar:** um dia de atraso já quebra o acordo? Hoje 17 parcelas
+  vencidas virariam 'quebrado' de uma vez.
+- **Dúvida da auditoria:** a exclusão definitiva de título com pagamento ainda
+  apaga os pagamentos em cascata (a de acordo foi bloqueada). Manter?
 - **P6 — aposentar `acordos.titulo_id`.** Duas fontes de verdade para "títulos
   do acordo": a coluna (resquício do 1:1) e `acordo_titulos` (N:N). View,
   cancelamento e trava de pagamento já usam a tabela; falta tirar a coluna.
@@ -55,7 +59,6 @@ caminho — ver memória `fila-e-ficha-produtividade`):
 Roteiro em [`Plano_Auditoria.md`](Plano_Auditoria.md).
 
 - **Rodada 1** (dinheiro/concorrência) feita em 2026-09-29 —
-  [`AUDITORIA_RODADA_1.md`](AUDITORIA_RODADA_1.md). 18 achados; 1, 2 e 17
-  corrigidos no mesmo dia (grants de funções). Próximos: 3 e 8. O P8 acima
-  **não** deve ser ligado antes do item 8 do relatório.
+  [`AUDITORIA_RODADA_1.md`](AUDITORIA_RODADA_1.md). Os 18 achados foram
+  corrigidos no mesmo dia. Com o item 8 resolvido, o P8 pode ser ligado.
 - Rodadas 2 e 3: pendentes.

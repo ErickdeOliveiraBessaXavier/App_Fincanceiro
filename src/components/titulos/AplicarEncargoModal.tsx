@@ -30,10 +30,17 @@ interface AplicarEncargoModalProps {
   onSuccess: () => void;
 }
 
+// Os valores são os tipos do razão. O modal mandava 'juros'/'multa', que a
+// RPC recusava com "Tipo inválido" — nenhum encargo de título chegava a gravar.
 const TIPOS_ENCARGO = [
-  { value: 'juros', label: 'Juros' },
-  { value: 'multa', label: 'Multa' },
+  { value: 'juros_aplicado', label: 'Juros' },
+  { value: 'multa_aplicada', label: 'Multa' },
 ];
+
+const rotuloDoTipo = (tipo: string) => (tipo === 'juros_aplicado' ? 'Juros' : 'Multa');
+
+/** O banco grava com 2 casas; percentual gera dízima (ex.: 2% de 33,33). */
+const centavos = (valor: number) => Math.round(valor * 100) / 100;
 
 export function AplicarEncargoModal({
   open,
@@ -43,7 +50,7 @@ export function AplicarEncargoModal({
   saldoAtual,
   onSuccess
 }: AplicarEncargoModalProps) {
-  const [tipo, setTipo] = useState('juros');
+  const [tipo, setTipo] = useState('juros_aplicado');
   const [modoValor, setModoValor] = useState<'valor' | 'percentual'>('percentual');
   const [valor, setValor] = useState('');
   const [percentual, setPercentual] = useState('2');
@@ -51,9 +58,9 @@ export function AplicarEncargoModal({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  const valorCalculado = modoValor === 'percentual'
+  const valorCalculado = centavos(modoValor === 'percentual'
     ? (saldoAtual * (parseFloat(percentual) || 0)) / 100
-    : parseFloat(valor) || 0;
+    : parseFloat(valor) || 0);
 
   const handleSubmit = async () => {
     if (valorCalculado <= 0) {
@@ -71,23 +78,23 @@ export function AplicarEncargoModal({
         p_parcela_id: parcelaId,
         p_tipo: tipo,
         p_valor: valorCalculado,
-        p_descricao: descricao || `${tipo === 'juros' ? 'Juros' : 'Multa'} aplicado(a)`
+        p_descricao: descricao || `${rotuloDoTipo(tipo)} aplicado(a)`
       });
 
       if (error) throw error;
 
       toast({
         title: "Sucesso",
-        description: `${tipo === 'juros' ? 'Juros' : 'Multa'} de ${FormatUtils.currency(valorCalculado)} aplicado(a)`,
+        description: `${rotuloDoTipo(tipo)} de ${FormatUtils.currency(valorCalculado)} aplicado(a)`,
       });
 
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao aplicar encargo:', error);
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível aplicar o encargo",
+        description: (error as { message?: string })?.message || "Não foi possível aplicar o encargo",
         variant: "destructive",
       });
     } finally {
@@ -98,7 +105,7 @@ export function AplicarEncargoModal({
   // Reset form when modal opens
   React.useEffect(() => {
     if (open) {
-      setTipo('juros');
+      setTipo('juros_aplicado');
       setModoValor('percentual');
       setValor('');
       setPercentual('2');

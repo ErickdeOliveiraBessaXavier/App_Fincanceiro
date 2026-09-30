@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { MEIOS_PAGAMENTO } from '@/constants/meiosPagamento';
+import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 
 interface RegistrarPagamentoModalProps {
   open: boolean;
@@ -29,16 +31,6 @@ interface RegistrarPagamentoModalProps {
   saldoAtual: number;
   onSuccess: () => void;
 }
-
-const MEIOS_PAGAMENTO = [
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'pix', label: 'PIX' },
-  { value: 'cartao_credito', label: 'Cartão de Crédito' },
-  { value: 'cartao_debito', label: 'Cartão de Débito' },
-  { value: 'boleto', label: 'Boleto' },
-  { value: 'transferencia', label: 'Transferência Bancária' },
-  { value: 'cheque', label: 'Cheque' },
-];
 
 export function RegistrarPagamentoModal({
   open,
@@ -51,11 +43,13 @@ export function RegistrarPagamentoModal({
   const [valor, setValor] = useState(saldoAtual.toString());
   const [meioPagamento, setMeioPagamento] = useState('pix');
   const [descricao, setDescricao] = useState('');
+  const [dataPagamento, setDataPagamento] = useState(hojeIso());
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
   const handleSubmit = async () => {
-    const valorNum = parseFloat(valor);
+    // O banco grava com 2 casas: arredondar aqui evita comparar um float com o saldo.
+    const valorNum = Math.round((parseFloat(valor) || 0) * 100) / 100;
     if (!valorNum || valorNum <= 0) {
       toast({
         title: "Erro",
@@ -80,7 +74,8 @@ export function RegistrarPagamentoModal({
         p_parcela_id: parcelaId,
         p_valor: valorNum,
         p_meio_pagamento: meioPagamento,
-        p_descricao: descricao || null
+        p_descricao: descricao || null,
+        p_data_pagamento: dataPagamento,
       });
 
       if (error) throw error;
@@ -92,11 +87,11 @@ export function RegistrarPagamentoModal({
 
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
+    } catch (error) {
       console.error('Erro ao registrar pagamento:', error);
       toast({
         title: "Erro",
-        description: error.message || "Não foi possível registrar o pagamento",
+        description: (error as { message?: string })?.message || "Não foi possível registrar o pagamento",
         variant: "destructive",
       });
     } finally {
@@ -110,6 +105,7 @@ export function RegistrarPagamentoModal({
       setValor(saldoAtual.toString());
       setMeioPagamento('pix');
       setDescricao('');
+      setDataPagamento(hojeIso());
     }
   }, [open, saldoAtual]);
 
@@ -152,6 +148,16 @@ export function RegistrarPagamentoModal({
                 50%
               </Button>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="pagamento-data">Data do pagamento</Label>
+            <Input
+              id="pagamento-data"
+              type="date"
+              max={hojeIso()}
+              value={dataPagamento}
+              onChange={(e) => setDataPagamento(e.target.value)}
+            />
           </div>
           <div className="space-y-2">
             <Label>Meio de Pagamento</Label>

@@ -414,18 +414,23 @@ export function useEstornarEventoParcelaAcordo() {
 }
 
 /**
- * Cancelamento (soft delete) de um acordo — financeiro+ (validado pela RLS
- * acordos_update). Marca status='cancelado'; os títulos vinculados deixam de
- * ser 'renegociado' e voltam a ficar disponíveis. Mantém o histórico.
+ * Cancelamento de um acordo ativo ou quebrado (admin, motivo obrigatório).
+ *
+ * A RPC desfaz a novação — a dívida volta aos títulos — e credita neles o que
+ * o cliente já pagou no acordo. Acordo cumprido não cancela. Devolve quanto
+ * foi creditado, para a tela dizer isso ao operador.
  */
 export function useCancelAcordo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (acordoId: string) => {
-      // RPC cancelar_acordo: além de marcar 'cancelado', REVERTE a liquidação do
-      // título (estorna os eventos 'renegociacao'), fazendo a dívida voltar.
-      const { error } = await supabase.rpc('cancelar_acordo', { p_acordo_id: acordoId });
+    mutationFn: async ({ acordoId, motivo }: { acordoId: string; motivo: string }) => {
+      const { data, error } = await supabase.rpc('cancelar_acordo', {
+        p_acordo_id: acordoId,
+        p_motivo: motivo,
+      });
       if (error) throw error;
+      const resultado = data as { creditado_no_titulo?: number } | null;
+      return { creditado: Number(resultado?.creditado_no_titulo ?? 0) };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: acordosKeys.all });

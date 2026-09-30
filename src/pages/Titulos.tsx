@@ -646,20 +646,30 @@ interface PagamentoItemProps {
   onConfirmar: () => void;
   onCancelar: () => void;
 }
+const ROTULO_LANCAMENTO: Record<string, string> = {
+  pagamento_total: 'Pagamento',
+  pagamento_parcial: 'Pagamento parcial',
+  desconto_concedido: 'Desconto',
+  juros_aplicado: 'Juros',
+  multa_aplicada: 'Multa',
+};
+
 function PagamentoItem({
   pagamento, isAdmin, emEstorno, motivo, isPending,
   onIniciarEstorno, onMotivoChange, onConfirmar, onCancelar,
 }: PagamentoItemProps) {
+  const data = pagamento.data_evento ?? pagamento.created_at;
   return (
     <div className="p-3 border rounded-lg text-sm">
       <div className="flex justify-between items-center gap-3">
         <div>
+          <span className="text-muted-foreground mr-2">{ROTULO_LANCAMENTO[pagamento.tipo] ?? pagamento.tipo}</span>
           <span className="font-medium">{FormatUtils.currency(pagamento.valor)}</span>
           {pagamento.meio_pagamento && (
             <span className="text-muted-foreground ml-2">via {pagamento.meio_pagamento}</span>
           )}
           <div className="text-xs text-muted-foreground">
-            Data do pagamento: {pagamento.created_at ? FormatUtils.date(pagamento.created_at) : '—'}
+            Data: {data ? FormatUtils.date(data) : '—'}
           </div>
         </div>
         <PagamentoAcao
@@ -722,8 +732,8 @@ function HistoricoPagamentos({ parcelaIds, isAdmin, onEstornado }: {
     }
   };
 
-  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando pagamentos...</p>;
-  if (!pagamentos.length) return <p className="text-sm text-muted-foreground">Nenhum pagamento registrado.</p>;
+  if (isLoading) return <p className="text-sm text-muted-foreground">Carregando lançamentos...</p>;
+  if (!pagamentos.length) return <p className="text-sm text-muted-foreground">Nenhum pagamento, desconto ou encargo registrado.</p>;
 
   return (
     <div className="space-y-2">
