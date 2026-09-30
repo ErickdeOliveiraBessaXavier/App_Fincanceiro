@@ -34,7 +34,7 @@ export default defineConfig({
     trace: 'off',
     locale: 'pt-BR',
     timezoneId: 'America/Sao_Paulo',
-    channel: 'msedge',
+    channel: 'chrome',
   },
 
   projects: [
@@ -48,8 +48,9 @@ export default defineConfig({
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        // Usa o Edge já instalado no Windows — evita baixar o Chromium.
-        channel: 'msedge',
+        // Usa o Chrome já instalado — evita baixar o Chromium. (Era o Edge,
+        // que não está instalado nesta máquina.)
+        channel: 'chrome',
         storageState: 'e2e/.auth/operador.json',
       },
       dependencies: ['setup'],
