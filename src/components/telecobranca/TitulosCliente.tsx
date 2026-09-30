@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -344,18 +345,20 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
         ])
       );
 
-      const [{ data: parcelasData, error: parcelasError }, acordoPorTitulo] = await Promise.all([
-        supabase
-          .from('vw_parcelas_consolidadas')
-          .select('*')
-          .in('titulo_id', Array.from(meta.keys()))
-          .order('numero_parcela', { ascending: true }),
+      const [parcelasData, acordoPorTitulo] = await Promise.all([
+        buscarTodas((de, ate) =>
+          supabase
+            .from('vw_parcelas_consolidadas')
+            .select('*')
+            .in('titulo_id', Array.from(meta.keys()))
+            .order('numero_parcela', { ascending: true })
+            .order('id')
+            .range(de, ate),
+        ),
         buscarAcordoPorTitulo(clienteId),
       ]);
 
-      if (parcelasError) throw parcelasError;
-
-      setGrupos(agruparPorTitulo(parcelasData || [], meta, acordoPorTitulo));
+      setGrupos(agruparPorTitulo(parcelasData, meta, acordoPorTitulo));
     } catch (error) {
       console.error('Erro ao carregar parcelas:', error);
     } finally {

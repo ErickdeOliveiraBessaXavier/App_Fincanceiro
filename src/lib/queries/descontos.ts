@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 import type { Periodo } from '@/domain/metricas';
 
 /**
@@ -41,19 +42,20 @@ export function useDescontosConcedidos(periodo?: Periodo) {
   return useQuery({
     queryKey: descontosKeys.lista(periodo),
     queryFn: async (): Promise<DescontoConcedido[]> => {
-      let query = supabase
-        .from('vw_descontos_concedidos_tenant')
-        .select('*')
-        .order('data_evento', { ascending: false });
+      const data = await buscarTodas((de, ate) => {
+        let query = supabase
+          .from('vw_descontos_concedidos_tenant')
+          .select('*')
+          .order('data_evento', { ascending: false })
+          .order('id');
 
-      // Mesmo recorte por data usado nos demais relatórios.
-      if (periodo) {
-        query = query.gte('data_evento', periodo.de).lte('data_evento', periodo.ate);
-      }
-
-      const { data, error } = await query;
-      if (error) throw error;
-      return (data || []) as unknown as DescontoConcedido[];
+        // Mesmo recorte por data usado nos demais relatórios.
+        if (periodo) {
+          query = query.gte('data_evento', periodo.de).lte('data_evento', periodo.ate);
+        }
+        return query.range(de, ate);
+      });
+      return data as unknown as DescontoConcedido[];
     },
   });
 }

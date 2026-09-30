@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Search, Edit, Shield, User, UserCog, Clock, Check, X, Trash2, Store } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -280,14 +281,14 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
   const fetchUsuarios = async () => {
     setLoading(true);
     try {
-      const [{ data: profilesData, error: pErr }, { data: rolesData, error: rErr }] = await Promise.all([
-        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
-        supabase.from('user_roles').select('user_id, role'),
+      const [profilesData, rolesData] = await Promise.all([
+        buscarTodas((de, ate) =>
+          supabase.from('profiles').select('*').order('created_at', { ascending: false }).order('id').range(de, ate)),
+        buscarTodas((de, ate) =>
+          supabase.from('user_roles').select('user_id, role').order('id').range(de, ate)),
       ]);
-      if (pErr) throw pErr;
-      if (rErr) throw rErr;
 
-      setUsuarios((profilesData ?? []).map((p: any) => ({
+      setUsuarios(profilesData.map((p: any) => ({
         ...p,
         role: (rolesData?.find((r: any) => r.user_id === p.user_id)?.role ?? null) as AppRole | null,
       })));

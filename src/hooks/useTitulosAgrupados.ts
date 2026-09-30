@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 
 export interface TituloItem {
   id: string;
@@ -128,21 +129,20 @@ export const useTitulosAgrupados = (clienteIdFiltro?: string) => {
       // Buscar da view consolidada. 'renegociado' (título já com acordo ativo)
       // fica de fora: não se cria um novo acordo sobre um título já em acordo.
       // Ao cancelar o acordo, o título deixa de ser 'renegociado' e reaparece.
-      let query = supabase
-        .from('vw_titulos_completos')
-        .select('*')
-        .in('status', ['pendente', 'a_vencer', 'vencido']);
+      const titulos = await buscarTodas((de, ate) => {
+        let query = supabase
+          .from('vw_titulos_completos')
+          .select('*')
+          .in('status', ['pendente', 'a_vencer', 'vencido']);
 
-      if (clienteIdFiltro) {
-        query = query.eq('cliente_id', clienteIdFiltro);
-      }
-
-      const { data: titulos, error } = await query;
-
-      if (error) throw error;
+        if (clienteIdFiltro) {
+          query = query.eq('cliente_id', clienteIdFiltro);
+        }
+        return query.order('id').range(de, ate);
+      });
 
       const clientesMap = new Map<string, ClienteComDividas>();
-      for (const titulo of titulos ?? []) {
+      for (const titulo of titulos) {
         await processarTitulo(titulo, clientesMap);
       }
 

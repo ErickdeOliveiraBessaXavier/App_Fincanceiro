@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 import type { TituloConsolidado, Parcela } from '@/utils/titulo';
 
 // ============== Query Keys ==============
@@ -45,13 +46,15 @@ export function useTitulos() {
   return useQuery({
     queryKey: titulosKeys.list(),
     queryFn: async (): Promise<TituloConsolidado[]> => {
-      const { data, error } = await supabase
-        .from('vw_titulos_completos')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      return (data || []) as TituloConsolidado[];
+      const data = await buscarTodas((de, ate) =>
+        supabase
+          .from('vw_titulos_completos')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(de, ate),
+      );
+      return data as TituloConsolidado[];
     },
   });
 }
@@ -63,13 +66,14 @@ export function useClientesSelect() {
   return useQuery({
     queryKey: titulosKeys.clientes,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('clientes')
-        .select('id, nome, cpf_cnpj')
-        .order('nome');
-
-      if (error) throw error;
-      return data || [];
+      return buscarTodas((de, ate) =>
+        supabase
+          .from('clientes')
+          .select('id, nome, cpf_cnpj')
+          .order('nome')
+          .order('id')
+          .range(de, ate),
+      );
     },
   });
 }

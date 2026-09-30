@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { getCurrentCompanyId } from '@/lib/currentCompany';
+import { buscarTodas } from '@/lib/buscarTodas';
 import { hojeNegocio } from '@/domain/telecobranca/statusCobranca';
 import { soDigitos } from '@/utils/format';
 import {
@@ -107,34 +108,42 @@ export function useClientes() {
   return useQuery({
     queryKey: clientesKeys.list(),
     queryFn: async (): Promise<ClienteRow[]> => {
-      const [clientesRes, titulosRes, agendamentosRes] = await Promise.all([
-        supabase
-          .from('clientes')
-          .select(`
-            *,
-            cobradores ( nome ),
-            vendedores ( nome )
-          `)
-          .order('created_at', { ascending: false }),
+      const [clientes, titulos, agendamentos] = await Promise.all([
+        buscarTodas((de, ate) =>
+          supabase
+            .from('clientes')
+            .select(`
+              *,
+              cobradores ( nome ),
+              vendedores ( nome )
+            `)
+            .order('created_at', { ascending: false })
+            .order('id')
+            .range(de, ate),
+        ),
         // vw_titulos_completos já exclui títulos cancelados/excluídos (deleted_at)
         // e traz o status consolidado (a_vencer/vencido/pago/renegociado).
-        supabase
-          .from('vw_titulos_completos')
-          .select('cliente_id, status, acordo_status, valor_original'),
+        buscarTodas((de, ate) =>
+          supabase
+            .from('vw_titulos_completos')
+            .select('cliente_id, status, acordo_status, valor_original')
+            .order('id')
+            .range(de, ate),
+        ),
         // Próximos retornos pendentes (RLS já limita à carteira do cobrador).
-        supabase
-          .from('agendamentos')
-          .select('cliente_id, data_agendamento, status_cobranca')
-          .eq('status', 'pendente')
-          .is('deleted_at', null)
-          .order('data_agendamento', { ascending: true }),
+        buscarTodas((de, ate) =>
+          supabase
+            .from('agendamentos')
+            .select('cliente_id, data_agendamento, status_cobranca')
+            .eq('status', 'pendente')
+            .is('deleted_at', null)
+            .order('data_agendamento', { ascending: true })
+            .order('id')
+            .range(de, ate),
+        ),
       ]);
 
-      if (clientesRes.error) throw clientesRes.error;
-      if (titulosRes.error) throw titulosRes.error;
-      if (agendamentosRes.error) throw agendamentosRes.error;
-
-      const retornos = mapProximosRetornos(agendamentosRes.data ?? []);
+      const retornos = mapProximosRetornos(agendamentos);
 
       // Agrega títulos por cliente. `acordo_status` entra junto porque a situação
       // depende dele: título renegociado fica com status 'pago' (a novação zerou
@@ -143,7 +152,7 @@ export function useClientes() {
         string,
         { total: number; valor: number; titulos: TituloSituacao[] }
       >();
-      (titulosRes.data ?? []).forEach((t: any) => {
+      titulos.forEach((t) => {
         if (!t.cliente_id) return;
         const agg = porCliente.get(t.cliente_id) ?? { total: 0, valor: 0, titulos: [] };
         agg.total += 1;
@@ -153,7 +162,7 @@ export function useClientes() {
       });
 
       const semRetorno: ProximoRetorno = { data: null, status_cobranca: null, atrasado: false };
-      return (clientesRes.data || []).map((c: any) => {
+      return clientes.map((c) => {
         const { titulos, total, valor } = porCliente.get(c.id) ?? { total: 0, valor: 0, titulos: [] };
         const retorno = retornos.get(c.id) ?? semRetorno;
         return {

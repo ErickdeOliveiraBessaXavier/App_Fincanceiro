@@ -15,6 +15,7 @@
 // Chamada sem JWT (verify_jwt = false no config.toml): a segurança vem da
 // chave de API, no mesmo espírito de `registrar-convite`.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { buscarTodas } from "../_shared/buscarTodas.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -180,15 +181,22 @@ function somar(parcelas: LinhaMv[], campo: keyof LinhaMv): number {
   return Math.round(total * 100) / 100;
 }
 
+// Uma página de até LIMITE_MAXIMO títulos passa fácil de 1.000 parcelas: sem
+// buscar em lotes, o PostgREST cortava a resposta e o ERP recebia título com
+// parcela faltando. Erro de consulta agora sobe (antes virava lista vazia).
 async function parcelasDe(admin: Admin, companyId: string, tituloIds: string[]): Promise<LinhaMv[]> {
   if (tituloIds.length === 0) return [];
-  const { data } = await admin
-    .from("mv_parcelas_consolidadas")
-    .select("titulo_id, numero_parcela, valor_nominal, vencimento, juros, multa, descontos, total_pago, saldo_atual, status, data_ultimo_pagamento")
-    .eq("company_id", companyId)
-    .in("titulo_id", tituloIds)
-    .order("numero_parcela");
-  return (data ?? []) as LinhaMv[];
+  const linhas = await buscarTodas((de, ate) =>
+    admin
+      .from("mv_parcelas_consolidadas")
+      .select("titulo_id, numero_parcela, valor_nominal, vencimento, juros, multa, descontos, total_pago, saldo_atual, status, data_ultimo_pagamento")
+      .eq("company_id", companyId)
+      .in("titulo_id", tituloIds)
+      .order("numero_parcela")
+      .order("id")
+      .range(de, ate)
+  );
+  return linhas as LinhaMv[];
 }
 
 type LinhaTitulo = {
@@ -279,6 +287,9 @@ async function getTitulos(admin: Admin, ctx: Contexto, url: URL): Promise<Respon
 
   const { data, error } = await consulta
     .order("updated_at", { ascending: false })
+    // Desempate: títulos importados no mesmo lote têm o mesmo updated_at, e
+    // sem ordem total um título podia repetir ou sumir entre páginas do ERP.
+    .order("id")
     .range(offset, offset + limite - 1);
   if (error) return erro(500, "falha_consulta", "Não foi possível listar os títulos.");
 

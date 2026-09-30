@@ -7,6 +7,7 @@
 // Usa service_role (só disponível aqui) para ler o token do provedor, que a RLS
 // esconde do frontend de propósito.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.4";
+import { buscarTodas } from "../_shared/buscarTodas.ts";
 import { enviarTexto, type CredenciaisZApi } from "./zapi.ts";
 
 const corsHeaders = {
@@ -75,15 +76,20 @@ async function credenciaisDaEmpresa(admin: Admin, companyId: string): Promise<Cr
 }
 
 /** Clientes da campanha com telefone. Sem telefone não há o que enviar. */
+// Em lotes: acima de 1.000 clientes a campanha ia só para os primeiros 1.000.
 async function destinatariosDaCampanha(admin: Admin, companyId: string): Promise<Destinatario[]> {
-  const { data } = await admin
-    .from("clientes")
-    .select("id, nome, telefone")
-    .eq("company_id", companyId)
-    .is("deleted_at", null)
-    .not("telefone", "is", null);
+  const data = await buscarTodas((de, ate) =>
+    admin
+      .from("clientes")
+      .select("id, nome, telefone")
+      .eq("company_id", companyId)
+      .is("deleted_at", null)
+      .not("telefone", "is", null)
+      .order("id")
+      .range(de, ate)
+  );
 
-  return (data ?? [])
+  return data
     .filter((c: { telefone: string | null }) => !!c.telefone)
     .map((c: { id: string; nome: string; telefone: string }) => ({
       cliente_id: c.id,

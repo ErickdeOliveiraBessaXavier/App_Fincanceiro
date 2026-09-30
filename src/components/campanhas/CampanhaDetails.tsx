@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Mail, MessageSquare, Phone, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 
 interface CampaignLog {
   id: string;
@@ -55,15 +56,16 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
 
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('campaign_logs')
-        .select('*')
-        .eq('campanha_id', campanha.id)
-        .order('sent_at', { ascending: false });
-
-      if (error) throw error;
-
-      const logsData = data ?? [];
+      // Uma campanha manda para a carteira inteira: passa de 1.000 envios fácil.
+      const logsData = await buscarTodas((de, ate) =>
+        supabase
+          .from('campaign_logs')
+          .select('*')
+          .eq('campanha_id', campanha.id)
+          .order('sent_at', { ascending: false })
+          .order('id')
+          .range(de, ate),
+      );
       setLogs(logsData);
       setStats(calcularStatsCampanha(logsData));
     } catch (error) {

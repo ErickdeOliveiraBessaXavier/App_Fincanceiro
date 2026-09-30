@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 import type { Json } from '@/integrations/supabase/types';
 import { titulosKeys } from './titulos';
 import { clientesKeys } from './clientes';
@@ -115,7 +116,7 @@ export function useAcordos() {
   return useQuery({
     queryKey: acordosKeys.list(),
     queryFn: async (): Promise<AcordoRow[]> => {
-      const { data, error } = await supabase
+      const data = await buscarTodas((de, ate) => supabase
         .from('acordos')
         .select(`
           id,
@@ -146,12 +147,12 @@ export function useAcordos() {
             cpf_cnpj
           )
         `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(de, ate));
 
       type LinhaVinculo = { titulos: TituloDoAcordo | null };
-      return ((data ?? []) as unknown as Array<AcordoRow & { acordo_titulos?: LinhaVinculo[] }>)
+      return (data as unknown as Array<AcordoRow & { acordo_titulos?: LinhaVinculo[] }>)
         .map((a) => ({
           ...a,
           // Fallback no vínculo legado para acordos anteriores à acordo_titulos.

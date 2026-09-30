@@ -3,6 +3,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Plus, Play, Pause, Eye, Edit, Trash2, Mail, MessageSquare, Phone, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -79,13 +80,15 @@ export default function Campanhas() {
 
   const fetchCampanhas = async () => {
     try {
-      const { data, error } = await supabase
-        .from('campanhas')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setCampanhas(data || []);
+      const data = await buscarTodas((de, ate) =>
+        supabase
+          .from('campanhas')
+          .select('*')
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(de, ate),
+      );
+      setCampanhas(data);
     } catch (error) {
       console.error('Erro ao carregar campanhas:', error);
       toast.error('Não foi possível carregar as campanhas');

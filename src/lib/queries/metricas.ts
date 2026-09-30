@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import type { PostgrestError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { buscarTodas } from '@/lib/buscarTodas';
 import { dividaPorCliente, restringirAoUniverso } from '@/domain/metricas';
 import type { DividaCliente } from '@/domain/metricas';
 import type {
@@ -26,11 +28,36 @@ const COLUNAS_ACORDO =
 // Da view, não da tabela: o saldo vem do razão e o status 'vencida' é calculado
 // pela data (a coluna da tabela só muda quando alguém sincroniza).
 const COLUNAS_PARCELA_ACORDO = 'id, acordo_id, valor_total, saldo_atual, data_vencimento, status';
+const COLUNAS_RECEBIMENTO =
+  'recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento, meio_pagamento, titulo_ids';
 
-/** Propaga o erro da consulta ou devolve as linhas — evita 5 `if` seguidos. */
-function linhasDe<T>(resultado: { data: T[] | null; error: { message: string } | null }): T[] {
-  if (resultado.error) throw resultado.error;
-  return resultado.data ?? [];
+/**
+ * Busca a tabela/view inteira (visível pela RLS), ordenada por uma coluna
+ * única — sem isso o PostgREST corta em 1.000 linhas e os totais saem errados.
+ * `filtrar` estreita a consulta (ex.: um cliente só).
+ */
+function todas<T>(
+  origem: string,
+  colunas: string,
+  chave = 'id',
+  filtrar: (q: Consulta) => Consulta = (q) => q,
+): Promise<T[]> {
+  return buscarTodas<T>((de, ate) => {
+    const consulta = supabase.from(origem as never).select(colunas) as unknown as Consulta;
+    return filtrar(consulta).order(chave).range(de, ate) as PromiseLike<Resposta<T>>;
+  });
+}
+
+/** O pedaço do query builder que `todas` usa (as origens variam, o tipo gerado não ajuda). */
+interface Consulta {
+  eq(coluna: string, valor: string): Consulta;
+  in(coluna: string, valores: string[]): Consulta;
+  order(coluna: string): Consulta;
+  range(de: number, ate: number): PromiseLike<Resposta<unknown>>;
+}
+interface Resposta<T> {
+  data: T[] | null;
+  error: PostgrestError | null;
 }
 
 /** `acordos` traz o nome do cliente por join; o resto vem plano. */
@@ -77,26 +104,15 @@ export function useBaseMetricas() {
   return useQuery({
     queryKey: metricasKeys.base(),
     queryFn: async (): Promise<BaseMetricas> => {
-      const [titulosRes, parcelasRes, recebimentosRes, acordosRes, parcelasAcordoRes] =
-        await Promise.all([
-          supabase.from('vw_titulos_completos').select(COLUNAS_TITULO),
-          supabase.from('vw_parcelas_consolidadas').select(COLUNAS_PARCELA),
-          supabase
-            .from('vw_recebimentos_tenant')
-            .select(
-              'recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento, meio_pagamento, titulo_ids',
-            ),
-          supabase.from('acordos').select(COLUNAS_ACORDO),
-          supabase.from('vw_parcelas_acordo_tenant').select(COLUNAS_PARCELA_ACORDO),
-        ]);
+      const [titulos, parcelas, recebimentos, acordos, parcelasAcordo] = await Promise.all([
+        todas<TituloMetrica>('vw_titulos_completos', COLUNAS_TITULO),
+        todas<ParcelaMetrica>('vw_parcelas_consolidadas', COLUNAS_PARCELA),
+        todas<RecebimentoMetrica>('vw_recebimentos_tenant', COLUNAS_RECEBIMENTO, 'recebimento_id'),
+        todas<AcordoRow>('acordos', COLUNAS_ACORDO),
+        todas<ParcelaAcordoMetrica>('vw_parcelas_acordo_tenant', COLUNAS_PARCELA_ACORDO),
+      ]);
 
-      return {
-        titulos: linhasDe(titulosRes) as unknown as TituloMetrica[],
-        parcelas: linhasDe(parcelasRes) as unknown as ParcelaMetrica[],
-        recebimentos: linhasDe(recebimentosRes) as unknown as RecebimentoMetrica[],
-        parcelasAcordo: linhasDe(parcelasAcordoRes) as unknown as ParcelaAcordoMetrica[],
-        acordos: (linhasDe(acordosRes) as unknown as AcordoRow[]).map(mapearAcordo),
-      };
+      return { titulos, parcelas, recebimentos, parcelasAcordo, acordos: acordos.map(mapearAcordo) };
     },
   });
 }
@@ -139,34 +155,30 @@ export function useBaseMetricasCliente(clienteId: string | null) {
     queryKey: metricasKeys.cliente(clienteId ?? ''),
     enabled: !!clienteId,
     queryFn: async (): Promise<BaseMetricas> => {
-      const [titulosRes, acordosRes] = await Promise.all([
-        supabase.from('vw_titulos_completos').select(COLUNAS_TITULO).eq('cliente_id', clienteId!),
-        supabase.from('acordos').select(COLUNAS_ACORDO).eq('cliente_id', clienteId!),
+      const doCliente = (q: Consulta) => q.eq('cliente_id', clienteId!);
+      const [titulos, acordoRows] = await Promise.all([
+        todas<TituloMetrica>('vw_titulos_completos', COLUNAS_TITULO, 'id', doCliente),
+        todas<AcordoRow>('acordos', COLUNAS_ACORDO, 'id', doCliente),
       ]);
-
-      const titulos = linhasDe(titulosRes) as unknown as TituloMetrica[];
-      const acordos = (linhasDe(acordosRes) as unknown as AcordoRow[]).map(mapearAcordo);
+      const acordos = acordoRows.map(mapearAcordo);
       const tituloIds = titulos.map((t) => t.id);
       const acordoIds = acordos.map((a) => a.id);
 
       // `.in()` com lista vazia devolve tudo em alguns backends; melhor não ir.
-      const [parcelasRes, parcelasAcordoRes] = await Promise.all([
+      const [parcelas, parcelasAcordo] = await Promise.all([
         tituloIds.length
-          ? supabase.from('vw_parcelas_consolidadas').select(COLUNAS_PARCELA).in('titulo_id', tituloIds)
-          : Promise.resolve({ data: [], error: null }),
+          ? todas<ParcelaMetrica>('vw_parcelas_consolidadas', COLUNAS_PARCELA, 'id', (q) => q.in('titulo_id', tituloIds))
+          : Promise.resolve([]),
         acordoIds.length
-          ? supabase
-              .from('vw_parcelas_acordo_tenant')
-              .select(COLUNAS_PARCELA_ACORDO)
-              .in('acordo_id', acordoIds)
-          : Promise.resolve({ data: [], error: null }),
+          ? todas<ParcelaAcordoMetrica>('vw_parcelas_acordo_tenant', COLUNAS_PARCELA_ACORDO, 'id', (q) => q.in('acordo_id', acordoIds))
+          : Promise.resolve([]),
       ]);
 
       return {
         titulos,
         acordos,
-        parcelas: linhasDe(parcelasRes) as unknown as ParcelaMetrica[],
-        parcelasAcordo: linhasDe(parcelasAcordoRes) as unknown as ParcelaAcordoMetrica[],
+        parcelas,
+        parcelasAcordo,
         recebimentos: [],
       };
     },
