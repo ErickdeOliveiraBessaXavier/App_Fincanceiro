@@ -6,30 +6,23 @@ no histórico do git). Item feito sai daqui.
 
 ---
 
-## Por onde retomar (combinado em 2026-09-29)
+## Por onde retomar (atualizado em 2026-09-30)
 
 Ordem recomendada, da mais urgente à menos urgente. Os detalhes de cada item estão nas seções abaixo.
 
-1. **Publicar** o commit `4421c46` (correções da Rodada 1) com `git push`. Até lá, a versão no Vercel
-   falha ao cancelar acordo, conceder desconto e registrar baixa de título, porque as RPCs mudaram de assinatura.
-2. **Exclusão definitiva de título com pagamento** — recomendação: *bloquear*, como já é feito
-   para acordo. Dinheiro recebido não se apaga; erro se corrige com estorno, título indevido se cancela.
-   A "limpar empresa" da Plataforma pode ficar só enquanto os dados forem de teste.
-   *Aguardando o OK do gestor.*
-3. **P8 com tolerância** — recomendação: `dias_tolerancia_quebra` configurável por empresa
-   (padrão 10) em `configuracoes_empresa`; job diário via `pg_cron`; o acordo vira
-   'quebrado' mas **não é cancelado sozinho** (cancelar continua sendo decisão do admin).
-   *Aguardando o OK do gestor.*
-4. **Rodada 3, só o truncamento** — o PostgREST corta em 1000 linhas sem avisar; as listagens
+1. **Rodada 3, só o truncamento** — o PostgREST corta em 1000 linhas sem avisar; as listagens
    trazem tudo para o cliente. É obrigatório resolver antes do primeiro cliente real.
-5. **Rodada 2 da auditoria** — já tem um item conhecido: o status `vencido` da MV e de
+2. **Rodada 2 da auditoria** — já tem um item conhecido: o status `vencido` da MV e de
    `vw_parcelas_acordo_consolidadas` usa `CURRENT_DATE` em UTC (entre 21h e meia-noite, a parcela do dia aparece vencida).
-6. **Pré-lançamento** (seção abaixo): SMTP, confirmação de e-mail, hook, URLs. Billing pode esperar.
-7. **P6 + P9** — aproveitar que os dados ainda são de teste (tirar a coluna agora é barato).
-8. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
+3. **Pré-lançamento** (seção abaixo): SMTP, confirmação de e-mail, hook, URLs. Billing pode esperar.
+4. **P6 + P9** — aproveitar que os dados ainda são de teste (tirar a coluna agora é barato).
+5. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
 
 Também em aberto: os 4 acordos de teste com diferença de centavos (gravados antes da correção)
 podem ser apagados e recriados, se o gestor quiser.
+
+Feito em 2026-09-30 (migration `20260930120000`): push da Rodada 1; exclusão definitiva de
+título com lançamento **bloqueada**; **P8 ligado** com tolerância de 10 dias (ver "Acordos").
 
 ## Antes de lançar para cliente externo
 
@@ -44,12 +37,14 @@ podem ser apagados e recriados, se o gestor quiser.
 
 ## Acordos
 
-- **P8 — acordo nunca vira "quebrado".** A RPC
-  `marcar_parcelas_acordo_vencidas()` existe, mas nada a chama. Já é segura: só mexe em acordo
-  vigente e usa a data de Brasília. Hoje ela quebra com 1 dia de atraso — 17 parcelas virariam
-  'quebrado' de uma vez. Proposta: ver o item 3 de "Por onde retomar".
-- **Exclusão definitiva de título com pagamento** ainda apaga os pagamentos em cascata
-  (a de acordo foi bloqueada). Proposta: ver o item 2 de "Por onde retomar".
+- **P8 ligado (2026-09-30).** Job `quebra-acordos-diaria` (pg_cron, 00:10 de Brasília) chama
+  `_processar_quebra_acordos()`. O acordo vira 'quebrado' com parcela em aberto há mais de
+  `configuracoes_empresa.dias_tolerancia_quebra` dias (padrão 10, editável em Configurações),
+  volta a 'ativo' se regularizar e nunca é cancelado sozinho. Na 1ª execução, **6 dos 11 acordos
+  ativos** de teste viram quebrados. A regra está só em `_status_devido_acordo`, usada pelo
+  trigger e pelo job.
+- **Limpar títulos da empresa** (Plataforma) ainda apaga pagamentos em cascata. Aceito só
+  enquanto os dados forem de teste; rever antes do primeiro cliente real.
 - **P6 — aposentar `acordos.titulo_id`.** Duas fontes de verdade para "títulos
   do acordo": a coluna (resquício do 1:1) e `acordo_titulos` (N:N). View,
   cancelamento e trava de pagamento já usam a tabela; falta tirar a coluna.

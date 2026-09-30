@@ -58,7 +58,7 @@ decidida (ver abaixo).
 
 **Decisões tomadas junto:**
 - **Quebra (Dúvida 2):** o acordo quebrado continua travando o título; para renegociar, cancela-se o quebrado (a dívida volta abatida do que foi pago) e cria-se um acordo novo.
-- **Exclusão (Dúvida 1, parcial):** acordo com pagamento ou outro lançamento financeiro não é mais excluído definitivamente. A exclusão definitiva de **título** com pagamento continua como estava (decisão de 2026-08-03).
+- **Exclusão (Dúvida 1, parcial):** acordo com pagamento ou outro lançamento financeiro não é mais excluído definitivamente. A exclusão definitiva de **título** com lançamento financeiro também passou a ser recusada em 2026-09-30 (migration `20260930120000`, decisão do gestor). Só a "limpar títulos da empresa" da Plataforma ainda apaga, enquanto os dados forem de teste.
 
 **Verificação:** as migrations foram ensaiadas em `BEGIN … ROLLBACK` e depois
 submetidas a 21 cenários com um admin simulado: centavos, baixa parcial, data

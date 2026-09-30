@@ -76,6 +76,43 @@ function CampoMeta({ valor, onChange }: { valor: number; onChange: (v: number) =
   );
 }
 
+function CampoToleranciaQuebra({ valor, onChange }: { valor: string; onChange: (v: string) => void }) {
+  const numero = Number(valor) || 0;
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="tolerancia-quebra">Tolerância para quebra de acordo (dias)</Label>
+      <Input
+        id="tolerancia-quebra"
+        type="number"
+        min="0"
+        max="90"
+        step="1"
+        value={valor}
+        onChange={(e) => onChange(e.target.value)}
+        className="max-w-[140px]"
+      />
+      <p className="text-xs text-muted-foreground">
+        {numero > 0
+          ? <>O acordo vira <strong>quebrado</strong> quando uma parcela passa de <strong>{numero} dias</strong> de atraso.</>
+          : <>O acordo vira <strong>quebrado</strong> no primeiro dia de atraso de qualquer parcela.</>}
+        {' '}Ele volta a ativo se o cliente regularizar e nunca é cancelado sozinho: cancelar
+        continua sendo decisão do administrador. A verificação roda todo dia à meia-noite.
+      </p>
+    </div>
+  );
+}
+
+/** Mensagem do primeiro campo inválido, ou null. */
+function validarParametros(percentual: number, tolerancia: number): string | null {
+  if (Number.isNaN(percentual) || percentual < 0 || percentual > 100) {
+    return 'Teto de desconto: informe um valor entre 0 e 100.';
+  }
+  if (!Number.isInteger(tolerancia) || tolerancia < 0 || tolerancia > 90) {
+    return 'Tolerância: informe um número inteiro de dias entre 0 e 90.';
+  }
+  return null;
+}
+
 export default function Configuracoes() {
   const { isAdmin, isLoading: roleLoading } = useUserRole();
   const { data: config, isLoading } = useConfiguracaoEmpresa();
@@ -84,21 +121,29 @@ export default function Configuracoes() {
 
   const [teto, setTeto] = useState('0');
   const [meta, setMeta] = useState(0);
+  const [tolerancia, setTolerancia] = useState('10');
 
   useEffect(() => {
     if (!config) return;
     setTeto(String(config.desconto_maximo_percentual ?? 0));
     setMeta(Number(config.meta_recuperacao_mensal ?? 0));
+    setTolerancia(String(config.dias_tolerancia_quebra ?? 10));
   }, [config]);
 
   const confirmar = async () => {
     const percentual = Number(teto);
-    if (Number.isNaN(percentual) || percentual < 0 || percentual > 100) {
-      toast({ title: 'Percentual inválido', description: 'Informe um valor entre 0 e 100.', variant: 'destructive' });
+    const dias = Number(tolerancia);
+    const erro = validarParametros(percentual, dias);
+    if (erro) {
+      toast({ title: 'Valor inválido', description: erro, variant: 'destructive' });
       return;
     }
     try {
-      await salvar.mutateAsync({ descontoMaximoPercentual: percentual, metaRecuperacaoMensal: meta });
+      await salvar.mutateAsync({
+        descontoMaximoPercentual: percentual,
+        metaRecuperacaoMensal: meta,
+        diasToleranciaQuebra: dias,
+      });
       toast({ title: 'Configurações salvas', description: 'Os novos parâmetros já valem para a empresa.' });
     } catch (e) {
       toast({
@@ -139,6 +184,7 @@ export default function Configuracoes() {
         <CardContent className="space-y-8 pt-6">
           <CampoTetoDesconto valor={teto} onChange={setTeto} />
           <CampoMeta valor={meta} onChange={setMeta} />
+          <CampoToleranciaQuebra valor={tolerancia} onChange={setTolerancia} />
 
           <div className="flex justify-end border-t border-border/50 pt-4">
             <Button onClick={confirmar} disabled={salvar.isPending}>

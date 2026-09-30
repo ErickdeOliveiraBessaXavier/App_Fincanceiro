@@ -942,6 +942,7 @@ export type Database = {
           company_id: string
           created_at: string
           desconto_maximo_percentual: number
+          dias_tolerancia_quebra: number
           meta_recuperacao_mensal: number
           updated_at: string
         }
@@ -949,6 +950,7 @@ export type Database = {
           company_id: string
           created_at?: string
           desconto_maximo_percentual?: number
+          dias_tolerancia_quebra?: number
           meta_recuperacao_mensal?: number
           updated_at?: string
         }
@@ -956,6 +958,7 @@ export type Database = {
           company_id?: string
           created_at?: string
           desconto_maximo_percentual?: number
+          dias_tolerancia_quebra?: number
           meta_recuperacao_mensal?: number
           updated_at?: string
         }
@@ -2055,8 +2058,10 @@ export type Database = {
         }
         Returns: Json
       }
+      _processar_quebra_acordos: { Args: never; Returns: Json }
       _saldo_parcela_titulo: { Args: { p_parcela_id: string }; Returns: number }
       _saldo_titulo: { Args: { p_titulo_id: string }; Returns: number }
+      _status_devido_acordo: { Args: { p_acordo_id: string }; Returns: string }
       _titulo_em_acordo_vigente: {
         Args: { p_titulo_id: string }
         Returns: boolean

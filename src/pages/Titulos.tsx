@@ -133,9 +133,17 @@ function tituloView(t: TituloConsolidado) {
     pagas: t.parcelas_pagas || 0,
     saldo: t.saldo_devedor || 0,
     original: t.valor_original || 0,
-    status: t.status || 'a_vencer',
     descricao: t.descricao || 'Título',
   };
+}
+
+/**
+ * Com acordo não cancelado, o rótulo vem do acordo: a novação zera o saldo e,
+ * pelo status do saldo, um título de acordo quebrado ou cumprido pareceria pago.
+ */
+function TituloStatusBadge({ titulo }: { titulo: Pick<TituloConsolidado, 'status' | 'acordo_status'> }) {
+  if (titulo.acordo_status) return <StatusBadge domain="titulo_acordo" status={titulo.acordo_status} />;
+  return <StatusBadge domain="titulo" status={titulo.status || 'a_vencer'} />;
 }
 
 // ===================== Subcomponentes da árvore cliente/título/parcela =====================
@@ -392,7 +400,7 @@ function TituloRow({ titulo, actions }: { titulo: TituloConsolidado; actions: Ti
           </div>
         </TableCell>
         <TableCell>
-          <StatusBadge domain="titulo" status={v.status} />
+          <TituloStatusBadge titulo={titulo} />
         </TableCell>
         <TableCell>
           <TituloAcoesMenu titulo={titulo} actions={actions} />
@@ -801,7 +809,7 @@ function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo, isAdm
               <div>
                 <Label className="text-muted-foreground">Status</Label>
                 <div className="mt-1">
-                  <StatusBadge domain="titulo" status={titulo.status || 'a_vencer'} />
+                  <TituloStatusBadge titulo={titulo} />
                 </div>
               </div>
             </div>

@@ -19,6 +19,8 @@ export interface ConfiguracaoEmpresa {
   desconto_maximo_percentual: number;
   /** 0 = sem meta definida; o Dashboard omite a barra de progresso. */
   meta_recuperacao_mensal: number;
+  /** Dias de atraso numa parcela de acordo antes de o acordo virar quebrado. */
+  dias_tolerancia_quebra: number;
 }
 
 export const configuracoesKeys = {
@@ -33,7 +35,7 @@ export function useConfiguracaoEmpresa() {
     queryFn: async (): Promise<ConfiguracaoEmpresa | null> => {
       const { data, error } = await supabase
         .from('configuracoes_empresa')
-        .select('company_id, desconto_maximo_percentual, meta_recuperacao_mensal')
+        .select('company_id, desconto_maximo_percentual, meta_recuperacao_mensal, dias_tolerancia_quebra')
         .maybeSingle();
       if (error) throw error;
       return (data as ConfiguracaoEmpresa | null) ?? null;
@@ -44,6 +46,7 @@ export function useConfiguracaoEmpresa() {
 export interface SalvarConfiguracaoInput {
   descontoMaximoPercentual: number;
   metaRecuperacaoMensal: number;
+  diasToleranciaQuebra: number;
 }
 
 export function useSalvarConfiguracaoEmpresa() {
@@ -59,6 +62,7 @@ export function useSalvarConfiguracaoEmpresa() {
           company_id: companyId,
           desconto_maximo_percentual: input.descontoMaximoPercentual,
           meta_recuperacao_mensal: input.metaRecuperacaoMensal,
+          dias_tolerancia_quebra: input.diasToleranciaQuebra,
         }, { onConflict: 'company_id' });
       if (error) throw error;
     },
