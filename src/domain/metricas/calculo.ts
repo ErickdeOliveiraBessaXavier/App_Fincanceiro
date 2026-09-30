@@ -444,19 +444,30 @@ export function somarRecebimentos(recebimentos: RecebimentoDetalhado[]): number 
   return soma(recebimentos.map((r) => r.valor));
 }
 
+/** Para quais títulos vai o dinheiro, e em que fração. */
+function rateioDoRecebimento(r: RecebimentoMetrica): Array<[string, number]> {
+  if (r.titulo_pesos) return Object.entries(r.titulo_pesos).map(([id, peso]) => [id, Number(peso)]);
+  return r.titulo_id ? [[r.titulo_id, 1]] : [];
+}
+
 /**
  * Quanto já entrou em cada título, das DUAS origens.
  *
  * `vw_titulos_completos.total_pago` ignora o dinheiro que entrou por parcela de
  * acordo (ver a view de recebimentos), então um título renegociado e pago
  * aparecia com "pago = 0" na exportação.
+ *
+ * Recebimento de acordo é rateado pelos títulos (`titulo_pesos`, proporcional
+ * ao liquidado na novação). Antes ia inteiro para o primeiro título do acordo.
  */
 export function pagoPorTitulo(recebimentos: RecebimentoMetrica[]): Map<string, number> {
   const pago = new Map<string, number>();
   recebimentos.forEach((r) => {
-    if (!r.titulo_id) return;
-    pago.set(r.titulo_id, (pago.get(r.titulo_id) ?? 0) + Number(r.valor));
+    rateioDoRecebimento(r).forEach(([id, peso]) => {
+      pago.set(id, (pago.get(id) ?? 0) + Number(r.valor) * peso);
+    });
   });
+  pago.forEach((valor, id) => pago.set(id, Math.round(valor * 100) / 100));
   return pago;
 }
 

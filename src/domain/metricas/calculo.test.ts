@@ -364,9 +364,12 @@ describe('listarRecebimentos', () => {
       titulo({ id: 't1', cliente_id: 'cli-1', cliente_nome: 'Ana' }),
       titulo({ id: 't2', cliente_id: 'cli-2', cliente_nome: 'Bruno' }),
     ],
+    acordos: [
+      { id: 'a1', status: 'ativo', valor_acordo: 250, valor_original: 250, data_acordo: '2026-07-01', created_at: '2026-07-01', cliente_id: 'cli-2', cliente_nome: 'Bruno' },
+    ],
     recebimentos: [
       { recebimento_id: 'r1', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 100, data_recebimento: '2026-07-10', meio_pagamento: 'pix' },
-      { recebimento_id: 'r2', origem: 'acordo', titulo_id: 't2', acordo_id: 'a1', valor: 250, data_recebimento: '2026-08-02', meio_pagamento: null },
+      { recebimento_id: 'r2', origem: 'acordo', titulo_id: null, acordo_id: 'a1', valor: 250, data_recebimento: '2026-08-02', meio_pagamento: null, titulo_ids: ['t2'], titulo_pesos: { t2: 1 } },
       { recebimento_id: 'r3', origem: 'titulo', titulo_id: 't1', acordo_id: null, valor: 50, data_recebimento: '2026-08-05', meio_pagamento: 'dinheiro' },
     ],
   };
@@ -388,6 +391,15 @@ describe('listarRecebimentos', () => {
     const pago = pagoPorTitulo(base.recebimentos);
     expect(pago.get('t1')).toBe(150);
     expect(pago.get('t2')).toBe(250);
+  });
+
+  it('rateia o recebimento de acordo multi-título pelo liquidado de cada um', () => {
+    // Antes o dinheiro ia inteiro para o primeiro título do acordo.
+    const pago = pagoPorTitulo([
+      { recebimento_id: 'r9', origem: 'acordo', titulo_id: null, acordo_id: 'a9', valor: 1000, data_recebimento: '2026-08-02', meio_pagamento: null, titulo_ids: ['tA', 'tB'], titulo_pesos: { tA: 0.75, tB: 0.25 } },
+    ]);
+    expect(pago.get('tA')).toBe(750);
+    expect(pago.get('tB')).toBe(250);
   });
 
   it('agrupa por cliente com o saldo que sobrou', () => {

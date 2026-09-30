@@ -39,35 +39,6 @@ import { resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociac
 import { codigoAcordo } from '@/domain/acordos/identificacao';
 import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
 
-interface Acordo {
-  id: string;
-  titulo_id: string;
-  cliente_id: string;
-  valor_original: number;
-  valor_acordo: number;
-  desconto: number;
-  parcelas: number;
-  valor_parcela: number;
-  data_acordo: string;
-  data_vencimento_primeira_parcela: string;
-  status: 'ativo' | 'cumprido' | 'quebrado' | 'cancelado';
-  observacoes?: string;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-  titulo: {
-    id: string;
-    valor_original: number;
-    vencimento_original: string;
-    numero_documento?: string;
-  };
-  cliente: {
-    id: string;
-    nome: string;
-    cpf_cnpj: string;
-  };
-}
-
 interface LocationState {
   clienteId?: string;
   tituloIds?: string[];
@@ -114,17 +85,13 @@ function TituloSecao({ children }: { children: ReactNode }) {
 /**
  * Números de documento dos títulos incluídos no acordo.
  *
- * Um acordo pode consolidar vários títulos; a coluna mostrava só o vínculo
- * legado `titulo_id`. Acima de dois, resume para não estourar a coluna.
+ * Um acordo pode consolidar vários títulos (acordo_titulos). Acima de dois,
+ * resume para não estourar a coluna.
  */
 function documentosDoAcordo(acordo: AcordoRow): string[] {
-  const documentos = (acordo.titulos ?? [])
+  return (acordo.titulos ?? [])
     .map((t) => t.numero_documento)
     .filter((n): n is string => !!n);
-  if (documentos.length > 0) return documentos;
-
-  const legado = acordo.titulo?.numero_documento;
-  return legado ? [legado] : [];
 }
 
 function DocumentosDoAcordo({ acordo }: { acordo: AcordoRow }) {

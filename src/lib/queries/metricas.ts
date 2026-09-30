@@ -29,7 +29,7 @@ const COLUNAS_ACORDO =
 // pela data (a coluna da tabela só muda quando alguém sincroniza).
 const COLUNAS_PARCELA_ACORDO = 'id, acordo_id, valor_total, saldo_atual, data_vencimento, status';
 const COLUNAS_RECEBIMENTO =
-  'recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento, meio_pagamento, titulo_ids';
+  'recebimento_id, origem, titulo_id, acordo_id, valor, data_recebimento, meio_pagamento, titulo_ids, titulo_pesos';
 
 /**
  * Busca a tabela/view inteira (visível pela RLS), ordenada por uma coluna

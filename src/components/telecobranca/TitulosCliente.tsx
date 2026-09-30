@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { buscarTodas } from '@/lib/buscarTodas';
+import { AvisoReimportado } from '@/components/titulos/AvisoReimportado';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/StatusBadge';
@@ -250,6 +251,7 @@ function TituloGrupoCard({ grupo, isExpanded, onToggle, onAcordo, onPagar }: Tit
               <span className="text-sm font-semibold">
                 Título {grupo.numeroDocumento ? `#${grupo.numeroDocumento}` : 'avulso'}
               </span>
+              <AvisoReimportado numeroDocumento={grupo.numeroDocumento} />
               <Badge variant={situacao.variant} className="text-xs">
                 {grupo.temVencido && <AlertTriangle className="h-3 w-3 mr-1" />}
                 {situacao.label}

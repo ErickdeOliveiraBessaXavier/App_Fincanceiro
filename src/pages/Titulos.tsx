@@ -55,6 +55,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils } from '@/utils/titulo';
+import { AvisoReimportado } from '@/components/titulos/AvisoReimportado';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SelecionarCliente } from '@/components/SelecionarCliente';
 import { derivarStatusCliente, type SituacaoCliente } from '@/domain/clientes/situacao';
@@ -374,6 +375,7 @@ function TituloRow({ titulo, actions }: { titulo: TituloConsolidado; actions: Ti
               <span className="text-sm">
                 {v.descricao}
               </span>
+              <AvisoReimportado numeroDocumento={titulo.numero_documento} />
             </div>
             <div className="text-xs text-muted-foreground">
               Venc: {FormatUtils.date(titulo.vencimento_original || '')}

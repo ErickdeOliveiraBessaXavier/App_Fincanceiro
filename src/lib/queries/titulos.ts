@@ -12,7 +12,50 @@ export const titulosKeys = {
   pagamentos: (parcelaIds: string[]) =>
     [...titulosKeys.all, 'pagamentos', [...parcelaIds].sort()] as const,
   clientes: ['titulos', 'clientes-select'] as const,
+  cancelados: ['titulos', 'cancelados'] as const,
 };
+
+export interface TituloCancelado {
+  numero_documento: string;
+  deleted_at: string;
+  motivo: string | null;
+}
+
+/**
+ * Títulos cancelados da empresa, por número do documento (P9).
+ *
+ * Cancelar um título e importar de novo com o mesmo número cria um título
+ * novo, sem histórico; o antigo (com baixas, estornos, acordos) some das
+ * telas. Com este mapa, o título novo avisa que existe histórico anterior.
+ * vw_titulos_completos esconde os cancelados; a tabela não (a RLS filtra
+ * empresa e carteira).
+ */
+export function useTitulosCancelados() {
+  return useQuery({
+    queryKey: titulosKeys.cancelados,
+    staleTime: 5 * 60 * 1000,
+    queryFn: async (): Promise<Map<string, TituloCancelado[]>> => {
+      const linhas = await buscarTodas((de, ate) =>
+        supabase
+          .from('titulos')
+          .select('numero_documento, deleted_at, metadata')
+          .not('deleted_at', 'is', null)
+          .not('numero_documento', 'is', null)
+          .order('deleted_at', { ascending: false })
+          .order('id')
+          .range(de, ate),
+      );
+      const porNumero = new Map<string, TituloCancelado[]>();
+      linhas.forEach((l) => {
+        const numero = l.numero_documento as string;
+        const meta = l.metadata as { motivo_cancelamento?: string } | null;
+        const t = { numero_documento: numero, deleted_at: l.deleted_at as string, motivo: meta?.motivo_cancelamento ?? null };
+        porNumero.set(numero, [...(porNumero.get(numero) ?? []), t]);
+      });
+      return porNumero;
+    },
+  });
+}
 
 // Pagamento de uma parcela de título (subconjunto de movimentos_financeiros).
 export interface PagamentoEvento {

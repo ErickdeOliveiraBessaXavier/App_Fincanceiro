@@ -1977,6 +1977,7 @@ export type Database = {
           recebimento_id: string | null
           titulo_id: string | null
           titulo_ids: string[] | null
+          titulo_pesos: Json | null
           valor: number | null
         }
         Relationships: [
@@ -2007,6 +2008,7 @@ export type Database = {
           recebimento_id: string | null
           titulo_id: string | null
           titulo_ids: string[] | null
+          titulo_pesos: Json | null
           valor: number | null
         }
         Relationships: [

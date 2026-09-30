@@ -42,6 +42,7 @@ export interface ParcelaMetrica {
 export interface RecebimentoMetrica {
   recebimento_id: string;
   origem: string;
+  /** Só no recebimento de título. O de acordo não tem "título principal". */
   titulo_id: string | null;
   acordo_id: string | null;
   valor: number;
@@ -50,10 +51,14 @@ export interface RecebimentoMetrica {
   meio_pagamento: string | null;
   /**
    * Todos os títulos a que o dinheiro se refere: o próprio título, ou todos os
-   * títulos do acordo. `titulo_id` é só o "principal" do acordo — filtrar por
-   * ele tirava do relatório o recebimento de acordo multi-título.
+   * títulos do acordo.
    */
   titulo_ids?: string[] | null;
+  /**
+   * Recebimento de acordo: fração de cada título ({titulo_id: fração}, soma 1),
+   * pelo que cada um teve liquidado na novação. Nulo no recebimento de título.
+   */
+  titulo_pesos?: Record<string, number> | null;
 }
 
 /** Linha de `acordos`. */

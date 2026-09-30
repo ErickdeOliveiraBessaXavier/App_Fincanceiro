@@ -8,7 +8,6 @@ import { clientesKeys } from './clientes';
 // ============== Types ==============
 export interface AcordoRow {
   id: string;
-  titulo_id: string;
   cliente_id: string;
   valor_original: number;
   valor_acordo: number;
@@ -22,18 +21,10 @@ export interface AcordoRow {
   created_by: string;
   created_at: string;
   updated_at: string;
-  titulo: {
-    id: string;
-    valor_original: number;
-    vencimento_original: string;
-    numero_documento?: string;
-  };
   /**
-   * Todos os títulos incluídos no acordo (acordo_titulos).
-   *
-   * A coluna `titulo_id` é do tempo em que um acordo cobria um título só; a
-   * lista mostrava apenas esse documento e um acordo consolidado aparecia como
-   * se cobrisse um título — informação errada, não só incompleta.
+   * Todos os títulos incluídos no acordo (acordo_titulos) — a única fonte.
+   * A antiga coluna acordos.titulo_id (do tempo do acordo de um título só)
+   * foi removida no P6.
    */
   titulos: TituloDoAcordo[];
   cliente: {
@@ -120,7 +111,6 @@ export function useAcordos() {
         .from('acordos')
         .select(`
           id,
-          titulo_id,
           cliente_id,
           valor_original,
           valor_acordo,
@@ -134,12 +124,6 @@ export function useAcordos() {
           created_by,
           created_at,
           updated_at,
-          titulo:titulos (
-            id,
-            valor_original,
-            vencimento_original,
-            numero_documento
-          ),
           acordo_titulos ( titulos ( id, numero_documento ) ),
           cliente:clientes (
             id,
@@ -155,7 +139,6 @@ export function useAcordos() {
       return (data as unknown as Array<AcordoRow & { acordo_titulos?: LinhaVinculo[] }>)
         .map((a) => ({
           ...a,
-          // Fallback no vínculo legado para acordos anteriores à acordo_titulos.
           titulos: (a.acordo_titulos ?? [])
             .map((v) => v.titulos)
             .filter((t): t is TituloDoAcordo => !!t),

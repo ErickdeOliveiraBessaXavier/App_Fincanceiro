@@ -11,8 +11,7 @@ no histórico do git). Item feito sai daqui.
 Ordem recomendada, da mais urgente à menos urgente. Os detalhes de cada item estão nas seções abaixo.
 
 1. **Pré-lançamento** (seção abaixo): SMTP, confirmação de e-mail, hook, URLs. Billing pode esperar.
-2. **P6 + P9** — aproveitar que os dados ainda são de teste (tirar a coluna agora é barato).
-3. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
+2. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
 
 Também em aberto: os 4 acordos de teste com diferença de centavos (gravados antes da correção)
 podem ser apagados e recriados, se o gestor quiser.
@@ -57,12 +56,14 @@ SMTP fica para depois (gestor, 2026-09-30).
   trigger e pelo job.
 - **Limpar títulos da empresa** (Plataforma) ainda apaga pagamentos em cascata. Aceito só
   enquanto os dados forem de teste; rever antes do primeiro cliente real.
-- **P6 — aposentar `acordos.titulo_id`.** Duas fontes de verdade para "títulos
-  do acordo": a coluna (resquício do 1:1) e `acordo_titulos` (N:N). View,
-  cancelamento e trava de pagamento já usam a tabela; falta tirar a coluna.
-- **P9 — sinalizar reimportação.** Quando existir título cancelado com o mesmo
-  `numero_documento`, mostrar "reimportado — há histórico anterior" com link.
-  Sem mudança de schema.
+- **P6 (2026-09-30)** — `acordos.titulo_id` aposentada em duas etapas. Etapa 1 (`20260930160000`,
+  aplicada): recebimento de acordo ganhou `titulo_pesos` (rateio pelo liquidado de cada título) e a
+  exportação de Relatórios rateia em vez de pôr tudo no primeiro título. **Etapa 2
+  (`20260930170000`) só depois do front do P6 publicado no Vercel** — ela apaga a coluna que o front
+  antigo ainda lê.
+- **P9 (2026-09-30)** — selo "Reimportado" em Títulos e na ficha, com data e motivo dos cancelamentos
+  anteriores do mesmo número. Sem link: não existe tela para título cancelado (o histórico fica no
+  banco). Se a operação pedir, fazer uma tela de consulta de cancelados.
 
 ## Fila do cobrador
 
