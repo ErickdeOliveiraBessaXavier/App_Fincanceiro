@@ -1,17 +1,20 @@
 import { defineConfig, devices } from '@playwright/test';
 import { readFileSync } from 'fs';
 
-// Playwright lê .env automaticamente, mas não .env.local (convenção do Vite).
-// Este bloco carrega .env.local para que as variáveis de teste fiquem disponíveis.
-try {
-  readFileSync('.env.local', 'utf-8')
-    .split('\n')
-    .forEach(line => {
-      const match = line.match(/^([^#=]+)=(.*)$/);
-      if (match) process.env[match[1].trim()] ??= match[2].trim();
-    });
-} catch {
-  // .env.local ausente — variáveis devem vir do ambiente ou do .env
+// Carrega .env.local e .env (nessa ordem: o local vence). O Playwright não lê
+// nenhum dos dois sozinho. O .env traz o que a limpeza pós-testes precisa
+// (SUPABASE_ACCESS_TOKEN, VITE_SUPABASE_PROJECT_ID).
+for (const arquivo of ['.env.local', '.env']) {
+  try {
+    readFileSync(arquivo, 'utf-8')
+      .split('\n')
+      .forEach(line => {
+        const match = line.match(/^([^#=]+)=(.*)$/);
+        if (match) process.env[match[1].trim()] ??= match[2].trim().replace(/^"(.*)"$/, '$1');
+      });
+  } catch {
+    // arquivo ausente — variáveis devem vir do ambiente
+  }
 }
 
 /**
@@ -21,6 +24,10 @@ try {
  *   PLAYWRIGHT_EMAIL       — e-mail do usuário operador de teste
  *   PLAYWRIGHT_SENHA       — senha do usuário operador de teste
  *   PLAYWRIGHT_CLIENTE_ID  — UUID de um cliente existente no banco
+ *
+ * Os testes gravam na ficha desse cliente; o projeto "limpeza" apaga o que foi
+ * gravado ao final (e2e/limpeza.teardown.ts — precisa do SUPABASE_ACCESS_TOKEN
+ * do .env; sem ele só avisa).
  */
 export default defineConfig({
   testDir: './e2e',
@@ -42,6 +49,13 @@ export default defineConfig({
     {
       name: 'setup',
       testMatch: /auth\.setup\.ts/,
+      // Roda depois de todos os projetos que dependem do setup, mesmo com falha.
+      teardown: 'limpeza',
+    },
+    // 3. Apaga o que os testes gravaram no banco.
+    {
+      name: 'limpeza',
+      testMatch: /limpeza\.teardown\.ts/,
     },
     // 2. Testes rodando com o estado salvo (já autenticado).
     {
