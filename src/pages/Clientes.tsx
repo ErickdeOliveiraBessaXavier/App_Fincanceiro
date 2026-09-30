@@ -746,7 +746,7 @@ export default function Clientes() {
 
       <div className="space-y-10">
         <Card className="overflow-hidden">
-          <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+          <CardHeader variant="faixa">
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle className="text-xl font-bold tracking-tight">Lista de Clientes</CardTitle>

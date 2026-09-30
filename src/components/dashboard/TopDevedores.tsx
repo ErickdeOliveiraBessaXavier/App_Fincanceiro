@@ -27,7 +27,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
   if (devedores.length === 0) {
     return (
       <Card className="overflow-hidden">
-        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <CardHeader variant="faixa">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-destructive" />
             Maiores Devedores
@@ -47,7 +47,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+      <CardHeader variant="faixa">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-destructive" />
@@ -98,7 +98,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
               <div className="pl-[52px]">
                 <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-destructive rounded-full transition-all duration-1000 ease-out shadow-[0_0_8px_rgba(var(--destructive),0.4)]"
+                    className="h-full bg-destructive rounded-full transition-all duration-1000 ease-out"
                     style={{ width: `${percentage}%` }}
                   />
                 </div>

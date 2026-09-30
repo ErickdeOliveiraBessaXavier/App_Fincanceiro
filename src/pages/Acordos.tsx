@@ -762,7 +762,7 @@ export default function Acordos() {
       />
 
       <Card className="overflow-hidden">
-        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <CardHeader variant="faixa">
           <div>
             <CardTitle className="text-xl font-bold tracking-tight">Lista de Acordos</CardTitle>
             <CardDescription className="text-xs font-medium">

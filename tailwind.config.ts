@@ -93,9 +93,12 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        // Fonte única das animações do app. Até 2026-09 o index.css redefinia
+        // animate-fade-in/scale-in e vencia por vir depois; o fade-in que valia
+        // era só de opacidade, e é o que fica aqui.
         "fade-in": {
-          "0%": { opacity: "0", transform: "translateY(10px)" },
-          "100%": { opacity: "1", transform: "translateY(0)" },
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
         },
         "scale-in": {
           "0%": { opacity: "0", transform: "scale(0.95)" },

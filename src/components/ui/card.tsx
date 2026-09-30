@@ -18,11 +18,23 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
 );
 Card.displayName = "Card";
 
-const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", className)} {...props} />
-  )
-);
+/**
+ * `faixa` é o cabeçalho de seção do app: fundo levemente tingido e linha
+ * separando do conteúdo. Estava copiado em 24 cabeçalhos de 17 arquivos.
+ */
+type VarianteCardHeader = "default" | "faixa";
+
+const CABECALHO: Record<VarianteCardHeader, string> = {
+  default: "",
+  faixa: "pb-4 border-b border-border/50 bg-muted/20",
+};
+
+const CardHeader = React.forwardRef<
+  HTMLDivElement,
+  React.HTMLAttributes<HTMLDivElement> & { variant?: VarianteCardHeader }
+>(({ className, variant = "default", ...props }, ref) => (
+  <div ref={ref} className={cn("flex flex-col space-y-1.5 p-6", CABECALHO[variant], className)} {...props} />
+));
 CardHeader.displayName = "CardHeader";
 
 const CardTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(

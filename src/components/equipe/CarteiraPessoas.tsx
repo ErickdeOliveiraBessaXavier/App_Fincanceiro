@@ -323,7 +323,7 @@ export function CarteiraPessoas({ config, isAdmin }: { config: CarteiraConfig; i
       <ResumoCards pessoas={config.pessoas} />
 
       <Card className="overflow-hidden">
-        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <CardHeader variant="faixa">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <CardTitle className="text-xl font-bold tracking-tight">{config.titulo}</CardTitle>

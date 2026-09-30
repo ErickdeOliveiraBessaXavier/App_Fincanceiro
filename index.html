@@ -4,6 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>App Financeiro</title>
+    <!-- Fonte declarada aqui, e não por @import no CSS: assim o navegador a
+         descobre no HTML, em paralelo ao bundle, em vez de só depois de baixar
+         a folha de estilos do app. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" />
     <meta name="description" content="Aplicativo de Finanças Pessoais" />
     <!--
       Tela de carregamento da primeira pintura. Vive aqui, em CSS puro, porque

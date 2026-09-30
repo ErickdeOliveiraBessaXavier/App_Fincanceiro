@@ -158,7 +158,7 @@ export function IntegracaoWhatsApp() {
   return (
     <>
       <Card className="overflow-hidden">
-        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <CardHeader variant="faixa">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-500/10 text-green-600">

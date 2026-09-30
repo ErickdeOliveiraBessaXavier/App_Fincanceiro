@@ -105,7 +105,7 @@ function ClientesQuePagaram({ clientes }: { clientes: ClientePago[] }) {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+      <CardHeader variant="faixa">
         <CardTitle className="text-lg font-bold tracking-tight">Clientes que pagaram</CardTitle>
         <CardDescription className="text-xs font-medium">
           Quanto cada cliente já pagou no período e o que dele ainda está em aberto hoje
@@ -152,7 +152,7 @@ function PagamentoAPagamento({ recebimentos }: { recebimentos: RecebimentoDetalh
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+      <CardHeader variant="faixa">
         <CardTitle className="text-lg font-bold tracking-tight">Pagamentos recebidos</CardTitle>
         <CardDescription className="text-xs font-medium">
           Baixa de parcela de título e parcela de acordo, na data real do recebimento

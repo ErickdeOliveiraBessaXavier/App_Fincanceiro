@@ -82,7 +82,7 @@ export function DescontosConcedidos({ descontos }: { descontos: DescontoConcedid
       />
 
       <Card className="overflow-hidden">
-        <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+        <CardHeader variant="faixa">
           <CardTitle className="text-lg font-bold tracking-tight">Descontos concedidos</CardTitle>
           <CardDescription className="text-xs font-medium">
             Exceção que vira rotina não pede trava mais apertada — pede recalibrar o teto.

@@ -17,7 +17,7 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+      <CardHeader variant="faixa">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-bold flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />

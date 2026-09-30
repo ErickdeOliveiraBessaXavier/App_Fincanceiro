@@ -255,7 +255,7 @@ export default function Atribuicao() {
       />
 
       <Card className="overflow-hidden">
-        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <CardHeader variant="faixa">
           <CardTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
             <Users className="h-5 w-5" /> Clientes
           </CardTitle>

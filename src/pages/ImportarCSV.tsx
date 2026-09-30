@@ -409,7 +409,7 @@ function PreviewCard({ parsed }: { parsed: ParsedFile | null }) {
   if (!parsed || parsed.previewRows.length === 0) return null;
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+      <CardHeader variant="faixa">
         <CardTitle className="text-xl font-bold tracking-tight">Prévia da Planilha</CardTitle>
         <CardDescription className="text-xs font-medium">As primeiras 5 linhas identificadas</CardDescription>
       </CardHeader>
@@ -652,7 +652,7 @@ export default function ImportarCSV() {
 
       <div className="grid gap-10 md:grid-cols-2">
         <Card className="overflow-hidden">
-          <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+          <CardHeader variant="faixa">
             <CardTitle className="text-lg font-bold flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                 <Upload className="h-4 w-4" />

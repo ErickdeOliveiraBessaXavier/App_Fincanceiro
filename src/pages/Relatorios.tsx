@@ -10,6 +10,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { exportToCSV, exportToExcel, exportToPDF } from '@/utils/export';
+import { COR_GRAFICO, CORES_SERIES, CURSOR_BARRA, TOOLTIP_GRAFICO, pontoDaLinha } from '@/lib/graficos';
 import { formatCpfCnpj, formatData } from '@/utils/format';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { useBaseMetricas } from '@/lib/queries/metricas';
@@ -67,8 +68,6 @@ function exportarComFormato(format: 'csv' | 'excel' | 'pdf', options: ExportOpti
   else exportToPDF(options);
 }
 
-const COLORS = ['#f59e0b', '#22c55e', '#ef4444', '#3b82f6', '#8b5cf6', '#64748b'];
-
 const formatCurrency = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
 
@@ -112,13 +111,6 @@ const IndicadorCard = ({ titulo, valor, icone: Icone, corIcone, comparacao, nota
     </CardContent>
   </Card>
 );
-
-const CHART_TOOLTIP = {
-  backgroundColor: 'hsl(var(--card))',
-  border: 'none',
-  borderRadius: '12px',
-  boxShadow: 'var(--shadow-card-hover)',
-};
 
 interface DadosRelatorio {
   base: ReturnType<typeof prepararBase>;
@@ -380,7 +372,7 @@ const CardsIndicadores = ({ dados, mostraTitulos, mostraAcordos, comparacaoVisiv
 const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
   <>
     <Card className="overflow-hidden">
-      <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+      <CardHeader variant="faixa">
         <CardTitle className="text-lg font-bold tracking-tight">Títulos por Situação</CardTitle>
         <CardDescription className="text-xs font-medium">
           Acordo cumprido e quebrado aparecem separados de "Pago"
@@ -393,31 +385,31 @@ const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
               {dados.distribuicao.map((entry, index) => (
                 <Cell
                   key={entry.name}
-                  fill={COLORS[index % COLORS.length]}
+                  fill={CORES_SERIES[index % CORES_SERIES.length]}
                   className="stroke-background hover:opacity-80 transition-opacity outline-none"
                   strokeWidth={4}
                 />
               ))}
             </Pie>
-            <Tooltip contentStyle={CHART_TOOLTIP} />
+            <Tooltip contentStyle={TOOLTIP_GRAFICO} />
           </PieChart>
         </ResponsiveContainer>
       </CardContent>
     </Card>
 
     <Card className="overflow-hidden">
-      <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+      <CardHeader variant="faixa">
         <CardTitle className="text-lg font-bold tracking-tight">Títulos por Mês</CardTitle>
         <CardDescription className="text-xs font-medium">Títulos com parcela vencendo no mês</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
         <ResponsiveContainer width="100%" height={320}>
           <BarChart data={dados.titulosPorMes}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={COR_GRAFICO.grade} />
             <XAxis dataKey="rotulo" fontSize={12} tickLine={false} axisLine={false} dy={10} />
             <YAxis fontSize={12} tickLine={false} axisLine={false} dx={-10} />
-            <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.4)' }} contentStyle={CHART_TOOLTIP} />
-            <Bar dataKey="quantidade" name="Títulos" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} barSize={40} />
+            <Tooltip cursor={CURSOR_BARRA} contentStyle={TOOLTIP_GRAFICO} />
+            <Bar dataKey="quantidade" name="Títulos" fill={COR_GRAFICO.primaria} radius={[6, 6, 0, 0]} barSize={40} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>
@@ -427,7 +419,7 @@ const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
 
 const GraficoComparativo = ({ dados }: { dados: DadosRelatorio }) => (
   <Card className="md:col-span-2 overflow-hidden">
-    <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+    <CardHeader variant="faixa">
       <div className="flex items-center justify-between">
         <div>
           <CardTitle className="text-lg font-bold tracking-tight">Comparativo: Títulos vs Acordos</CardTitle>
@@ -446,12 +438,12 @@ const GraficoComparativo = ({ dados }: { dados: DadosRelatorio }) => (
             acordos: dados.acordosPorMes[index]?.quantidade ?? 0,
           }))}
         >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={COR_GRAFICO.grade} />
           <XAxis dataKey="rotulo" fontSize={12} tickLine={false} axisLine={false} dy={10} />
           <YAxis fontSize={12} tickLine={false} axisLine={false} dx={-10} />
-          <Tooltip contentStyle={CHART_TOOLTIP} />
-          <Line type="monotone" dataKey="quantidade" stroke="hsl(var(--primary))" name="Títulos" strokeWidth={4} dot={{ r: 6, fill: 'hsl(var(--primary))', stroke: '#fff', strokeWidth: 2 }} />
-          <Line type="monotone" dataKey="acordos" stroke="#22c55e" name="Acordos" strokeWidth={4} dot={{ r: 6, fill: '#22c55e', stroke: '#fff', strokeWidth: 2 }} />
+          <Tooltip contentStyle={TOOLTIP_GRAFICO} />
+          <Line type="monotone" dataKey="quantidade" stroke={COR_GRAFICO.primaria} name="Títulos" strokeWidth={4} dot={pontoDaLinha(COR_GRAFICO.primaria)} />
+          <Line type="monotone" dataKey="acordos" stroke={COR_GRAFICO.sucesso} name="Acordos" strokeWidth={4} dot={pontoDaLinha(COR_GRAFICO.sucesso)} />
         </LineChart>
       </ResponsiveContainer>
     </CardContent>
@@ -460,18 +452,18 @@ const GraficoComparativo = ({ dados }: { dados: DadosRelatorio }) => (
 
 const GraficoDeAcordos = ({ dados }: { dados: DadosRelatorio }) => (
   <Card className="md:col-span-2 overflow-hidden">
-    <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+    <CardHeader variant="faixa">
       <CardTitle className="text-lg font-bold tracking-tight">Acordos por Mês</CardTitle>
       <CardDescription className="text-xs font-medium">Acordos com parcela vencendo no mês</CardDescription>
     </CardHeader>
     <CardContent className="pt-6">
       <ResponsiveContainer width="100%" height={320}>
         <BarChart data={dados.acordosPorMes}>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={COR_GRAFICO.grade} />
           <XAxis dataKey="rotulo" fontSize={12} tickLine={false} axisLine={false} dy={10} />
           <YAxis fontSize={12} tickLine={false} axisLine={false} dx={-10} />
-          <Tooltip cursor={{ fill: 'hsl(var(--muted)/0.4)' }} contentStyle={CHART_TOOLTIP} />
-          <Bar dataKey="quantidade" name="Acordos" fill="#22c55e" radius={[6, 6, 0, 0]} barSize={40} />
+          <Tooltip cursor={CURSOR_BARRA} contentStyle={TOOLTIP_GRAFICO} />
+          <Bar dataKey="quantidade" name="Acordos" fill={COR_GRAFICO.sucesso} radius={[6, 6, 0, 0]} barSize={40} />
         </BarChart>
       </ResponsiveContainer>
     </CardContent>

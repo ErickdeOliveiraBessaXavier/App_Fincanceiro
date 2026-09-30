@@ -21,6 +21,7 @@ import {
   ultimosMeses,
 } from '@/domain/metricas';
 import { Rotulo } from '@/components/Rotulo';
+import { COR_GRAFICO, TOOLTIP_GRAFICO, pontoDaLinha } from '@/lib/graficos';
 
 /**
  * Resumo executivo da carteira.
@@ -141,7 +142,7 @@ const Dashboard = () => {
         {/* Saúde e Tendência */}
         <div className="space-y-10">
           <Card className="overflow-hidden">
-            <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+            <CardHeader variant="faixa">
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-xl font-bold tracking-tight">Evolução da Recuperação</CardTitle>
@@ -155,14 +156,14 @@ const Dashboard = () => {
             <CardContent className="pt-8">
               <ResponsiveContainer width="100%" height={300}>
                 <LineChart data={recuperacaoMensal}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                  <XAxis dataKey="rotulo" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                  <YAxis tickFormatter={(v) => `R$ ${(v/1000).toFixed(0)}k`} stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} dx={-10} />
+                  <CartesianGrid strokeDasharray="3 3" stroke={COR_GRAFICO.grade} vertical={false} />
+                  <XAxis dataKey="rotulo" stroke={COR_GRAFICO.eixo} fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                  <YAxis tickFormatter={(v) => `R$ ${(v/1000).toFixed(0)}k`} stroke={COR_GRAFICO.eixo} fontSize={12} tickLine={false} axisLine={false} dx={-10} />
                   <Tooltip
-                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: 'none', borderRadius: '16px', boxShadow: 'var(--shadow-card-hover)' }}
+                    contentStyle={TOOLTIP_GRAFICO}
                     formatter={(v: number) => [formatCurrency(v), 'Recuperado']}
                   />
-                  <Line type="monotone" dataKey="valor" stroke="hsl(var(--primary))" strokeWidth={4} dot={{ r: 6, fill: 'hsl(var(--primary))', strokeWidth: 2, stroke: '#fff' }} />
+                  <Line type="monotone" dataKey="valor" stroke={COR_GRAFICO.primaria} strokeWidth={4} dot={pontoDaLinha(COR_GRAFICO.primaria)} />
                 </LineChart>
               </ResponsiveContainer>
             </CardContent>

@@ -382,7 +382,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
       />
 
       <Card className="overflow-hidden">
-        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
+        <CardHeader variant="faixa">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-xl font-bold tracking-tight">Lista de Usuários</CardTitle>
