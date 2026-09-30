@@ -13,8 +13,9 @@ Ordem recomendada, da mais urgente à menos urgente. Os detalhes de cada item es
 1. **Pré-lançamento** (seção abaixo): SMTP, confirmação de e-mail, hook, URLs. Billing pode esperar.
 2. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
 
-Também em aberto: os 4 acordos de teste com diferença de centavos (gravados antes da correção)
-podem ser apagados e recriados, se o gestor quiser.
+Os 4 acordos de teste com diferença de centavos foram recriados em 2026-09-30 (mesmo valor combinado,
+resíduo na última parcela, pagamentos válidos relançados com a mesma data e meio; os estornos de teste
+de 13/08 não foram reproduzidos). Hoje: 14 acordos, nenhum com diferença.
 
 Feito em 2026-09-30 (migration `20260930120000`): push da Rodada 1; exclusão definitiva de
 título com lançamento **bloqueada**; **P8 ligado** com tolerância de 10 dias (ver "Acordos").
@@ -25,11 +26,9 @@ Também em 2026-09-30: **Rodada 2 auditada e corrigida** (migrations `2026093013
 
 Pequenos pendentes da Rodada 2:
 - **Tela de feriados da empresa** (estadual/municipal) — a tabela `feriados` existe, sem tela.
-- **Dígito verificador no importador/API** — hoje só o cadastro manual confere; decidir se a carga
-  do ERP deve recusar ou só avisar.
-- **`PLAYWRIGHT_CLIENTE_ID`** do `.env.local` aponta para um cliente que não existe mais: os testes
-  E2E da Telecobrança dependem dele. E o `playwright.config.ts` usa o Edge, que não está instalado
-  (rodar com Chrome).
+  O gestor vai avaliar se é aplicável ao negócio.
+- Resolvidos em 2026-09-30: CPF/CNPJ com dígito verificador em toda porta (cadastro, planilha, API,
+  empresa), com CNPJ alfanumérico; E2E da Telecobrança reescritos para a ficha atual (15 testes, Chrome).
 
 ## Antes de lançar para cliente externo
 
