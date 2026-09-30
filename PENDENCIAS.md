@@ -29,6 +29,9 @@ Pequenos pendentes da Rodada 2:
   O gestor vai avaliar se é aplicável ao negócio.
 - Resolvidos em 2026-09-30: CPF/CNPJ com dígito verificador em toda porta (cadastro, planilha, API,
   empresa), com CNPJ alfanumérico; E2E da Telecobrança reescritos para a ficha atual (15 testes, Chrome).
+- **Cobrador de teste** criado pelo fluxo real de convite (empresa de teste, 2 clientes atribuídos +
+  1 cadastrado por ele). Credenciais em `.env.local` (PLAYWRIGHT_COBRADOR_*); usado por
+  `e2e/carteira/cobrador.spec.ts`. Fluxo convite → cadastro → autorização → carteira conferido ponta a ponta.
 
 ## Antes de lançar para cliente externo
 
