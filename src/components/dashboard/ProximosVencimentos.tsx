@@ -1,15 +1,42 @@
+import { useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CalendarClock, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { parseDataLocal } from '@/utils/format';
 import type { ProximoVencimento } from '@/domain/metricas';
+import { useEstadoDaFila, type EstadoFila } from '@/hooks/useFilaNavegacao';
+
+const ITENS_VISIVEIS = 5;
+
+/**
+ * A linha inteira é o alvo do clique e leva à ficha do cliente. Sem cliente
+ * (parcela órfã) não há para onde ir, então fica como linha estática.
+ */
+function LinhaVencimento({ clienteId, fila, className, children }: {
+  clienteId: string | null;
+  fila: EstadoFila;
+  className: string;
+  children: ReactNode;
+}) {
+  if (!clienteId) return <div className={className}>{children}</div>;
+  return (
+    <Link to={`/clientes/${clienteId}`} state={fila} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 interface ProximosVencimentosProps {
   vencimentos: ProximoVencimento[];
 }
 
 const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
+  const [expandido, setExpandido] = useState(false);
+  const fila = useEstadoDaFila(
+    [...new Set(vencimentos.map((v) => v.clienteId).filter((id): id is string => !!id))],
+  );
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -62,38 +89,43 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-4">
-        {vencimentos.slice(0, 5).map((item) => (
-          <div 
-            key={item.id} 
+        {(expandido ? vencimentos : vencimentos.slice(0, ITENS_VISIVEIS)).map((item) => (
+          <LinhaVencimento
+            key={item.id}
+            clienteId={item.clienteId}
+            fila={fila}
             className={cn(
-              "flex items-center justify-between p-4 rounded-2xl border transition-all hover:scale-[1.02] active:scale-[0.98] cursor-default",
+              "flex items-center justify-between gap-3 p-4 rounded-2xl border transition-colors",
+              item.clienteId && "hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               getUrgencyStyles(item.diasRestantes)
             )}
           >
             <div className="flex-1 min-w-0">
               <p className="font-bold text-sm text-foreground truncate">{item.clienteNome}</p>
-              <div className="flex items-center gap-2 mt-1">
-                <span className="text-xs font-bold uppercase tracking-wider opacity-70">
-                  Vence {formatDate(item.vencimento)}
-                </span>
-                <span className="h-1 w-1 rounded-full bg-current opacity-30" />
-                <span className="text-xs font-bold">
-                  {item.diasRestantes <= 0 ? 'Vence hoje' : `Em ${item.diasRestantes} dias`}
-                </span>
-              </div>
+              <p className="mt-1 text-xs font-bold truncate">
+                <span className="uppercase tracking-wider opacity-70">Vence {formatDate(item.vencimento)}</span>
+                <span className="mx-1.5 opacity-30">·</span>
+                {item.diasRestantes <= 0 ? 'Vence hoje' : `Em ${item.diasRestantes} dias`}
+              </p>
             </div>
-            <div className="flex items-center gap-3 ml-4">
-              <span className="font-black text-sm text-foreground">{formatCurrency(item.valor)}</span>
-              <div className="h-8 w-8 rounded-full bg-background/50 flex items-center justify-center text-muted-foreground border border-border/20">
-                <ArrowRight className="h-4 w-4" />
-              </div>
+            <div className="flex items-center gap-3 shrink-0">
+              <span className="font-black text-sm text-foreground whitespace-nowrap">{formatCurrency(item.valor)}</span>
+              {item.clienteId && (
+                <div className="h-8 w-8 rounded-full bg-background/50 flex items-center justify-center text-muted-foreground border border-border/20">
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              )}
             </div>
-          </div>
+          </LinhaVencimento>
         ))}
-        
-        {vencimentos.length > 5 && (
-          <button className="w-full py-3 text-xs font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors uppercase tracking-widest">
-            Ver mais {vencimentos.length - 5} parcelas
+
+        {vencimentos.length > ITENS_VISIVEIS && (
+          <button
+            type="button"
+            onClick={() => setExpandido((v) => !v)}
+            className="w-full py-3 text-xs font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors uppercase tracking-widest"
+          >
+            {expandido ? 'Ver menos' : `Ver mais ${vencimentos.length - ITENS_VISIVEIS} parcelas`}
           </button>
         )}
       </CardContent>

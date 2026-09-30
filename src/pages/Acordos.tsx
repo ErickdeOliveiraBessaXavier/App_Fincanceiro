@@ -508,9 +508,13 @@ function AcordoDetailsDialog({ open, onOpenChange, acordo }: AcordoDetailsDialog
 
                 Em xl as duas colunas têm a altura do modal e cada uma cuida da
                 própria rolagem; empilhado, é o corpo que rola, porque aí a ficha
-                inteira em cima não caberia de jeito nenhum. */}
-            <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto xl:grid-cols-4 xl:overflow-visible">
-              <div className="xl:col-span-1 min-w-0 xl:h-full xl:overflow-y-auto xl:pr-2">
+                inteira em cima não caberia de jeito nenhum.
+
+                O respiro do fim fica em padding-bottom de quem rola (o corpo
+                empilhado, ou a coluna da ficha em xl): o space-y-5 da ficha só
+                dá margin-top, e a "Origem" encostava na borda e era cortada. */}
+            <div className="grid min-h-0 flex-1 gap-6 overflow-y-auto pb-4 xl:grid-cols-4 xl:overflow-visible xl:pb-0">
+              <div className="xl:col-span-1 min-w-0 xl:h-full xl:overflow-y-auto xl:pr-2 xl:pb-6">
                 <FichaAcordo acordo={acordo} aberto={open} />
               </div>
 

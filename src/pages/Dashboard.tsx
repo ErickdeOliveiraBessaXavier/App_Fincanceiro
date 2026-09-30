@@ -134,9 +134,12 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="grid gap-10 grid-cols-1 xl:grid-cols-12">
-        {/* Lado Esquerdo: Saúde e Tendência */}
-        <div className="xl:col-span-8 space-y-10">
+      {/* Prioridades ficam abaixo, em largura inteira. Como coluna lateral de
+          4/12 (o conteúdo tem largura máxima, então nem monitor largo ajudava)
+          sobravam ~200px por linha: nome, data e valor quebravam ou vazavam. */}
+      <div className="space-y-10">
+        {/* Saúde e Tendência */}
+        <div className="space-y-10">
           <Card className="overflow-hidden">
             <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
               <div className="flex items-center justify-between">
@@ -168,8 +171,8 @@ const Dashboard = () => {
           <AgingReport data={aging} totalValue={indicadores.valorVencido} />
         </div>
 
-        {/* Lado Direito: Centro de Ação Prioritária */}
-        <div className="xl:col-span-4 space-y-8">
+        {/* Centro de Ação Prioritária */}
+        <div>
           <div className="bg-primary/5 rounded-3xl p-1 border border-primary/10">
             <div className="bg-background rounded-[calc(1.5rem-2px)] p-6 space-y-8">
               <div>
@@ -177,9 +180,8 @@ const Dashboard = () => {
                 <p className="text-xs text-muted-foreground font-medium">Ações imediatas para redução de risco</p>
               </div>
 
-              <div className="space-y-10">
+              <div className="grid gap-8 xl:grid-cols-2">
                 <ProximosVencimentos vencimentos={proximosVencimentos} />
-                <div className="h-[1px] bg-border/60 mx-4" />
                 <TopDevedores devedores={topDevedores} />
               </div>
             </div>

@@ -93,7 +93,7 @@ interface IndicadorCardProps {
 }
 
 const IndicadorCard = ({ titulo, valor, icone: Icone, corIcone, comparacao, nota }: IndicadorCardProps) => (
-  <Card className="overflow-hidden group">
+  <Card className="relative overflow-hidden group">
     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
       <CardTitle className={rotuloClasses}>{titulo}</CardTitle>

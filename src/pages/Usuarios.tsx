@@ -355,7 +355,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
           </CardHeader>
           <CardContent><div className="text-2xl font-black tracking-tighter">{usuarios.length}</div></CardContent>
         </Card>
-        <Card className="overflow-hidden group">
+        <Card className="relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className={rotuloClasses}>Administradores</CardTitle>
@@ -363,7 +363,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
           </CardHeader>
           <CardContent className="relative z-10"><div className="text-2xl font-black tracking-tighter text-primary">{count('admin')}</div></CardContent>
         </Card>
-        <Card className="overflow-hidden group">
+        <Card className="relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
             <CardTitle className={rotuloClasses}>Cobradores</CardTitle>

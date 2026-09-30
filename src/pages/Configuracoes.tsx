@@ -171,8 +171,8 @@ export default function Configuracoes() {
         description="Parâmetros de negócio que valem para toda a empresa."
       />
 
-      <Card className="max-w-2xl">
-        <CardHeader className="border-b border-border/50 bg-muted/20 pb-4">
+      <Card>
+        <CardHeader className="pb-4 border-b border-border/50 bg-muted/20">
           <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight">
             <Target className="h-5 w-5 text-primary" />
             Política de cobrança
@@ -181,10 +181,14 @@ export default function Configuracoes() {
             Alterações passam a valer imediatamente para toda a equipe.
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-8 pt-6">
-          <CampoTetoDesconto valor={teto} onChange={setTeto} />
-          <CampoMeta valor={meta} onChange={setMeta} />
-          <CampoToleranciaQuebra valor={tolerancia} onChange={setTolerancia} />
+        <CardContent className="space-y-6 pt-6">
+          {/* Uma coluna até xl; a partir daí os três parâmetros lado a lado, para
+              não deixar a metade direita da tela vazia. */}
+          <div className="grid gap-8 xl:grid-cols-3">
+            <CampoTetoDesconto valor={teto} onChange={setTeto} />
+            <CampoMeta valor={meta} onChange={setMeta} />
+            <CampoToleranciaQuebra valor={tolerancia} onChange={setTolerancia} />
+          </div>
 
           <div className="flex justify-end border-t border-border/50 pt-4">
             <Button onClick={confirmar} disabled={salvar.isPending}>

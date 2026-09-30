@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { TrendingDown, User, ArrowUpRight } from 'lucide-react';
@@ -5,6 +6,7 @@ import { cn } from '@/lib/utils';
 
 import type { Devedor } from '@/domain/metricas';
 import { Rotulo } from '@/components/Rotulo';
+import { useEstadoDaFila } from '@/hooks/useFilaNavegacao';
 
 interface TopDevedoresProps {
   devedores: Devedor[];
@@ -19,6 +21,8 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
   };
 
   const maxValue = devedores.length > 0 ? devedores[0].totalValor : 0;
+  const top = devedores.slice(0, 5);
+  const fila = useEstadoDaFila(top.map((d) => d.clienteId));
 
   if (devedores.length === 0) {
     return (
@@ -53,14 +57,19 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
-        {devedores.slice(0, 5).map((devedor, index) => {
+        {top.map((devedor, index) => {
           const percentage = maxValue > 0 ? (devedor.totalValor / maxValue) * 100 : 0;
           
           return (
-            <div key={devedor.clienteId} className="space-y-3 group cursor-default">
-              <div className="flex items-center justify-between">
+            <Link
+              key={devedor.clienteId}
+              to={`/clientes/${devedor.clienteId}`}
+              state={fila}
+              className="block space-y-3 group rounded-2xl -m-2 p-2 transition-colors hover:bg-destructive/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
-                  <div className="relative">
+                  <div className="relative shrink-0">
                     <div className="h-10 w-10 rounded-2xl bg-muted flex items-center justify-center border border-border/50 group-hover:bg-destructive/5 group-hover:border-destructive/20 transition-colors">
                       <User className="h-5 w-5 text-muted-foreground group-hover:text-destructive transition-colors" />
                     </div>
@@ -77,8 +86,8 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
                     </span>
                   </div>
                 </div>
-                <div className="text-right flex flex-col items-end">
-                  <span className="text-sm font-black text-destructive tracking-tight">
+                <div className="text-right flex flex-col items-end shrink-0">
+                  <span className="text-sm font-black text-destructive tracking-tight whitespace-nowrap">
                     {formatCurrency(devedor.totalValor)}
                   </span>
                   <Rotulo as="span" className="mt-0.5 flex items-center gap-1">
@@ -94,7 +103,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
                   />
                 </div>
               </div>
-            </div>
+            </Link>
           );
         })}
       </CardContent>
