@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  erroCpfCnpj,
   formatData,
   formatMoeda,
   isoDeData,
@@ -150,5 +151,30 @@ describe('parseValorPlanilha', () => {
     expect(parseValorPlanilha(null)).toBeNull();
     expect(parseValorPlanilha('abc')).toBeNull();
     expect(parseValorPlanilha(Number.NaN)).toBeNull();
+  });
+});
+
+describe('erroCpfCnpj', () => {
+  it('aceita CPF e CNPJ válidos, com ou sem máscara', () => {
+    expect(erroCpfCnpj('529.982.247-25')).toBeNull();
+    expect(erroCpfCnpj('52998224725')).toBeNull();
+    expect(erroCpfCnpj('11.222.333/0001-81')).toBeNull();
+    expect(erroCpfCnpj('11222333000181')).toBeNull();
+  });
+
+  it('recusa dígito verificador errado', () => {
+    expect(erroCpfCnpj('529.982.247-24')).toMatch(/inválido/);
+    expect(erroCpfCnpj('11.222.333/0001-82')).toMatch(/inválido/);
+  });
+
+  it('recusa sequência repetida, que passa no cálculo', () => {
+    expect(erroCpfCnpj('111.111.111-11')).toMatch(/inválido/);
+    expect(erroCpfCnpj('00000000000000')).toMatch(/inválido/);
+  });
+
+  it('recusa vazio e tamanho errado', () => {
+    expect(erroCpfCnpj('')).toMatch(/obrigatório/);
+    expect(erroCpfCnpj('123')).toMatch(/11 dígitos/);
+    expect(erroCpfCnpj('123456789012')).toMatch(/11 dígitos/);
   });
 });

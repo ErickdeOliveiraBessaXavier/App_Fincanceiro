@@ -180,6 +180,41 @@ export function mascaraCpfCnpj(valor: string): string {
   return aplicarMascara(digitos, digitos.length <= 11 ? MASCARA_CPF : MASCARA_CNPJ);
 }
 
+const PESOS_CPF = [11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
+const PESOS_CNPJ = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+
+/** Dígito verificador (módulo 11) dos `n` primeiros dígitos, com os últimos `n` pesos. */
+function digitoVerificador(digitos: string, n: number, pesos: number[]): number {
+  const usados = pesos.slice(pesos.length - n);
+  const soma = usados.reduce((total, peso, i) => total + Number(digitos[i]) * peso, 0);
+  const resto = soma % 11;
+  return resto < 2 ? 0 : 11 - resto;
+}
+
+function dvConfere(digitos: string, pesos: number[]): boolean {
+  const base = digitos.length - 2;
+  return digitoVerificador(digitos, base, pesos) === Number(digitos[base])
+    && digitoVerificador(digitos, base + 1, pesos) === Number(digitos[base + 1]);
+}
+
+/**
+ * Motivo de o CPF/CNPJ ser inválido, ou null se estiver certo (aceita com ou
+ * sem máscara). Confere tamanho e dígitos verificadores, e recusa sequência
+ * repetida ("111.111.111-11"), que passa no cálculo mas não existe.
+ *
+ * Só o cadastro manual usa: o importador e a API aceitam o que o ERP manda
+ * (o banco exige apenas 11 ou 14 dígitos), para não travar uma carga inteira
+ * por um documento antigo.
+ */
+export function erroCpfCnpj(valor: string): string | null {
+  const digitos = soDigitos(valor);
+  if (!digitos) return 'CPF/CNPJ é obrigatório';
+  if (digitos.length !== 11 && digitos.length !== 14) return 'CPF tem 11 dígitos; CNPJ, 14';
+  if (/^(\d)\1+$/.test(digitos)) return 'CPF/CNPJ inválido';
+  const pesos = digitos.length === 11 ? PESOS_CPF : PESOS_CNPJ;
+  return dvConfere(digitos, pesos) ? null : 'CPF/CNPJ inválido: confira os dígitos';
+}
+
 /**
  * Máscara de telefone para digitação.
  *

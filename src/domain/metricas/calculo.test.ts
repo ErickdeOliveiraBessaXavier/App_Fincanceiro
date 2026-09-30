@@ -7,6 +7,7 @@ import {
   classificarTitulo,
   diasDeAtraso,
   dividaPorCliente,
+  listarAVencer,
   listarItensVencidos,
   listarRecebimentos,
   pagoPorTitulo,
@@ -151,13 +152,13 @@ describe('aging e top devedores', () => {
   };
 
   it('inclui parcela de acordo em atraso, que antes era invisível', () => {
-    const itens = listarItensVencidos(base, HOJE);
+    const itens = listarItensVencidos(base);
     expect(itens).toHaveLength(3);
     expect(itens.filter((i) => i.origem === 'acordo')).toHaveLength(1);
   });
 
   it('aging e top devedores fecham no mesmo total', () => {
-    const itens = listarItensVencidos(base, HOJE);
+    const itens = listarItensVencidos(base);
     const aging = calcularAging(itens, HOJE);
     const totalAging = aging.reduce((s, f) => s + f.value, 0);
     const totalDevedores = calcularTopDevedores(itens).reduce((s, d) => s + d.totalValor, 0);
@@ -167,14 +168,14 @@ describe('aging e top devedores', () => {
   });
 
   it('distribui nas faixas certas', () => {
-    const aging = calcularAging(listarItensVencidos(base, HOJE), HOJE);
+    const aging = calcularAging(listarItensVencidos(base), HOJE);
     expect(aging[0]).toMatchObject({ label: '0-30 dias', count: 1, value: 100 });
     expect(aging[1]).toMatchObject({ label: '31-60 dias', count: 1, value: 300 });
     expect(aging[3]).toMatchObject({ label: '+90 dias', count: 1, value: 700 });
   });
 
   it('agrupa o devedor somando título e acordo', () => {
-    const devedores = calcularTopDevedores(listarItensVencidos(base, HOJE));
+    const devedores = calcularTopDevedores(listarItensVencidos(base));
     expect(devedores[0]).toMatchObject({ clienteNome: 'Bruno', totalValor: 700 });
     expect(devedores[1]).toMatchObject({ clienteNome: 'Ana', totalValor: 400, totalItens: 2 });
   });
@@ -271,7 +272,7 @@ describe('situacaoFinanceiraCliente', () => {
         { id: 'a1', status: 'quebrado', valor_acordo: 800, valor_original: 1000, data_acordo: '2026-05-01', created_at: '2026-05-01', cliente_id: 'cli-2', cliente_nome: 'Cliente 2' },
       ],
       parcelasAcordo: [
-        { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-06-06', status: 'pendente' },
+        { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-06-06', status: 'vencida' },
         { id: 'pa2', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-10-06', status: 'pendente' },
       ],
     };
@@ -324,7 +325,7 @@ describe('dividaPorCliente', () => {
       { id: 'a1', status: 'quebrado', valor_acordo: 800, valor_original: 1000, data_acordo: '2026-05-01', created_at: '2026-05-01', cliente_id: 'cli-2', cliente_nome: 'Cliente 2' },
     ],
     parcelasAcordo: [
-      { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-06-06', status: 'pendente' },
+      { id: 'pa1', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-06-06', status: 'vencida' },
       { id: 'pa2', acordo_id: 'a1', valor_total: 400, saldo_atual: 400, data_vencimento: '2026-10-06', status: 'pendente' },
     ],
   };
@@ -455,5 +456,34 @@ describe('acordo medido pelo razão (auditoria, itens 10 e 11)', () => {
       ],
     };
     expect(restringirAoUniverso(base).recebimentos).toHaveLength(1);
+  });
+});
+
+describe('vencimento prorrogado para o próximo dia útil', () => {
+  // O banco decide 'vencido'/'vencida' (fuso de Brasília + dia útil). Uma
+  // parcela de sábado, prorrogada para segunda, tem data no passado e status
+  // ainda em aberto: não pode sumir das duas listas.
+  const base: BaseMetricas = {
+    ...baseVazia(),
+    titulos: [titulo({ id: 't1', status: 'a_vencer' })],
+    parcelas: [
+      { id: 'p1', titulo_id: 't1', vencimento: '2026-08-01', valor_nominal: 300, saldo_atual: 300, status: 'a_vencer' },
+    ],
+    acordos: [
+      { id: 'a1', status: 'ativo', valor_acordo: 200, valor_original: 200, data_acordo: '2026-07-01', created_at: '2026-07-01', cliente_id: 'cli-1', cliente_nome: 'Cliente 1' },
+    ],
+    parcelasAcordo: [
+      { id: 'pa1', acordo_id: 'a1', valor_total: 200, saldo_atual: 200, data_vencimento: '2026-08-01', status: 'pendente' },
+    ],
+  };
+
+  it('não entra como vencida', () => {
+    expect(listarItensVencidos(base)).toHaveLength(0);
+  });
+
+  it('continua a vencer, com 0 dias restantes', () => {
+    const itens = listarAVencer(base, HOJE);
+    expect(itens.map((i) => i.id).sort()).toEqual(['p1', 'pa1']);
+    expect(itens.every((i) => i.diasRestantes === 0)).toBe(true);
   });
 });

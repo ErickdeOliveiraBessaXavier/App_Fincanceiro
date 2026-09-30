@@ -56,7 +56,7 @@ import {
 import { Label } from "@/components/ui/label";
 import type { CobradorRow } from '@/lib/queries/cobradores';
 import type { VendedorRow } from '@/lib/queries/vendedores';
-import { formatCpfCnpj, formatTelefone, formatData } from '@/utils/format';
+import { erroCpfCnpj, formatCpfCnpj, formatTelefone, formatData } from '@/utils/format';
 import { Rotulo } from '@/components/Rotulo';
 
 // Atualize a interface Cliente para incluir todos os campos
@@ -298,6 +298,9 @@ interface ClienteCamposProps<T extends NovoClienteForm> {
 function ClienteCampos<T extends NovoClienteForm>({
   prefixo, valores, onChange, formErrors, cobradores, vendedores,
 }: ClienteCamposProps<T>) {
+  // Só o admin muda a carteira (o banco recusa para os demais); o cliente
+  // cadastrado por um cobrador entra na carteira dele automaticamente.
+  const { isAdmin } = useUserRole();
   const campo = (chave: keyof NovoClienteForm) => ({
     id: `${prefixo}-${String(chave)}`,
     value: valores[chave] as string,
@@ -356,16 +359,25 @@ function ClienteCampos<T extends NovoClienteForm>({
         <Label htmlFor={`${prefixo}-observacoes`}>Observações</Label>
         <Input {...campo('observacoes')} />
       </div>
-      <CarteiraFields
+      {isAdmin && <CarteiraFields
         cobradorId={valores.cobrador_id}
         vendedorId={valores.vendedor_id}
         cobradores={cobradores}
         vendedores={vendedores}
         onCobrador={(id) => onChange({ ...valores, cobrador_id: id })}
         onVendedor={(id) => onChange({ ...valores, vendedor_id: id })}
-      />
+      />}
     </div>
   );
+}
+
+/** Erros dos campos obrigatórios do cliente; objeto vazio quando está tudo certo. */
+function errosDoCliente(valores: { nome: string; cpf_cnpj: string }): FormErrors {
+  const errors: FormErrors = {};
+  if (!valores.nome.trim()) errors.nome = 'Nome é obrigatório';
+  const erroDocumento = erroCpfCnpj(valores.cpf_cnpj);
+  if (erroDocumento) errors.cpf_cnpj = erroDocumento;
+  return errors;
 }
 
 interface NovoClienteDialogProps {
@@ -513,14 +525,13 @@ export default function Clientes() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [clienteToDelete, setClienteToDelete] = useState<ClienteRow | null>(null);
 
-  const validateForm = () => {
-    const errors: FormErrors = {};
-    let isValid = true;
-    if (!newCliente.nome.trim()) { errors.nome = 'Nome é obrigatório'; isValid = false; }
-    if (!newCliente.cpf_cnpj.trim()) { errors.cpf_cnpj = 'CPF/CNPJ é obrigatório'; isValid = false; }
+  // Mesma regra no cadastro e na edição (a edição não conferia o documento).
+  const validarCliente = (valores: { nome: string; cpf_cnpj: string }) => {
+    const errors = errosDoCliente(valores);
     setFormErrors(errors);
-    return isValid;
+    return Object.keys(errors).length === 0;
   };
+  const validateForm = () => validarCliente(newCliente);
 
   const limparFormulario = () => setNewCliente({
     nome: '', cpf_cnpj: '', telefone: '', email: '', endereco_completo: '',
@@ -582,13 +593,7 @@ export default function Clientes() {
     }
   };
 
-  const validateEditForm = () => {
-    const errors: FormErrors = {};
-    let isValid = true;
-    if (!editingCliente.nome.trim()) { errors.nome = 'Nome é obrigatório'; isValid = false; }
-    setFormErrors(errors);
-    return isValid;
-  };
+  const validateEditForm = () => validarCliente(editingCliente);
 
   const handleEditCliente = async () => {
     if (!validateEditForm()) return;

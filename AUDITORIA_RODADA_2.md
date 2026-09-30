@@ -27,6 +27,30 @@ O que preocupa são, de novo, as **portas laterais**, agora do lado das tabelas:
 
 ---
 
+## Status das correções
+
+Corrigido em **2026-09-30**, no mesmo dia, em três migrations
+(`20260930130000`, `140000` e `150000`), testadas em transação desfeita
+(20 + 8 + 4 cenários) antes do `db push`.
+
+| Item | Correção |
+|---|---|
+| 3 | `authenticated` perdeu INSERT/UPDATE/DELETE em `titulos`, `parcelas`, `acordos`, `parcelas_acordo`, `acordo_titulos` e `movimentos_financeiros`; as policies de escrita saíram. Dinheiro só por RPC. Os ataques P1 a P4 dão `permission denied`; o fluxo inteiro do admin pela tela continua funcionando. |
+| 1 | Trigger `_proteger_carteira_cliente`: só admin troca `cobrador_id`/`vendedor_id`; cliente cadastrado por cobrador entra na carteira dele. Cobrador e vendedor só são cadastrados por admin. Na tela, os campos de carteira aparecem só para admin. |
+| 2 | Decisão do gestor: "só enxergar o que for dele". Filtro de carteira em `clientes` (pelas colunas da própria linha; `cobrador_ve_cliente(id)` quebrava o INSERT … RETURNING), `comunicacoes`, `agendamentos`, `anexos`, `campanha_envios` e `campaign_logs`. `agendar_retorno`, `registrar_resultado_cobranca` e `criar_titulo_com_parcelas` checam a carteira por dentro. |
+| 4 | Status calculado na leitura (`_vw_parcelas_status`, só service role; as views do app leem dela) com `hoje_br()`. **Vencimento em dia não útil vai para o próximo dia útil** (decisão do gestor): `proximo_dia_util` com o calendário bancário nacional calculado (`feriado_bancario_nacional`: feriados nacionais, Carnaval, Sexta-feira Santa, Corpus Christi e 31/12) e datas extras por empresa na tabela `feriados` (ainda sem tela). A tolerância de quebra do P8 conta do vencimento efetivo. O front usa o status do banco também para parcela de acordo. A coluna `status` da MV ficou como legado, com comentário. |
+| 5 | Cobrador dispara campanha só para a própria carteira. A parte "financeiro barrado" **não era bug**: o papel saiu de circulação em 2026-08-03 e o CHECK impede atribuí-lo. |
+| 6 | `erroCpfCnpj` em `src/utils/format.ts` (tamanho, dígito verificador, sequência repetida), com testes, no cadastro e na edição de cliente. No banco, CHECK de 11 ou 14 dígitos (`NOT VALID`: vale para linha nova ou editada). O importador e a API não conferem o dígito, para não travar a carga do ERP (3 dos 19 clientes atuais têm dígito errado). |
+| 7 | `Math.floor` no serial do Excel. |
+
+**Dúvidas:** 1 (fim de semana/feriado) → prorroga para o próximo dia útil, calendário
+nacional por enquanto; 2 → cobrador só vê a carteira; 3 → mantido: a tela Usuários
+cria administrador por desenho, e cobrador/vendedor entram por convite (definição de
+2026-08-03).
+
+**Sem ação:** o cliente com documento vazio continua gravado; a tela vai exigir um
+documento válido na próxima edição.
+
 ## Achados
 
 ### 1. Cobrador altera cadastro e carteira de qualquer cliente da empresa

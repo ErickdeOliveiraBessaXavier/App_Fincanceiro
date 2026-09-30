@@ -1036,6 +1036,38 @@ export type Database = {
           },
         ]
       }
+      feriados: {
+        Row: {
+          company_id: string
+          created_at: string
+          data: string
+          descricao: string
+          id: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          data: string
+          descricao: string
+          id?: never
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          data?: string
+          descricao?: string
+          id?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feriados_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       integracoes_whatsapp: {
         Row: {
           ativo: boolean
@@ -1184,6 +1216,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "vw_recebimentos_tenant"
             referencedColumns: ["recebimento_id"]
+          },
+          {
+            foreignKeyName: "eventos_parcela_parcela_id_fkey"
+            columns: ["parcela_titulo_id"]
+            isOneToOne: false
+            referencedRelation: "_vw_parcelas_status"
+            referencedColumns: ["id"]
           },
           {
             foreignKeyName: "eventos_parcela_parcela_id_fkey"
@@ -1585,6 +1624,47 @@ export type Database = {
       }
     }
     Views: {
+      _vw_parcelas_status: {
+        Row: {
+          company_id: string | null
+          data_ultimo_pagamento: string | null
+          descontos: number | null
+          id: string | null
+          juros: number | null
+          multa: number | null
+          numero_parcela: number | null
+          saldo_atual: number | null
+          status: string | null
+          titulo_id: string | null
+          total_eventos: number | null
+          total_pago: number | null
+          valor_nominal: number | null
+          vencimento: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcelas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "titulos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parcelas_titulo_id_fkey"
+            columns: ["titulo_id"]
+            isOneToOne: false
+            referencedRelation: "vw_titulos_completos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       mv_parcelas_consolidadas: {
         Row: {
           company_id: string | null
@@ -2128,6 +2208,10 @@ export type Database = {
         Args: { p_motivo?: string; p_titulo_id: string }
         Returns: Json
       }
+      cliente_do_anexo: {
+        Args: { p_acordo: string; p_cliente: string; p_titulo: string }
+        Returns: string
+      }
       cliente_tem_historico: {
         Args: { p_cliente_id: string }
         Returns: boolean
@@ -2184,6 +2268,7 @@ export type Database = {
       current_company_id: { Args: never; Returns: string }
       current_vendedor_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
+      data_pascoa: { Args: { p_ano: number }; Returns: string }
       estornar_movimento: {
         Args: { p_motivo: string; p_movimento_id: string }
         Returns: Json
@@ -2201,6 +2286,7 @@ export type Database = {
         Args: { p_cliente_id: string }
         Returns: string[]
       }
+      feriado_bancario_nacional: { Args: { p_data: string }; Returns: boolean }
       find_or_create_cobrador: { Args: { p_nome: string }; Returns: string }
       find_or_create_vendedor: { Args: { p_nome: string }; Returns: string }
       has_min_role: {
@@ -2254,6 +2340,10 @@ export type Database = {
           usuarios: number
         }[]
       }
+      na_carteira: {
+        Args: { p_cobrador: string; p_vendedor: string }
+        Returns: boolean
+      }
       pagar_parcela_acordo: {
         Args: {
           p_data_pagamento?: string
@@ -2265,6 +2355,10 @@ export type Database = {
           p_valor: number
         }
         Returns: Json
+      }
+      proximo_dia_util: {
+        Args: { p_company: string; p_data: string }
+        Returns: string
       }
       reativar_cliente: {
         Args: { p_cliente_id: string; p_dados?: Json }

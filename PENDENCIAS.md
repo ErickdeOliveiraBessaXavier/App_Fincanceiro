@@ -10,12 +10,9 @@ no histórico do git). Item feito sai daqui.
 
 Ordem recomendada, da mais urgente à menos urgente. Os detalhes de cada item estão nas seções abaixo.
 
-1. **Corrigir a Rodada 2** — relatório em [`AUDITORIA_RODADA_2.md`](AUDITORIA_RODADA_2.md) (2026-09-30):
-   7 achados, 4 altos (carteira do cobrador, admin por fora do razão, status 'vencido' congelado).
-   Três dúvidas aguardam o gestor (fim de semana/feriado, cobrador ver fora da carteira, papel do usuário criado).
-2. **Pré-lançamento** (seção abaixo): SMTP, confirmação de e-mail, hook, URLs. Billing pode esperar.
-3. **P6 + P9** — aproveitar que os dados ainda são de teste (tirar a coluna agora é barato).
-4. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
+1. **Pré-lançamento** (seção abaixo): SMTP, confirmação de e-mail, hook, URLs. Billing pode esperar.
+2. **P6 + P9** — aproveitar que os dados ainda são de teste (tirar a coluna agora é barato).
+3. **Fila, tela de auditoria, CNAB** — quando a operação real pedir.
 
 Também em aberto: os 4 acordos de teste com diferença de centavos (gravados antes da correção)
 podem ser apagados e recriados, se o gestor quiser.
@@ -25,6 +22,15 @@ título com lançamento **bloqueada**; **P8 ligado** com tolerância de 10 dias 
 Também em 2026-09-30: **truncamento de 1000 linhas resolvido** — toda listagem sem limite
 natural passa por `buscarTodas` (`src/lib/buscarTodas.ts`, espelho em `functions/_shared`).
 O resto da Rodada 3 (volume) continua pendente — ver "Volume".
+Também em 2026-09-30: **Rodada 2 auditada e corrigida** (migrations `20260930130000/140000/150000`).
+
+Pequenos pendentes da Rodada 2:
+- **Tela de feriados da empresa** (estadual/municipal) — a tabela `feriados` existe, sem tela.
+- **Dígito verificador no importador/API** — hoje só o cadastro manual confere; decidir se a carga
+  do ERP deve recusar ou só avisar.
+- **`PLAYWRIGHT_CLIENTE_ID`** do `.env.local` aponta para um cliente que não existe mais: os testes
+  E2E da Telecobrança dependem dele. E o `playwright.config.ts` usa o Edge, que não está instalado
+  (rodar com Chrome).
 
 ## Antes de lançar para cliente externo
 
@@ -95,6 +101,6 @@ Roteiro em [`Plano_Auditoria.md`](Plano_Auditoria.md).
 - **Rodada 1** (dinheiro/concorrência) feita em 2026-09-29 —
   [`AUDITORIA_RODADA_1.md`](AUDITORIA_RODADA_1.md). Os 18 achados foram
   corrigidos no mesmo dia. Com o item 8 resolvido, o P8 pode ser ligado.
-- **Rodada 2** (regra de negócio/estados impossíveis) feita em 2026-09-30 —
-  [`AUDITORIA_RODADA_2.md`](AUDITORIA_RODADA_2.md). Correções pendentes.
+- **Rodada 2** (regra de negócio/estados impossíveis) feita e corrigida em 2026-09-30 —
+  [`AUDITORIA_RODADA_2.md`](AUDITORIA_RODADA_2.md).
 - Rodada 3: truncamento resolvido; volume pendente (seção "Volume").

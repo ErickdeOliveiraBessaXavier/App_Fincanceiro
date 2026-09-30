@@ -168,15 +168,19 @@ function itensVencidosDeTitulos(titulos: TituloMetrica[], parcelas: ParcelaMetri
 /**
  * Parcela de acordo em atraso também é inadimplência — e era invisível: o
  * título fica com saldo zerado pela novação, então nada dele aparecia vencido.
+ *
+ * 'vencida' vem do banco (vw_parcelas_acordo_tenant), como o 'vencido' do
+ * título: lá mora a regra do próximo dia útil e do fuso de Brasília. Comparar
+ * a data aqui marcava vencida a parcela de sábado que ainda pode ser paga na
+ * segunda.
  */
 function itensVencidosDeAcordos(
   acordos: AcordoMetrica[],
   parcelasAcordo: ParcelaAcordoMetrica[],
-  hoje: string,
 ): ItemVencido[] {
   const porAcordo = new Map(acordos.map((a) => [a.id, a]));
   return parcelasAcordo
-    .filter((p) => p.status !== 'paga' && p.data_vencimento < hoje)
+    .filter((p) => p.status === 'vencida')
     .map((p) => {
       const acordo = porAcordo.get(p.acordo_id);
       return {
@@ -190,10 +194,10 @@ function itensVencidosDeAcordos(
     });
 }
 
-export function listarItensVencidos(base: BaseMetricas, hoje: string = hojeIso()): ItemVencido[] {
+export function listarItensVencidos(base: BaseMetricas): ItemVencido[] {
   return [
     ...itensVencidosDeTitulos(base.titulos, base.parcelas),
-    ...itensVencidosDeAcordos(base.acordos, base.parcelasAcordo, hoje),
+    ...itensVencidosDeAcordos(base.acordos, base.parcelasAcordo),
   ];
 }
 
@@ -223,7 +227,7 @@ export function listarAVencer(
     }));
 
   const deAcordos = base.parcelasAcordo
-    .filter((p) => p.status !== 'paga' && p.data_vencimento >= hoje)
+    .filter((p) => p.status === 'pendente')
     .map((p) => ({
       id: p.id,
       clienteId: porAcordo.get(p.acordo_id)?.cliente_id ?? null,
@@ -233,9 +237,10 @@ export function listarAVencer(
       origem: 'acordo' as const,
     }));
 
+  // O status já diz o que ainda vence. A parcela de sábado, prorrogada para
+  // segunda, tem data no passado mas não está vencida: entra com 0 dias.
   return [...deTitulos, ...deAcordos]
-    .map((item) => ({ ...item, diasRestantes: -diasDeAtraso(item.vencimento, hoje) }))
-    .filter((item) => item.diasRestantes >= 0)
+    .map((item) => ({ ...item, diasRestantes: Math.max(0, -diasDeAtraso(item.vencimento, hoje)) }))
     .sort((a, b) => a.diasRestantes - b.diasRestantes);
 }
 
@@ -386,7 +391,7 @@ export function dividaPorCliente(
     });
   };
 
-  listarItensVencidos(base, hoje).forEach((i) =>
+  listarItensVencidos(base).forEach((i) =>
     acumular(i.clienteId, i.valor, true, diasDeAtraso(i.vencimento, hoje)),
   );
   listarAVencer(base, hoje).forEach((i) => acumular(i.clienteId, i.valor, false, 0));
@@ -672,7 +677,7 @@ export function calcularIndicadores(
   base: BaseMetricas,
   hoje: string = hojeIso(),
 ): IndicadoresCarteira {
-  const itensVencidos = listarItensVencidos(base, hoje);
+  const itensVencidos = listarItensVencidos(base);
   const valorVencido = soma(itensVencidos.map((i) => i.valor));
 
   // valorVencido é um SUBCONJUNTO do que está em aberto (parcela vencida também

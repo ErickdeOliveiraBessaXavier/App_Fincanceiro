@@ -188,7 +188,9 @@ async function parcelasDe(admin: Admin, companyId: string, tituloIds: string[]):
   if (tituloIds.length === 0) return [];
   const linhas = await buscarTodas((de, ate) =>
     admin
-      .from("mv_parcelas_consolidadas")
+      // Status calculado na leitura (fuso de Brasília + próximo dia útil); o da
+      // MV é gravado no refresh e fica parado entre operações.
+      .from("_vw_parcelas_status")
       .select("titulo_id, numero_parcela, valor_nominal, vencimento, juros, multa, descontos, total_pago, saldo_atual, status, data_ultimo_pagamento")
       .eq("company_id", companyId)
       .in("titulo_id", tituloIds)

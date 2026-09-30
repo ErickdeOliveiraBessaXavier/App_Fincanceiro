@@ -75,9 +75,10 @@ function findHeader(matrix: any[][]): { rowIdx: number; colMap: ColMap } | null 
   return null;
 }
 
-// Serial do Excel -> 'YYYY-MM-DD' (ou null se inválido).
+// Serial do Excel -> 'YYYY-MM-DD' (ou null se inválido). A parte inteira é o
+// dia; a fração é a hora. Arredondar jogava "30/09 18:00" para 01/10.
 function dateFromExcelSerial(v: number): string | null {
-  const d = new Date(Date.UTC(1899, 11, 30) + Math.round(v) * 86400000);
+  const d = new Date(Date.UTC(1899, 11, 30) + Math.floor(v) * 86400000);
   return isNaN(d.getTime()) ? null : d.toISOString().slice(0, 10);
 }
 

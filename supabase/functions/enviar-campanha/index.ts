@@ -25,8 +25,28 @@ function json(status: number, body: unknown) {
 
 type Admin = ReturnType<typeof createClient>;
 
-/** Confirma que quem chamou é operador+ da empresa e devolve o company_id. */
-async function resolverChamador(admin: Admin, req: Request): Promise<Response | { companyId: string }> {
+interface Chamador {
+  companyId: string;
+  /** Cobrador com carteira: a campanha vai só para os clientes dele. */
+  cobradorId: string | null;
+}
+
+/**
+ * Espelha public.current_cobrador_id(): admin não tem carteira; operador
+ * vinculado a um cadastro de cobrador ativo tem. A service role ignora a RLS,
+ * então a carteira precisa ser aplicada aqui.
+ */
+async function carteiraDoChamador(admin: Admin, userId: string, roles: string[]): Promise<string | null> {
+  if (roles.some((r) => r === "admin" || r === "super_admin")) return null;
+  const { data } = await admin
+    .from("cobradores").select("id")
+    .eq("user_id", userId).eq("ativo", true).is("deleted_at", null)
+    .limit(1).maybeSingle();
+  return (data?.id as string | undefined) ?? null;
+}
+
+/** Confirma que quem chamou é operador+ da empresa e devolve empresa e carteira. */
+async function resolverChamador(admin: Admin, req: Request): Promise<Response | Chamador> {
   const token = (req.headers.get("Authorization") ?? "").replace("Bearer ", "");
   const { data: caller, error } = await admin.auth.getUser(token);
   if (error || !caller?.user) return json(401, { error: "Não autenticado" });
@@ -38,11 +58,11 @@ async function resolverChamador(admin: Admin, req: Request): Promise<Response | 
 
   const { data: roles } = await admin
     .from("user_roles").select("role").eq("user_id", caller.user.id);
-  const podeDisparar = (roles ?? []).some((r: { role: string }) =>
-    r.role === "operador" || r.role === "admin" || r.role === "super_admin");
+  const papeis = (roles ?? []).map((r: { role: string }) => r.role);
+  const podeDisparar = papeis.some((r) => r === "operador" || r === "admin" || r === "super_admin");
   if (!podeDisparar) return json(403, { error: "Sem permissão para disparar campanhas" });
 
-  return { companyId };
+  return { companyId, cobradorId: await carteiraDoChamador(admin, caller.user.id, papeis) };
 }
 
 interface Destinatario {
@@ -77,17 +97,18 @@ async function credenciaisDaEmpresa(admin: Admin, companyId: string): Promise<Cr
 
 /** Clientes da campanha com telefone. Sem telefone não há o que enviar. */
 // Em lotes: acima de 1.000 clientes a campanha ia só para os primeiros 1.000.
-async function destinatariosDaCampanha(admin: Admin, companyId: string): Promise<Destinatario[]> {
-  const data = await buscarTodas((de, ate) =>
-    admin
+// Cobrador dispara só para a própria carteira (decisão de 2026-09-30).
+async function destinatariosDaCampanha(admin: Admin, chamador: Chamador): Promise<Destinatario[]> {
+  const data = await buscarTodas((de, ate) => {
+    let consulta = admin
       .from("clientes")
       .select("id, nome, telefone")
-      .eq("company_id", companyId)
+      .eq("company_id", chamador.companyId)
       .is("deleted_at", null)
-      .not("telefone", "is", null)
-      .order("id")
-      .range(de, ate)
-  );
+      .not("telefone", "is", null);
+    if (chamador.cobradorId) consulta = consulta.eq("cobrador_id", chamador.cobradorId);
+    return consulta.order("id").range(de, ate);
+  });
 
   return data
     .filter((c: { telefone: string | null }) => !!c.telefone)
@@ -195,7 +216,7 @@ Deno.serve(async (req: Request) => {
     });
   }
 
-  const destinatarios = await destinatariosDaCampanha(admin, companyId);
+  const destinatarios = await destinatariosDaCampanha(admin, chamador);
   if (destinatarios.length === 0) {
     return json(400, { error: "Nenhum cliente com telefone para esta campanha." });
   }
