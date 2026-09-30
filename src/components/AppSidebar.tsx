@@ -30,7 +30,6 @@ import {
 } from "@/components/ui/sidebar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { rotuloClasses } from '@/components/Rotulo';
 
 /**
  * Navegação agrupada por finalidade.
@@ -150,9 +149,11 @@ const GrupoNav = ({ grupo, isCollapsed, isActive }: {
   if (grupo.itens.length === 0) return null;
   return (
     <SidebarGroup className={cn(isCollapsed && "!p-1")}>
-      {/* Recolhida, a sidebar tem 3rem: um rótulo de grupo não caberia. */}
+      {/* Recolhida, a sidebar tem 3rem: um rótulo de grupo não caberia.
+          O rótulo tem estilo próprio (maiúsculas espaçadas), independente do
+          rotuloClasses das telas, que ficou em caixa normal. */}
       {!isCollapsed && (
-        <SidebarGroupLabel className={cn(rotuloClasses, 'px-3 text-sidebar-foreground/50')}>
+        <SidebarGroupLabel className="px-3 text-[10px] font-bold uppercase tracking-widest text-sidebar-foreground/50">
           {grupo.label}
         </SidebarGroupLabel>
       )}

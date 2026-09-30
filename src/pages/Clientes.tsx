@@ -102,7 +102,7 @@ function RetornoCell({ cliente }: { cliente: ClienteRow }) {
   }
   return (
     <div className="space-y-1">
-      <div className={cliente.retorno_atrasado ? 'text-xs font-bold text-destructive' : 'text-xs font-bold text-foreground'}>
+      <div className={cliente.retorno_atrasado ? 'text-xs font-semibold text-destructive' : 'text-xs font-semibold text-foreground'}>
         {formatDateShort(cliente.proximo_retorno)}
       </div>
       {cliente.retorno_status_cobranca && (
@@ -123,11 +123,11 @@ interface ClienteItemProps {
 
 function ClienteCard({ cliente, isOperador, onDetails, onEdit, onDelete }: ClienteItemProps) {
   return (
-    <div className="p-5 rounded-2xl border border-border/50 bg-card hover:border-primary/30 transition-all shadow-sm group">
+    <div className="p-5 rounded-lg border border-border/50 bg-card hover:border-primary/30 transition-all shadow-sm group">
       <div className="flex justify-between items-start mb-4">
         <div className="flex-1 min-w-0">
-          <button type="button" onClick={() => onDetails(cliente)} className="block text-left font-bold text-lg text-foreground truncate hover:text-primary hover:underline transition-colors">{cliente.nome}</button>
-          <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{formatCpfCnpj(cliente.cpf_cnpj)}</p>
+          <button type="button" onClick={() => onDetails(cliente)} className="block text-left font-semibold text-lg text-foreground truncate hover:text-primary hover:underline transition-colors">{cliente.nome}</button>
+          <p className="text-xs font-medium text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</p>
         </div>
         <StatusBadge domain="cliente" status={cliente.status} />
       </div>
@@ -149,11 +149,11 @@ function ClienteCard({ cliente, isOperador, onDetails, onEdit, onDelete }: Clien
         <div className="flex gap-4">
           <div>
             <Rotulo>Títulos</Rotulo>
-            <p className="text-sm font-black">{cliente.total_titulos}</p>
+            <p className="text-sm font-semibold">{cliente.total_titulos}</p>
           </div>
           <div>
             <Rotulo>Total</Rotulo>
-            <p className="text-sm font-black text-primary">{formatCurrency(cliente.total_valor || 0)}</p>
+            <p className="text-sm font-semibold text-primary">{formatCurrency(cliente.total_valor || 0)}</p>
           </div>
           <div>
             <Rotulo>Retorno</Rotulo>
@@ -165,7 +165,7 @@ function ClienteCard({ cliente, isOperador, onDetails, onEdit, onDelete }: Clien
             <Button variant="ghost" size="sm" className="h-10 w-10 rounded-xl hover:bg-primary/5"><MoreHorizontal className="h-5 w-5" /></Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="rounded-xl shadow-card border-border/40">
-            <DropdownMenuLabel className="text-xs font-bold uppercase tracking-widest text-muted-foreground px-3 py-2">Ações</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs font-medium text-muted-foreground px-3 py-2">Ações</DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem className="rounded-lg m-1 font-medium" onClick={() => onDetails(cliente)}><Eye className="h-4 w-4 mr-2" />Abrir ficha</DropdownMenuItem>
             {isOperador && (
@@ -187,14 +187,14 @@ function ClienteTableRow({ cliente, isOperador, onDetails, onEdit, onDelete }: C
     <TableRow className="hover:bg-muted/10 transition-colors">
       {/* Cliente: nome + CPF/CNPJ empilhados (antes eram 2 colunas) */}
       <TableCell>
-        <button type="button" onClick={() => onDetails(cliente)} className="block text-left font-bold text-sm text-foreground hover:text-primary hover:underline transition-colors">{cliente.nome}</button>
+        <button type="button" onClick={() => onDetails(cliente)} className="block text-left font-semibold text-sm text-foreground hover:text-primary hover:underline transition-colors">{cliente.nome}</button>
         <div className="text-[11px] font-medium text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</div>
       </TableCell>
       {/* Contato: some abaixo de xl (email é o principal vilão de largura) */}
       <TableCell className="hidden xl:table-cell">
         <div className="text-xs space-y-0.5">
           {cliente.telefone
-            ? <div className="font-bold text-foreground">{formatTelefone(cliente.telefone)}</div>
+            ? <div className="font-semibold text-foreground">{formatTelefone(cliente.telefone)}</div>
             : <span className="text-muted-foreground">—</span>}
           {cliente.email && <div className="text-muted-foreground font-medium truncate max-w-[200px]">{cliente.email}</div>}
         </div>
@@ -212,7 +212,7 @@ function ClienteTableRow({ cliente, isOperador, onDetails, onEdit, onDelete }: C
         <div className="space-y-1">
           <StatusBadge domain="cliente" status={cliente.status} />
           <div className="text-xs">
-            <span className="font-black text-primary">{formatCurrency(cliente.total_valor || 0)}</span>
+            <span className="font-semibold text-primary">{formatCurrency(cliente.total_valor || 0)}</span>
             <span className="text-muted-foreground"> · {cliente.total_titulos} tít.</span>
           </div>
         </div>
@@ -749,7 +749,7 @@ export default function Clientes() {
           <CardHeader variant="faixa">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-xl font-bold tracking-tight">Lista de Clientes</CardTitle>
+                <CardTitle className="text-xl font-semibold tracking-tight">Lista de Clientes</CardTitle>
                 <CardDescription className="text-xs font-medium">
                   {filteredClientes.length} clientes encontrados na base
                 </CardDescription>

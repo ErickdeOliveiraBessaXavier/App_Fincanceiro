@@ -83,7 +83,7 @@ export function DescontosConcedidos({ descontos }: { descontos: DescontoConcedid
 
       <Card className="overflow-hidden">
         <CardHeader variant="faixa">
-          <CardTitle className="text-lg font-bold tracking-tight">Descontos concedidos</CardTitle>
+          <CardTitle className="text-lg font-semibold tracking-tight">Descontos concedidos</CardTitle>
           <CardDescription className="text-xs font-medium">
             Exceção que vira rotina não pede trava mais apertada — pede recalibrar o teto.
           </CardDescription>
@@ -91,32 +91,34 @@ export function DescontosConcedidos({ descontos }: { descontos: DescontoConcedid
         <CardContent className="pt-6">
           {descontos.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border/60 bg-muted/5 py-10 text-center">
-              <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+              <p className="text-sm font-medium text-muted-foreground">
                 Nenhum desconto no período
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border border-border/50">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Valor</TableHead>
-                    <TableHead className="hidden md:table-cell">Limite</TableHead>
-                    <TableHead className="hidden lg:table-cell">Concedido por</TableHead>
-                    <TableHead className="hidden xl:table-cell">Motivo</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagination.pageItems.map((desconto) => (
-                    <LinhaDesconto key={desconto.id} desconto={desconto} />
-                  ))}
-                </TableBody>
-              </Table>
+            <>
+              <div className="overflow-x-auto rounded-xl border border-border/50">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Cliente</TableHead>
+                      <TableHead>Valor</TableHead>
+                      <TableHead className="hidden md:table-cell">Limite</TableHead>
+                      <TableHead className="hidden lg:table-cell">Concedido por</TableHead>
+                      <TableHead className="hidden xl:table-cell">Motivo</TableHead>
+                      <TableHead />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pagination.pageItems.map((desconto) => (
+                      <LinhaDesconto key={desconto.id} desconto={desconto} />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               <TablePagination pagination={pagination} />
-            </div>
+            </>
           )}
         </CardContent>
       </Card>

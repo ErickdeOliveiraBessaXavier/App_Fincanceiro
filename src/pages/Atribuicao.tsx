@@ -79,7 +79,7 @@ function BulkBar({ count, cobradores, vendedores, onAtribuirCobrador, onAtribuir
   const [ven, setVen] = useState<string>('');
   return (
     <div className="flex flex-wrap items-end gap-4 p-4 mb-4 rounded-xl border border-primary/30 bg-primary/5">
-      <div className="text-sm font-bold">{count} selecionado{count === 1 ? '' : 's'}</div>
+      <div className="text-sm font-semibold">{count} selecionado{count === 1 ? '' : 's'}</div>
       <div className="flex items-end gap-2">
         <div className="space-y-1.5">
           <Label className={rotuloClasses}>Cobrador</Label>
@@ -122,7 +122,7 @@ function AtribuicaoRow({ cliente, selecionado, cobradores, vendedores, onToggle,
       <TableCell className="w-10">
         <Checkbox checked={selecionado} onCheckedChange={() => onToggle(cliente.id)} />
       </TableCell>
-      <TableCell className="font-bold text-sm text-foreground">{cliente.nome}</TableCell>
+      <TableCell className="font-semibold text-sm text-foreground">{cliente.nome}</TableCell>
       <TableCell className="text-xs font-medium text-muted-foreground">{formatCpfCnpj(cliente.cpf_cnpj)}</TableCell>
       <TableCell className="w-52">
         <AssignSelect value={cliente.cobrador_id ?? ''} opcoes={cobradores} semLabel="Sem cobrador" onChange={onCobrador} disabled={pending} />
@@ -256,7 +256,7 @@ export default function Atribuicao() {
 
       <Card className="overflow-hidden">
         <CardHeader variant="faixa">
-          <CardTitle className="text-xl font-bold tracking-tight flex items-center gap-2">
+          <CardTitle className="text-xl font-semibold tracking-tight flex items-center gap-2">
             <Users className="h-5 w-5" /> Clientes
           </CardTitle>
           <CardDescription className="text-xs font-medium">
@@ -326,9 +326,12 @@ export default function Atribuicao() {
                   ))}
                 </TableBody>
               </Table>
-              <TablePagination pagination={pagination} />
             </div>
           )}
+
+          {/* Fora da caixa com borda da tabela, como nas demais listagens:
+              dentro dela a paginação encostava nas laterais e no fundo. */}
+          {!isLoading && <TablePagination pagination={pagination} />}
         </CardContent>
       </Card>
     </div>

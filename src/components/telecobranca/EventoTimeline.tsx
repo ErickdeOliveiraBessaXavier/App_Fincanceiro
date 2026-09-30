@@ -105,7 +105,7 @@ export function EventoTimeline({ clienteId }: EventoTimelineProps) {
     <Card className="overflow-hidden">
       <CardHeader className="pb-4 bg-muted/10 border-b border-border/40">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold tracking-tight">Histórico de Eventos</CardTitle>
+          <CardTitle className="text-lg font-semibold tracking-tight">Histórico de Eventos</CardTitle>
           <Select value={filtroTipo} onValueChange={setFiltroTipo}>
             <SelectTrigger className="w-[180px]">
               <Filter className="mr-2 h-4 w-4" />

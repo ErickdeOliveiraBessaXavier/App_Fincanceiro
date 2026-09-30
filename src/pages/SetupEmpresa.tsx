@@ -70,10 +70,10 @@ export default function SetupEmpresa() {
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
             <Building2 className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-2xl font-bold">Configure sua empresa</CardTitle>
+          <CardTitle className="text-2xl font-semibold">Configure sua empresa</CardTitle>
           <CardDescription>
             Crie a empresa para começar a usar o sistema. Você será o administrador.
           </CardDescription>

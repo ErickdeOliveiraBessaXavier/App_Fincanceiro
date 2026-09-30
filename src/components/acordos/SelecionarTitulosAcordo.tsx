@@ -77,7 +77,7 @@ function ResumoItem({ label, valor, destaque }: { label: string; valor: string; 
   return (
     <div className="min-w-0">
       <p className="text-muted-foreground">{label}</p>
-      <p className={cn('font-medium truncate', destaque && 'text-primary font-bold')}>{valor}</p>
+      <p className={cn('font-medium truncate', destaque && 'text-primary font-semibold')}>{valor}</p>
     </div>
   );
 }
@@ -159,7 +159,7 @@ function DividaCard({ divida, isSelected, isExpanded, onToggleSelect, onToggleEx
       {/* Parcelas vinculadas ao título */}
       {isExpanded && (
         <div className="ml-12 mr-3 mb-3 space-y-1 rounded-lg border border-l-2 border-dashed border-l-primary/40 bg-muted/30 p-2">
-          <p className="px-1 pb-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="px-1 pb-1 text-xs font-medium text-muted-foreground">
             Parcelas vinculadas
           </p>
           {divida.titulos.map((titulo) => (
@@ -178,7 +178,7 @@ function ResumoSelecao({ quantidade, valor }: { quantidade: number; valor: numbe
       <span className="text-sm font-medium">
         {quantidade} título{plural} selecionado{plural}
       </span>
-      <span className="font-bold text-primary">{formatCurrency(valor)}</span>
+      <span className="font-semibold text-primary">{formatCurrency(valor)}</span>
     </div>
   );
 }

@@ -9,7 +9,7 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       className={cn(
         // rounded-xl = calc(var(--radius) + 4px): o raio do cartão sai do token,
         // não de um valor fixo repetido em cada tela.
-        "rounded-xl border-none bg-card text-card-foreground transition-all duration-300 shadow-card",
+        "rounded-xl border-none bg-card text-card-foreground transition-shadow duration-200 shadow-card",
         className
       )}
       {...props}
@@ -19,14 +19,13 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
 Card.displayName = "Card";
 
 /**
- * `faixa` é o cabeçalho de seção do app: fundo levemente tingido e linha
- * separando do conteúdo. Estava copiado em 24 cabeçalhos de 17 arquivos.
+ * `faixa` é o cabeçalho de seção do app: uma linha separando do conteúdo. Estava copiado em 24 cabeçalhos de 17 arquivos.
  */
 type VarianteCardHeader = "default" | "faixa";
 
 const CABECALHO: Record<VarianteCardHeader, string> = {
   default: "",
-  faixa: "pb-4 border-b border-border/50 bg-muted/20",
+  faixa: "pb-4 border-b border-border/60",
 };
 
 const CardHeader = React.forwardRef<

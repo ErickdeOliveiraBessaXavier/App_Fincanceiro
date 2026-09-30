@@ -372,7 +372,7 @@ function ImportStatus({ parsed, errors, uploading, uploadProgress }: ImportStatu
       {parsed && parsed.grupos.length > 0 && (
         <Alert className="bg-success/5 border-success/20 text-success rounded-xl">
           <CheckCircle className="h-4 w-4" />
-          <AlertDescription className="font-bold text-xs uppercase tracking-wider">
+          <AlertDescription className="font-medium text-xs">
             Detectados {parsed.grupos.length} títulos e {parsed.totalParcelas} parcelas.
           </AlertDescription>
         </Alert>
@@ -383,7 +383,7 @@ function ImportStatus({ parsed, errors, uploading, uploadProgress }: ImportStatu
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
             <div className="max-h-40 overflow-y-auto">
-              <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
+              <ul className="text-xs font-medium space-y-1">
                 {errors.slice(0, 5).map((e, i) => <li key={i}>• {e}</li>)}
                 {errors.length > 5 && <li>... e mais {errors.length - 5} erros</li>}
               </ul>
@@ -394,7 +394,7 @@ function ImportStatus({ parsed, errors, uploading, uploadProgress }: ImportStatu
 
       {uploading && (
         <div className="space-y-3 bg-muted/20 p-4 rounded-xl border border-border/40">
-          <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
+          <div className="flex justify-between text-xs font-medium">
             <span className="text-muted-foreground animate-pulse">Importando dados...</span>
             <span className="text-primary">{uploadProgress}%</span>
           </div>
@@ -410,7 +410,7 @@ function PreviewCard({ parsed }: { parsed: ParsedFile | null }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
-        <CardTitle className="text-xl font-bold tracking-tight">Prévia da Planilha</CardTitle>
+        <CardTitle className="text-xl font-semibold tracking-tight">Prévia da Planilha</CardTitle>
         <CardDescription className="text-xs font-medium">As primeiras 5 linhas identificadas</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -442,7 +442,7 @@ function ResultCard({ result }: { result: ImportResult | null }) {
   return (
     <Card className="overflow-hidden bg-primary/5 border-primary/10">
       <CardHeader className="pb-4 border-b border-primary/10">
-        <CardTitle className="text-xl font-bold tracking-tight text-primary">Resultado da Importação</CardTitle>
+        <CardTitle className="text-xl font-semibold tracking-tight text-primary">Resultado da Importação</CardTitle>
       </CardHeader>
       <CardContent className="pt-8 space-y-8">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
@@ -452,9 +452,9 @@ function ResultCard({ result }: { result: ImportResult | null }) {
             { label: 'Clientes', val: result.clientes, cls: 'bg-background text-blue-600' },
             { label: 'Erros', val: result.errors.length, cls: result.errors.length > 0 ? 'bg-destructive/10 text-destructive border-destructive/20' : 'bg-background text-muted-foreground' }
           ].map((item, i) => (
-            <div key={i} className={cn("p-6 rounded-2xl border border-border/50 text-center shadow-sm", item.cls)}>
-              <div className="text-3xl font-black tracking-tighter mb-1">{item.val}</div>
-              <div className="text-[10px] font-black uppercase tracking-widest opacity-70">{item.label}</div>
+            <div key={i} className={cn("p-6 rounded-lg border border-border/50 text-center shadow-sm", item.cls)}>
+              <div className="text-3xl font-semibold tracking-tight mb-1">{item.val}</div>
+              <div className="text-xs font-medium opacity-70">{item.label}</div>
             </div>
           ))}
         </div>
@@ -478,7 +478,7 @@ function ResultCard({ result }: { result: ImportResult | null }) {
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
               <div className="max-h-40 overflow-y-auto">
-                <ul className="text-xs font-bold uppercase tracking-tight space-y-1">
+                <ul className="text-xs font-medium space-y-1">
                   {result.errors.slice(0, 10).map((e, i) => <li key={i}>• {e}</li>)}
                   {result.errors.length > 10 && <li className="pt-2">... e mais {result.errors.length - 10} erros</li>}
                 </ul>
@@ -644,7 +644,7 @@ export default function ImportarCSV() {
         title="Importar Planilha"
         description="Carga em lote de títulos, parcelas e clientes (.xlsx ou .csv)"
       >
-        <Button variant="outline" onClick={downloadTemplate} className="rounded-xl font-bold">
+        <Button variant="outline" onClick={downloadTemplate} className="rounded-xl font-semibold">
           <Download className="h-4 w-4 mr-2" />
           Baixar Template
         </Button>
@@ -653,7 +653,7 @@ export default function ImportarCSV() {
       <div className="grid gap-10 md:grid-cols-2">
         <Card className="overflow-hidden">
           <CardHeader variant="faixa">
-            <CardTitle className="text-lg font-bold flex items-center gap-2">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2">
               <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
                 <Upload className="h-4 w-4" />
               </div>
@@ -669,13 +669,13 @@ export default function ImportarCSV() {
               onChange={setSelectedCompany}
             />
             <div
-              className="border-2 border-dashed border-primary/20 bg-primary/5 rounded-2xl p-12 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/10 transition-all group"
+              className="border-2 border-dashed border-primary/20 bg-primary/5 rounded-lg p-12 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/10 transition-all group"
               onClick={() => fileInputRef.current?.click()}
             >
-              <div className="h-16 w-16 bg-background rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
+              <div className="h-16 w-16 bg-background rounded-lg flex items-center justify-center mx-auto mb-4 shadow-sm group-hover:scale-110 transition-transform">
                 <FileText className="h-8 w-8 text-primary/60" />
               </div>
-              <p className="text-lg font-bold tracking-tight mb-2">
+              <p className="text-lg font-semibold tracking-tight mb-2">
                 {file ? file.name : 'Selecione sua planilha'}
               </p>
               <p className="text-sm text-muted-foreground font-medium">Arraste e solte ou clique para navegar</p>
@@ -694,7 +694,7 @@ export default function ImportarCSV() {
             <Button
               onClick={handleImport}
               disabled={isImportDisabled(file, parsed, errors, uploading)}
-              className="w-full h-14 text-base rounded-2xl"
+              className="w-full h-14 text-base rounded-lg"
             >
               {uploading ? 'Processando Arquivo...' : 'Iniciar Importação'}
             </Button>
@@ -703,18 +703,18 @@ export default function ImportarCSV() {
 
         <Card className="overflow-hidden bg-muted/10">
           <CardHeader className="pb-4">
-            <CardTitle className="text-lg font-bold">Instruções de Preparo</CardTitle>
+            <CardTitle className="text-lg font-semibold">Instruções de Preparo</CardTitle>
             <CardDescription className="text-xs font-medium text-muted-foreground">Siga os padrões para evitar erros</CardDescription>
           </CardHeader>
           <CardContent className="space-y-8">
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-success flex items-center gap-2">
+              <h4 className="text-xs font-medium text-success flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-success" />
                 Colunas obrigatórias
               </h4>
               <div className="grid grid-cols-2 gap-2">
                 {['cliente', 'cpf_cnpj', 'valor', 'vencimento', 'numero_documento'].map(col => (
-                  <div key={col} className="p-3 bg-background rounded-xl border border-border/50 text-xs font-mono font-bold flex items-center gap-2">
+                  <div key={col} className="p-3 bg-background rounded-xl border border-border/50 text-xs font-mono font-semibold flex items-center gap-2">
                     <div className="h-1.5 w-1.5 rounded-full bg-primary/40" />
                     {col}
                   </div>
@@ -723,7 +723,7 @@ export default function ImportarCSV() {
             </div>
 
             <div className="space-y-4">
-              <h4 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+              <h4 className="text-xs font-medium text-muted-foreground flex items-center gap-2">
                 <div className="h-1.5 w-1.5 rounded-full bg-muted-foreground" />
                 Colunas opcionais
               </h4>
@@ -736,7 +736,7 @@ export default function ImportarCSV() {
               </div>
             </div>
 
-            <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+            <div className="p-4 rounded-lg bg-primary/5 border border-primary/10">
               <div className="flex gap-3">
                 <AlertCircle className="h-5 w-5 text-primary shrink-0" />
                 <p className="text-xs font-medium text-primary/80 leading-relaxed">

@@ -47,7 +47,7 @@ function PendingConvitesCard({ isAdmin, pendentes, busy, onAutorizar, onRecusar 
       <CardHeader className="pb-4 border-b border-amber-500/10 bg-amber-500/10">
         <CardTitle className="flex items-center gap-3 text-amber-700">
           <Clock className="h-5 w-5" />
-          <span className="font-bold tracking-tight">Aguardando Autorização</span>
+          <span className="font-semibold tracking-tight">Aguardando Autorização</span>
           <Badge className="bg-amber-600 text-white rounded-full px-2.5">{pendentes.length}</Badge>
         </CardTitle>
         <CardDescription className="text-amber-600/80 font-medium">
@@ -69,17 +69,17 @@ function PendingConvitesCard({ isAdmin, pendentes, busy, onAutorizar, onRecusar 
             <TableBody>
               {pendentes.map((c) => (
                 <TableRow key={c.id} className="hover:bg-amber-500/5 transition-colors">
-                  <TableCell className="font-bold text-sm text-amber-900">{c.nome ?? '—'}</TableCell>
+                  <TableCell className="font-semibold text-sm text-amber-900">{c.nome ?? '—'}</TableCell>
                   <TableCell className="text-xs font-medium text-amber-800/70">{c.email ?? '—'}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary" className="capitalize rounded-lg font-bold text-[10px] bg-amber-200 text-amber-900">{c.tipo}</Badge>
+                    <Badge variant="secondary" className="capitalize rounded-lg font-semibold text-[10px] bg-amber-200 text-amber-900">{c.tipo}</Badge>
                   </TableCell>
                   <TableCell className="text-xs font-medium text-amber-800/70">{c.carteira_nome ?? '—'}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
                       <Button
                         size="sm"
-                        className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 font-bold h-8"
+                        className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-4 font-semibold h-8"
                         onClick={() => onAutorizar(c)}
                         disabled={busy}
                       >
@@ -88,7 +88,7 @@ function PendingConvitesCard({ isAdmin, pendentes, busy, onAutorizar, onRecusar 
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/5 rounded-lg h-8 px-3 font-bold"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/5 rounded-lg h-8 px-3 font-semibold"
                         onClick={() => onRecusar(c)}
                         disabled={busy}
                       >
@@ -353,7 +353,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
             <CardTitle className={rotuloClasses}>Total de Usuários</CardTitle>
             <User className="h-4 w-4 text-muted-foreground group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-black tracking-tighter">{usuarios.length}</div></CardContent>
+          <CardContent><div className="text-2xl font-semibold tracking-tight">{usuarios.length}</div></CardContent>
         </Card>
         <Card className="relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent pointer-events-none" />
@@ -361,7 +361,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
             <CardTitle className={rotuloClasses}>Administradores</CardTitle>
             <Shield className="h-4 w-4 text-primary group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent className="relative z-10"><div className="text-2xl font-black tracking-tighter text-primary">{count('admin')}</div></CardContent>
+          <CardContent className="relative z-10"><div className="text-2xl font-semibold tracking-tight text-primary">{count('admin')}</div></CardContent>
         </Card>
         <Card className="relative overflow-hidden group">
           <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent pointer-events-none" />
@@ -369,7 +369,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
             <CardTitle className={rotuloClasses}>Cobradores</CardTitle>
             <UserCog className="h-4 w-4 text-blue-600 group-hover:scale-110 transition-transform" />
           </CardHeader>
-          <CardContent className="relative z-10"><div className="text-2xl font-black tracking-tighter text-blue-600">{count('operador')}</div></CardContent>
+          <CardContent className="relative z-10"><div className="text-2xl font-semibold tracking-tight text-blue-600">{count('operador')}</div></CardContent>
         </Card>
       </div>
 
@@ -385,7 +385,7 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
         <CardHeader variant="faixa">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-bold tracking-tight">Lista de Usuários</CardTitle>
+              <CardTitle className="text-xl font-semibold tracking-tight">Lista de Usuários</CardTitle>
               <CardDescription className="text-xs font-medium">Controle de acesso e atribuição de responsabilidades</CardDescription>
             </div>
           </div>
@@ -419,10 +419,10 @@ export default function Usuarios({ embutido = false }: UsuariosProps) {
                   const b = roleBadge(u.role);
                   return (
                     <TableRow key={u.id} className="hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-bold text-sm text-foreground">{u.nome}</TableCell>
+                      <TableCell className="font-semibold text-sm text-foreground">{u.nome}</TableCell>
                       <TableCell className="text-xs font-medium text-muted-foreground">{u.email}</TableCell>
                       <TableCell>
-                        <Badge className={`${b.cls} rounded-lg border-none font-bold text-[10px] uppercase tracking-wider py-1`}>
+                        <Badge className={`${b.cls} rounded-lg border-none font-medium text-xs py-1`}>
                           <div className="flex items-center gap-1.5">
                             {b.icon}
                             <span>{b.label}</span>

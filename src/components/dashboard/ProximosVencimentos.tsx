@@ -60,7 +60,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
     return (
       <Card className="overflow-hidden">
         <CardHeader variant="faixa">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <CalendarClock className="h-5 w-5 text-primary" />
             Próximos Vencimentos
           </CardTitle>
@@ -81,7 +81,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <CalendarClock className="h-5 w-5 text-primary" />
             Próximos Vencimentos
           </CardTitle>
@@ -95,21 +95,21 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
             clienteId={item.clienteId}
             fila={fila}
             className={cn(
-              "flex items-center justify-between gap-3 p-4 rounded-2xl border transition-colors",
+              "flex items-center justify-between gap-3 p-4 rounded-lg border transition-colors",
               item.clienteId && "hover:border-primary/30 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
               getUrgencyStyles(item.diasRestantes)
             )}
           >
             <div className="flex-1 min-w-0">
-              <p className="font-bold text-sm text-foreground truncate">{item.clienteNome}</p>
-              <p className="mt-1 text-xs font-bold truncate">
-                <span className="uppercase tracking-wider opacity-70">Vence {formatDate(item.vencimento)}</span>
+              <p className="font-semibold text-sm text-foreground truncate">{item.clienteNome}</p>
+              <p className="mt-1 text-xs font-semibold truncate">
+                <span className="opacity-70">Vence {formatDate(item.vencimento)}</span>
                 <span className="mx-1.5 opacity-30">·</span>
                 {item.diasRestantes <= 0 ? 'Vence hoje' : `Em ${item.diasRestantes} dias`}
               </p>
             </div>
             <div className="flex items-center gap-3 shrink-0">
-              <span className="font-black text-sm text-foreground whitespace-nowrap">{formatCurrency(item.valor)}</span>
+              <span className="font-semibold text-sm text-foreground whitespace-nowrap">{formatCurrency(item.valor)}</span>
               {item.clienteId && (
                 <div className="h-8 w-8 rounded-full bg-background/50 flex items-center justify-center text-muted-foreground border border-border/20">
                   <ArrowRight className="h-4 w-4" />
@@ -123,7 +123,7 @@ const ProximosVencimentos = ({ vencimentos }: ProximosVencimentosProps) => {
           <button
             type="button"
             onClick={() => setExpandido((v) => !v)}
-            className="w-full py-3 text-xs font-bold text-primary hover:bg-primary/5 rounded-xl transition-colors uppercase tracking-widest"
+            className="w-full py-3 text-xs font-medium text-primary hover:bg-primary/5 rounded-xl transition-colors"
           >
             {expandido ? 'Ver menos' : `Ver mais ${vencimentos.length - ITENS_VISIVEIS} parcelas`}
           </button>

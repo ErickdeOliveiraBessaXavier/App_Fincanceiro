@@ -28,7 +28,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
     return (
       <Card className="overflow-hidden">
         <CardHeader variant="faixa">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-destructive" />
             Maiores Devedores
           </CardTitle>
@@ -49,7 +49,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <TrendingDown className="h-5 w-5 text-destructive" />
             Top 5 Devedores
           </CardTitle>
@@ -65,20 +65,20 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
               key={devedor.clienteId}
               to={`/clientes/${devedor.clienteId}`}
               state={fila}
-              className="block space-y-3 group rounded-2xl -m-2 p-2 transition-colors hover:bg-destructive/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="block space-y-3 group rounded-lg -m-2 p-2 transition-colors hover:bg-destructive/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3 min-w-0 flex-1">
                   <div className="relative shrink-0">
-                    <div className="h-10 w-10 rounded-2xl bg-muted flex items-center justify-center border border-border/50 group-hover:bg-destructive/5 group-hover:border-destructive/20 transition-colors">
+                    <div className="h-10 w-10 rounded-lg bg-muted flex items-center justify-center border border-border/50 group-hover:bg-destructive/5 group-hover:border-destructive/20 transition-colors">
                       <User className="h-5 w-5 text-muted-foreground group-hover:text-destructive transition-colors" />
                     </div>
-                    <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-foreground text-background text-[10px] font-black flex items-center justify-center border-2 border-background">
+                    <span className="absolute -top-1 -left-1 h-5 w-5 rounded-full bg-foreground text-background text-[10px] font-semibold flex items-center justify-center border-2 border-background">
                       {index + 1}
                     </span>
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="font-bold text-sm text-foreground truncate group-hover:text-destructive transition-colors">
+                    <span className="font-semibold text-sm text-foreground truncate group-hover:text-destructive transition-colors">
                       {devedor.clienteNome}
                     </span>
                     <span className="text-xs font-medium text-muted-foreground">
@@ -87,7 +87,7 @@ const TopDevedores = ({ devedores }: TopDevedoresProps) => {
                   </div>
                 </div>
                 <div className="text-right flex flex-col items-end shrink-0">
-                  <span className="text-sm font-black text-destructive tracking-tight whitespace-nowrap">
+                  <span className="text-sm font-semibold text-destructive tracking-tight whitespace-nowrap">
                     {formatCurrency(devedor.totalValor)}
                   </span>
                   <Rotulo as="span" className="mt-0.5 flex items-center gap-1">

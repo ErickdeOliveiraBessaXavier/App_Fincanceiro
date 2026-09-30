@@ -55,7 +55,7 @@ function LinhaCliente({ cliente, fila }: { cliente: ClientePago; fila: EstadoFil
       <TableCell>
         <NomeDoCliente id={cliente.clienteId} nome={cliente.clienteNome} fila={fila} />
       </TableCell>
-      <TableCell className="whitespace-nowrap font-bold tabular-nums text-success">
+      <TableCell className="whitespace-nowrap font-semibold tabular-nums text-success">
         {formatCurrency(cliente.valorPago)}
       </TableCell>
       <TableCell className="hidden md:table-cell whitespace-nowrap tabular-nums">
@@ -86,7 +86,7 @@ function LinhaPagamento({ recebimento, fila }: { recebimento: RecebimentoDetalha
       <TableCell>
         <NomeDoCliente id={recebimento.clienteId} nome={recebimento.clienteNome} fila={fila} />
       </TableCell>
-      <TableCell className="whitespace-nowrap font-bold tabular-nums text-success">
+      <TableCell className="whitespace-nowrap font-semibold tabular-nums text-success">
         {formatCurrency(recebimento.valor)}
       </TableCell>
       <TableCell className="hidden md:table-cell text-xs text-muted-foreground">
@@ -106,7 +106,7 @@ function ClientesQuePagaram({ clientes }: { clientes: ClientePago[] }) {
   return (
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
-        <CardTitle className="text-lg font-bold tracking-tight">Clientes que pagaram</CardTitle>
+        <CardTitle className="text-lg font-semibold tracking-tight">Clientes que pagaram</CardTitle>
         <CardDescription className="text-xs font-medium">
           Quanto cada cliente já pagou no período e o que dele ainda está em aberto hoje
         </CardDescription>
@@ -115,26 +115,28 @@ function ClientesQuePagaram({ clientes }: { clientes: ClientePago[] }) {
         {clientes.length === 0 ? (
           <ListaVazia mensagem="Nenhum pagamento no período" />
         ) : (
-          <div className="overflow-x-auto rounded-xl border border-border/50">
-            <Table>
-              <TableHeader className="bg-muted/30">
-                <TableRow>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Valor pago</TableHead>
-                  <TableHead className="hidden md:table-cell">Em aberto</TableHead>
-                  <TableHead className="hidden lg:table-cell">Pagamentos</TableHead>
-                  <TableHead className="hidden lg:table-cell">Último</TableHead>
-                  <TableHead>Situação</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {pagination.pageItems.map((cliente) => (
-                  <LinhaCliente key={cliente.clienteId ?? cliente.clienteNome} cliente={cliente} fila={fila} />
-                ))}
-              </TableBody>
-            </Table>
+          <>
+            <div className="overflow-x-auto rounded-xl border border-border/50">
+              <Table>
+                <TableHeader className="bg-muted/30">
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Valor pago</TableHead>
+                    <TableHead className="hidden md:table-cell">Em aberto</TableHead>
+                    <TableHead className="hidden lg:table-cell">Pagamentos</TableHead>
+                    <TableHead className="hidden lg:table-cell">Último</TableHead>
+                    <TableHead>Situação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pagination.pageItems.map((cliente) => (
+                    <LinhaCliente key={cliente.clienteId ?? cliente.clienteNome} cliente={cliente} fila={fila} />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
             <TablePagination pagination={pagination} />
-          </div>
+          </>
         )}
       </CardContent>
     </Card>
@@ -153,7 +155,7 @@ function PagamentoAPagamento({ recebimentos }: { recebimentos: RecebimentoDetalh
   return (
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
-        <CardTitle className="text-lg font-bold tracking-tight">Pagamentos recebidos</CardTitle>
+        <CardTitle className="text-lg font-semibold tracking-tight">Pagamentos recebidos</CardTitle>
         <CardDescription className="text-xs font-medium">
           Baixa de parcela de título e parcela de acordo, na data real do recebimento
         </CardDescription>
@@ -176,8 +178,8 @@ function PagamentoAPagamento({ recebimentos }: { recebimentos: RecebimentoDetalh
               ))}
             </TableBody>
           </Table>
-          <TablePagination pagination={pagination} />
         </div>
+        <TablePagination pagination={pagination} />
       </CardContent>
     </Card>
   );

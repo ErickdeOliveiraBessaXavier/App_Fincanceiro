@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { resumoNegociacao, type TipoNegociacao } from '@/domain/acordos/negociacao';
 import { codigoAcordo } from '@/domain/acordos/identificacao';
 import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
+import { rotuloClasses } from '@/components/Rotulo';
 
 interface LocationState {
   clienteId?: string;
@@ -76,7 +77,7 @@ function CampoDetalhe({ label, children }: { label: string; children: ReactNode 
 
 function TituloSecao({ children }: { children: ReactNode }) {
   return (
-    <h4 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+    <h4 className={rotuloClasses}>
       {children}
     </h4>
   );
@@ -764,7 +765,7 @@ export default function Acordos() {
       <Card className="overflow-hidden">
         <CardHeader variant="faixa">
           <div>
-            <CardTitle className="text-xl font-bold tracking-tight">Lista de Acordos</CardTitle>
+            <CardTitle className="text-xl font-semibold tracking-tight">Lista de Acordos</CardTitle>
             <CardDescription className="text-xs font-medium">
               Total de {filteredAcordos.length} acordos encontrados
             </CardDescription>

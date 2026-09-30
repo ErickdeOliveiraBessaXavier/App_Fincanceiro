@@ -83,7 +83,7 @@ async function carregarTentativas(clienteId: string): Promise<number> {
 function Passo({ numero, titulo, children }: { numero: number; titulo: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
-      <h4 className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-muted-foreground">
+      <h4 className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <span className="flex h-4 w-4 items-center justify-center rounded-full bg-muted text-[10px] text-foreground">
           {numero}
         </span>

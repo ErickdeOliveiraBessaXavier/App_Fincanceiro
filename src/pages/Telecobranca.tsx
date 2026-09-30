@@ -283,7 +283,7 @@ export default function Telecobranca() {
           </Button>
           
           {/* Avatar com iniciais */}
-          <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm sm:text-xl font-bold shadow-md shrink-0 mt-2 sm:mt-0">
+          <div className="h-10 w-10 sm:h-14 sm:w-14 rounded-full bg-gradient-to-br from-primary to-primary/70 flex items-center justify-center text-primary-foreground text-sm sm:text-xl font-semibold shadow-md shrink-0 mt-2 sm:mt-0">
             {getInitials(cliente.nome)}
           </div>
           
@@ -294,7 +294,7 @@ export default function Telecobranca() {
             <div className="flex flex-col xl:flex-row xl:items-center gap-3 min-w-0">
               {/* Quem corta o nome é o `truncate`, na largura que sobrar: um
                   corte fixo em 35 caracteres encurtava o nome até em tela larga. */}
-              <h1 className="truncate text-2xl font-black tracking-tighter sm:text-3xl md:text-4xl" title={cliente.nome}>
+              <h1 className="truncate text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl" title={cliente.nome}>
                 {cliente.nome}
               </h1>
               <div className="flex flex-wrap items-center gap-2 shrink-0">
@@ -408,7 +408,7 @@ function NegociacaoResumo({ valorOriginal, valorAcordo }: { valorOriginal: numbe
   return (
     <div>
       <Rotulo>{acrescimo ? 'Acréscimo' : 'Desconto'}</Rotulo>
-      <p className={cn('font-bold text-base mt-1', acrescimo ? 'text-amber-600' : 'text-green-600')}>
+      <p className={cn('font-semibold text-base mt-1', acrescimo ? 'text-amber-600' : 'text-green-600')}>
         {percentual.toFixed(1)}%
       </p>
     </div>
@@ -525,15 +525,15 @@ function AcordoCard({ acordo, expandido, onAlternar, onAbrir }: {
             <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
               <div>
                 <Rotulo>Valor Original</Rotulo>
-                <p className="font-bold text-base mt-1">{formatCurrency(acordo.valor_original)}</p>
+                <p className="font-semibold text-base mt-1">{formatCurrency(acordo.valor_original)}</p>
               </div>
               <div>
                 <Rotulo>Valor Acordo</Rotulo>
-                <p className="font-bold text-lg text-primary mt-1">{formatCurrency(acordo.valor_acordo)}</p>
+                <p className="font-semibold text-lg text-primary mt-1">{formatCurrency(acordo.valor_acordo)}</p>
               </div>
               <div>
                 <Rotulo>Parcelas</Rotulo>
-                <p className="font-bold text-base mt-1">{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</p>
+                <p className="font-semibold text-base mt-1">{acordo.parcelas}x de {formatCurrency(acordo.valor_parcela)}</p>
               </div>
               <NegociacaoResumo valorOriginal={acordo.valor_original} valorAcordo={acordo.valor_acordo} />
             </div>
@@ -608,7 +608,7 @@ function AcordosCliente({ clienteId }: { clienteId: string }) {
   if (acordos.length === 0) {
     return (
       <>
-        <div className="text-center py-12 bg-muted/20 rounded-2xl border-none shadow-sm">
+        <div className="text-center py-12 bg-muted/20 rounded-lg border-none shadow-sm">
           <Handshake className="h-12 w-12 mx-auto mb-3 text-muted-foreground/30" />
           <p className="text-sm font-medium text-muted-foreground">Nenhum acordo encontrado</p>
           <Button variant="outline" className="mt-4 rounded-full" onClick={() => setNovoAcordoAberto(true)}>

@@ -19,13 +19,13 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-bold flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold flex items-center gap-2">
             <Clock className="h-5 w-5 text-primary" />
             Tempo de Atraso
           </CardTitle>
           {/* "Parcelas": o count sempre foi de parcelas em atraso (de título e
               de acordo), nunca de títulos — o rótulo antigo induzia ao erro. */}
-          <span className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Parcelas Vencidas</span>
+          <span className="text-xs font-medium text-muted-foreground">Parcelas Vencidas</span>
         </div>
       </CardHeader>
       <CardContent className="pt-6 space-y-6">
@@ -40,11 +40,11 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
                     className="w-3 h-3 rounded-full ring-2 ring-offset-2 ring-transparent transition-all group-hover:ring-current" 
                     style={{ backgroundColor: item.color, color: item.color }}
                   />
-                  <span className="font-bold text-foreground">{item.label}</span>
+                  <span className="font-semibold text-foreground">{item.label}</span>
                   <span className="text-muted-foreground text-xs font-medium">({item.range})</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-bold text-foreground">{item.count}</span>
+                  <span className="font-semibold text-foreground">{item.count}</span>
                   <span className="text-muted-foreground text-xs ml-1 font-medium">
                     {item.count === 1 ? 'parcela' : 'parcelas'}
                   </span>
@@ -60,7 +60,7 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
                     }}
                   />
                 </div>
-                <span className="text-sm font-bold text-foreground min-w-[100px] text-right">
+                <span className="text-sm font-semibold text-foreground min-w-[100px] text-right">
                   {formatCurrency(item.value)}
                 </span>
               </div>
@@ -70,8 +70,8 @@ const AgingReport = ({ data, totalValue }: AgingReportProps) => {
         
         <div className="pt-4 border-t border-dashed border-border/50">
           <div className="flex justify-between items-center p-3 rounded-xl bg-destructive/5 border border-destructive/10">
-            <span className="text-sm font-bold text-destructive/80 uppercase tracking-wider">Total Vencido</span>
-            <span className="text-xl font-black text-destructive tracking-tight">
+            <span className="text-sm font-medium text-destructive/80">Total Vencido</span>
+            <span className="text-xl font-semibold text-destructive tracking-tight">
               {formatCurrency(totalValue)}
             </span>
           </div>

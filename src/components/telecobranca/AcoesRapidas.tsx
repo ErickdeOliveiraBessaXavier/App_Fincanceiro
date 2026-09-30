@@ -64,7 +64,7 @@ export function AcoesRapidas({ telefone, email, onContatoIniciado }: AcoesRapida
   return (
     <Card className="border-primary/20 shadow-sm overflow-hidden">
       <CardHeader className="pb-3 bg-muted/30">
-        <CardTitle className="text-sm font-bold flex items-center gap-2">
+        <CardTitle className="text-sm font-semibold flex items-center gap-2">
           <Zap className="h-4 w-4 text-primary fill-primary/10" />
           Falar com o cliente
         </CardTitle>
@@ -83,7 +83,7 @@ export function AcoesRapidas({ telefone, email, onContatoIniciado }: AcoesRapida
             title={telefone ? "Ligar para o cliente" : "Sem telefone cadastrado"}
           >
             <Phone className="h-5 w-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">Ligar</span>
+            <span className="text-xs font-medium">Ligar</span>
           </Button>
           
           <Button 
@@ -97,7 +97,7 @@ export function AcoesRapidas({ telefone, email, onContatoIniciado }: AcoesRapida
             title={telefone ? "Enviar WhatsApp" : "Sem telefone cadastrado"}
           >
             <MessageSquare className="h-5 w-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">WhatsApp</span>
+            <span className="text-xs font-medium">WhatsApp</span>
           </Button>
           
           <Button 
@@ -111,7 +111,7 @@ export function AcoesRapidas({ telefone, email, onContatoIniciado }: AcoesRapida
             title={email ? "Enviar E-mail" : "Sem e-mail cadastrado"}
           >
             <Mail className="h-5 w-5" />
-            <span className="text-[10px] font-bold uppercase tracking-wider">E-mail</span>
+            <span className="text-xs font-medium">E-mail</span>
           </Button>
         </div>
         

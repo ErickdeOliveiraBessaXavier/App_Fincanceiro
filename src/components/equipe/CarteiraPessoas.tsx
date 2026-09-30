@@ -78,22 +78,22 @@ function LinhaPessoa({ pessoa, isAdmin, gerando, onGerarLink, onEdit, onDelete, 
 }) {
   return (
     <TableRow className="hover:bg-muted/10 transition-colors">
-      <TableCell className="font-bold text-sm text-foreground">{pessoa.nome}</TableCell>
+      <TableCell className="font-semibold text-sm text-foreground">{pessoa.nome}</TableCell>
       <TableCell>
         <div className="text-xs space-y-1">
-          {pessoa.email && <div className="font-bold text-foreground">{pessoa.email}</div>}
+          {pessoa.email && <div className="font-semibold text-foreground">{pessoa.email}</div>}
           {pessoa.telefone && <div className="text-muted-foreground font-medium">{formatTelefone(pessoa.telefone)}</div>}
         </div>
       </TableCell>
       <TableCell>
         {pessoa.carteira > 0 ? (
           <button type="button" onClick={() => onVerCarteira(pessoa)} title="Ver clientes desta carteira">
-            <Badge variant="secondary" className="rounded-lg font-bold text-[10px] uppercase tracking-wider cursor-pointer hover:bg-primary/10 transition-colors">
+            <Badge variant="secondary" className="rounded-lg font-medium text-xs cursor-pointer hover:bg-primary/10 transition-colors">
               {pessoa.carteira} clientes
             </Badge>
           </button>
         ) : (
-          <Badge variant="outline" className="rounded-lg font-bold text-[10px] uppercase tracking-wider text-muted-foreground">
+          <Badge variant="outline" className="rounded-lg font-medium text-xs text-muted-foreground">
             0 clientes
           </Badge>
         )}
@@ -326,7 +326,7 @@ export function CarteiraPessoas({ config, isAdmin }: { config: CarteiraConfig; i
         <CardHeader variant="faixa">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-xl font-bold tracking-tight">{config.titulo}</CardTitle>
+              <CardTitle className="text-xl font-semibold tracking-tight">{config.titulo}</CardTitle>
               <CardDescription className="text-xs font-medium">{config.descricao}</CardDescription>
             </div>
             <Button onClick={() => { setForm(vazio); setAberto(true); }}>
@@ -341,47 +341,49 @@ export function CarteiraPessoas({ config, isAdmin }: { config: CarteiraConfig; i
             </div>
           ) : config.pessoas.length === 0 ? (
             <div className="text-center py-10 bg-muted/5 rounded-xl border border-dashed border-border/60">
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">{config.vazio}</p>
+              <p className="text-sm font-medium text-muted-foreground">{config.vazio}</p>
               <p className="text-xs text-muted-foreground mt-1 font-medium">
                 Também são criados automaticamente na importação de CSV.
               </p>
             </div>
           ) : (
-            <div className="rounded-xl border border-border/50 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-muted/30">
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Contato</TableHead>
-                    <TableHead>Carteira</TableHead>
-                    <TableHead>Ativo</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {pagination.pageItems.map((p) => (
-                    <LinhaPessoa
-                      key={p.id}
-                      pessoa={p}
-                      isAdmin={isAdmin}
-                      gerando={gerarConvite.isPending}
-                      onGerarLink={gerarLink}
-                      onEdit={(alvo) => {
-                        setForm({
-                          id: alvo.id, nome: alvo.nome, email: alvo.email ?? '',
-                          telefone: alvo.telefone ?? '', ativo: alvo.ativo,
-                        });
-                        setAberto(true);
-                      }}
-                      onDelete={setAExcluir}
-                      onToggle={alternarAtivo}
-                      onVerCarteira={(alvo) => navigate(config.rotaCarteira(alvo.id))}
-                    />
-                  ))}
-                </TableBody>
-              </Table>
+            <>
+              <div className="rounded-xl border border-border/50 overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Contato</TableHead>
+                      <TableHead>Carteira</TableHead>
+                      <TableHead>Ativo</TableHead>
+                      <TableHead className="text-right">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pagination.pageItems.map((p) => (
+                      <LinhaPessoa
+                        key={p.id}
+                        pessoa={p}
+                        isAdmin={isAdmin}
+                        gerando={gerarConvite.isPending}
+                        onGerarLink={gerarLink}
+                        onEdit={(alvo) => {
+                          setForm({
+                            id: alvo.id, nome: alvo.nome, email: alvo.email ?? '',
+                            telefone: alvo.telefone ?? '', ativo: alvo.ativo,
+                          });
+                          setAberto(true);
+                        }}
+                        onDelete={setAExcluir}
+                        onToggle={alternarAtivo}
+                        onVerCarteira={(alvo) => navigate(config.rotaCarteira(alvo.id))}
+                      />
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
               <TablePagination pagination={pagination} />
-            </div>
+            </>
           )}
         </CardContent>
       </Card>

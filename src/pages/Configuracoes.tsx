@@ -173,7 +173,7 @@ export default function Configuracoes() {
 
       <Card>
         <CardHeader variant="faixa">
-          <CardTitle className="flex items-center gap-2 text-lg font-bold tracking-tight">
+          <CardTitle className="flex items-center gap-2 text-lg font-semibold tracking-tight">
             <Target className="h-5 w-5 text-primary" />
             Política de cobrança
           </CardTitle>

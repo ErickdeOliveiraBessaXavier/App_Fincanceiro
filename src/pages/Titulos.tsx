@@ -1359,7 +1359,7 @@ export default function Titulos() {
         <CardHeader variant="faixa">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-bold tracking-tight">Lista de Títulos</CardTitle>
+              <CardTitle className="text-xl font-semibold tracking-tight">Lista de Títulos</CardTitle>
               <CardDescription className="text-xs font-medium">
                 {clientesComTitulosFiltrados.length} clientes, {totalTitulos} títulos sob gestão
               </CardDescription>

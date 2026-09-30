@@ -165,7 +165,7 @@ export function IntegracaoWhatsApp() {
                 <MessageSquare className="h-4 w-4" />
               </div>
               <div>
-                <CardTitle className="text-lg font-bold tracking-tight">Canal de WhatsApp</CardTitle>
+                <CardTitle className="text-lg font-semibold tracking-tight">Canal de WhatsApp</CardTitle>
                 <CardDescription className="text-xs font-medium">
                   Provedor Z-API — necessário para disparar campanhas
                 </CardDescription>

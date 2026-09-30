@@ -62,10 +62,10 @@ export function ProximoRetorno({ clienteId }: { clienteId: string }) {
       title={retorno.descricao ?? undefined}
     >
       <CalendarClock className="h-3.5 w-3.5 shrink-0" />
-      <span className="text-[10px] font-bold uppercase tracking-widest">
+      <span className="text-xs font-medium">
         {atrasado ? 'Retorno atrasado' : 'Retorno'}
       </span>
-      <span className="whitespace-nowrap text-xs font-bold tabular-nums">{quando(retorno.data)}</span>
+      <span className="whitespace-nowrap text-xs font-semibold tabular-nums">{quando(retorno.data)}</span>
     </div>
   );
 }

@@ -40,10 +40,10 @@ function ConfirmacaoEmail({ email, aposLogin, onVoltar }: { email: string; aposL
   return (
     <Card className="border-0 shadow-none lg: lg:border">
       <CardHeader className="text-center pb-2">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10">
           <MailCheck className="h-7 w-7 text-primary" />
         </div>
-        <CardTitle className="text-2xl font-bold">Confirme seu e-mail</CardTitle>
+        <CardTitle className="text-2xl font-semibold">Confirme seu e-mail</CardTitle>
         <CardDescription>
           {aposLogin
             ? <>Sua conta ainda não foi confirmada. O link foi enviado para <strong>{email}</strong>.</>
@@ -84,10 +84,10 @@ function EsqueciSenha({ emailInicial, onVoltar }: { emailInicial: string; onVolt
   return (
     <Card className="border-0 shadow-none lg: lg:border">
       <CardHeader className="text-center pb-2">
-        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10">
           <KeyRound className="h-7 w-7 text-primary" />
         </div>
-        <CardTitle className="text-2xl font-bold">Esqueci minha senha</CardTitle>
+        <CardTitle className="text-2xl font-semibold">Esqueci minha senha</CardTitle>
         <CardDescription>
           {enviado
             ? <>Se houver uma conta com <strong>{email}</strong>, o link para criar uma senha nova chega em instantes. Confira também o spam.</>
@@ -179,15 +179,15 @@ const Auth = () => {
         
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+            <div className="h-12 w-12 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-white">CobrançaPro</span>
+            <span className="text-2xl font-semibold text-white">CobrançaPro</span>
           </div>
         </div>
         
         <div className="relative z-10 space-y-6">
-          <h1 className="text-4xl font-bold text-white leading-tight">
+          <h1 className="text-4xl font-semibold text-white leading-tight">
             Gerencie suas cobranças com eficiência
           </h1>
           <p className="text-lg text-white/80 max-w-md">
@@ -206,10 +206,10 @@ const Auth = () => {
         <div className="w-full max-w-md space-y-8">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center justify-center gap-3 mb-8">
-            <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center">
+            <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
               <Sparkles className="h-6 w-6 text-white" />
             </div>
-            <span className="text-2xl font-bold text-foreground">CobrançaPro</span>
+            <span className="text-2xl font-semibold text-foreground">CobrançaPro</span>
           </div>
 
           {esqueciSenha ? (
@@ -223,7 +223,7 @@ const Auth = () => {
           ) : (
           <Card className="border-0 shadow-none lg: lg:border">
             <CardHeader className="text-center pb-2">
-              <CardTitle className="text-2xl font-bold">Bem-vindo de volta</CardTitle>
+              <CardTitle className="text-2xl font-semibold">Bem-vindo de volta</CardTitle>
               <CardDescription>
                 Acesse sua conta ou crie uma nova
               </CardDescription>

@@ -471,19 +471,19 @@ export default function Plataforma() {
               <CardTitle className="text-sm font-medium">Total</CardTitle>
               <Building2 className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent><div className="text-2xl font-bold">{companies.length}</div></CardContent>
+            <CardContent><div className="text-2xl font-semibold">{companies.length}</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Pendentes</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold text-amber-600">{count('pendente')}</div></CardContent>
+            <CardContent><div className="text-2xl font-semibold text-amber-600">{count('pendente')}</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Ativas</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold text-green-600">{count('ativa')}</div></CardContent>
+            <CardContent><div className="text-2xl font-semibold text-green-600">{count('ativa')}</div></CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Suspensas</CardTitle></CardHeader>
-            <CardContent><div className="text-2xl font-bold text-red-600">{count('suspensa')}</div></CardContent>
+            <CardContent><div className="text-2xl font-semibold text-red-600">{count('suspensa')}</div></CardContent>
           </Card>
         </div>
 

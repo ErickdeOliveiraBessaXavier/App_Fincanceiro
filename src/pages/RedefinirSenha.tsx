@@ -23,10 +23,10 @@ const Frame = ({ children }: { children: React.ReactNode }) => (
   <div className="flex min-h-screen items-center justify-center bg-background p-6">
     <div className="w-full max-w-md space-y-6">
       <div className="flex items-center justify-center gap-3">
-        <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center">
+        <div className="h-12 w-12 rounded-lg bg-primary flex items-center justify-center">
           <Sparkles className="h-6 w-6 text-white" />
         </div>
-        <span className="text-2xl font-bold text-foreground">CobrançaPro</span>
+        <span className="text-2xl font-semibold text-foreground">CobrançaPro</span>
       </div>
       {children}
     </div>
@@ -42,10 +42,10 @@ function LinkExpirado() {
     <Frame>
       <Card>
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-lg bg-destructive/10">
             <AlertTriangle className="h-7 w-7 text-destructive" />
           </div>
-          <CardTitle className="text-xl font-bold">Link expirado ou já usado</CardTitle>
+          <CardTitle className="text-xl font-semibold">Link expirado ou já usado</CardTitle>
           <CardDescription>
             Peça um novo link em "Esqueci minha senha", na tela de entrada.
           </CardDescription>
@@ -93,10 +93,10 @@ export default function RedefinirSenha() {
     <Frame>
       <Card>
         <CardHeader className="text-center">
-          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10">
             <KeyRound className="h-7 w-7 text-primary" />
           </div>
-          <CardTitle className="text-xl font-bold">Criar nova senha</CardTitle>
+          <CardTitle className="text-xl font-semibold">Criar nova senha</CardTitle>
           <CardDescription>Para {user.email}</CardDescription>
         </CardHeader>
         <CardContent>

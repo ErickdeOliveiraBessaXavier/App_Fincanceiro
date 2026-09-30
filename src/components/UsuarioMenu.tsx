@@ -63,7 +63,7 @@ export const UsuarioMenu = memo(() => {
           className="h-10 gap-2 rounded-xl px-2 hover:bg-muted"
           aria-label={`Conta de ${nome}`}
         >
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[11px] font-bold text-primary">
+          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-[11px] font-semibold text-primary">
             {iniciais(nome)}
           </span>
           <span className="hidden text-left leading-tight sm:block">

@@ -172,7 +172,7 @@ function ResumoItem({ label, valor, destaque }: { label: string; valor: string; 
   return (
     <div className="min-w-0">
       <Rotulo>{label}</Rotulo>
-      <p className={cn('text-sm font-bold truncate mt-0.5', destaque ? 'text-destructive' : '')}>{valor}</p>
+      <p className={cn('text-sm font-semibold truncate mt-0.5', destaque ? 'text-destructive' : '')}>{valor}</p>
     </div>
   );
 }
@@ -419,13 +419,13 @@ export function TitulosCliente({ clienteId }: TitulosClienteProps) {
       <Card className="overflow-hidden">
         <CardHeader className="pb-4 bg-muted/10 border-b border-border/40">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-lg flex items-center gap-2 font-bold tracking-tight">
+            <CardTitle className="text-lg flex items-center gap-2 font-semibold tracking-tight">
               <FileText className="h-5 w-5 text-muted-foreground" />
               Títulos e Parcelas
             </CardTitle>
             <div className="text-right">
               <Rotulo>Total em Aberto</Rotulo>
-              <p className="text-2xl font-black tracking-tighter text-destructive mt-0.5">{formatCurrency(totalEmAberto)}</p>
+              <p className="text-2xl font-semibold tracking-tight text-destructive mt-0.5">{formatCurrency(totalEmAberto)}</p>
             </div>
           </div>
         </CardHeader>

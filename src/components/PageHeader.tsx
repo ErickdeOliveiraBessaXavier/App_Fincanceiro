@@ -10,13 +10,13 @@ interface PageHeaderProps {
 
 export const PageHeader = ({ title, description, children, className }: PageHeaderProps) => {
   return (
-    <div className={cn("flex flex-col sm:flex-row sm:items-end sm:justify-between gap-6 mb-10 animate-fade-in", className)}>
-      <div className="space-y-2">
-        <h1 className="text-4xl font-black text-foreground tracking-tighter">
+    <div className={cn("flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-8", className)}>
+      <div className="space-y-1">
+        <h1 className="text-3xl sm:text-4xl font-bold text-foreground tracking-tight">
           {title}
         </h1>
         {description && (
-          <p className="text-muted-foreground text-base font-medium">
+          <p className="text-sm text-muted-foreground">
             {description}
           </p>
         )}

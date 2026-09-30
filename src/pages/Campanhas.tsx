@@ -225,7 +225,7 @@ export default function Campanhas() {
         <CardHeader variant="faixa">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl font-bold tracking-tight">Lista de Campanhas</CardTitle>
+              <CardTitle className="text-xl font-semibold tracking-tight">Lista de Campanhas</CardTitle>
               <CardDescription className="text-xs font-medium">
                 Campanhas de cobrança configuradas no sistema
               </CardDescription>
@@ -254,9 +254,9 @@ export default function Campanhas() {
               <div className="h-16 w-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
                 <MessageSquare className="h-8 w-8 text-muted-foreground/40" />
               </div>
-              <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Nenhuma campanha encontrada</p>
+              <p className="text-sm font-medium text-muted-foreground">Nenhuma campanha encontrada</p>
               {isOperador && (
-                <Button variant="outline" className="mt-4 rounded-xl font-bold" onClick={handleNewCampanha}>
+                <Button variant="outline" className="mt-4 rounded-xl font-semibold" onClick={handleNewCampanha}>
                   Criar primeira campanha
                 </Button>
               )}
@@ -277,7 +277,7 @@ export default function Campanhas() {
                 <TableBody>
                   {pagination.pageItems.map((campanha) => (
                     <TableRow key={campanha.id} className="hover:bg-muted/10 transition-colors">
-                      <TableCell className="font-bold text-sm text-foreground">{campanha.nome}</TableCell>
+                      <TableCell className="font-semibold text-sm text-foreground">{campanha.nome}</TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <div className="h-7 w-7 rounded-lg bg-muted flex items-center justify-center">

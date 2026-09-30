@@ -135,19 +135,19 @@ const CampanhaDetails = ({ open, onOpenChange, campanha }: CampanhaDetailsProps)
           <div className="grid grid-cols-3 gap-4">
             <Card>
               <CardContent className="pt-4 text-center">
-                <p className="text-2xl font-bold">{stats.enviados}</p>
+                <p className="text-2xl font-semibold">{stats.enviados}</p>
                 <p className="text-xs text-muted-foreground">Total Enviados</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
-                <p className="text-2xl font-bold text-green-500">{stats.sucesso}</p>
+                <p className="text-2xl font-semibold text-green-500">{stats.sucesso}</p>
                 <p className="text-xs text-muted-foreground">Sucesso</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 text-center">
-                <p className="text-2xl font-bold text-destructive">{stats.erro}</p>
+                <p className="text-2xl font-semibold text-destructive">{stats.erro}</p>
                 <p className="text-xs text-muted-foreground">Erros</p>
               </CardContent>
             </Card>

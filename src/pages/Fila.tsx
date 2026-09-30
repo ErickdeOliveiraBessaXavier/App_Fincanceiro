@@ -16,7 +16,7 @@ import type { DividaCliente } from '@/domain/metricas';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { formatCpfCnpj, formatData, formatTelefone, isoDeData } from '@/utils/format';
 import { cn } from '@/lib/utils';
-import { Rotulo } from '@/components/Rotulo';
+import { Rotulo, rotuloClasses } from '@/components/Rotulo';
 
 /**
  * Fila de retornos do dia.
@@ -131,7 +131,7 @@ function montarBlocos(
 function TituloSecao({ children, descricao }: { children: string; descricao: string }) {
   return (
     <div className="space-y-0.5">
-      <h2 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+      <h2 className={rotuloClasses}>
         {children}
       </h2>
       <p className="text-xs text-muted-foreground/80">{descricao}</p>
@@ -157,7 +157,7 @@ function LinhaCliente({ cliente, atrasado, divida, onAbrir }: {
         <button
           type="button"
           onClick={() => onAbrir(cliente)}
-          className="block max-w-full truncate text-left text-sm font-bold hover:text-primary hover:underline"
+          className="block max-w-full truncate text-left text-sm font-semibold hover:text-primary hover:underline"
         >
           {cliente.nome}
         </button>
@@ -182,7 +182,7 @@ function LinhaCliente({ cliente, atrasado, divida, onAbrir }: {
         {/* Zerado aqui só acontece quando a dívida não pôde ser lida — quem
             realmente zerou já saiu para o bloco "Já pagaram". */}
         <span className="w-28 text-right">
-          <span className="block text-sm font-black text-primary">
+          <span className="block text-sm font-semibold text-primary">
             {divida.emAberto > 0 ? formatCurrency(divida.emAberto) : '—'}
           </span>
           <Rotulo as="span" className="block">
@@ -213,11 +213,11 @@ function BlocoFila({ bloco, dividas, onAbrir }: BlocoFilaProps) {
           <div className="flex items-center gap-2">
             <Icone className={cn('h-5 w-5', cor)} />
             <div>
-              <CardTitle className="text-lg font-bold tracking-tight">{bloco.titulo}</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">{bloco.titulo}</CardTitle>
               <CardDescription className="text-xs font-medium">{bloco.descricao}</CardDescription>
             </div>
           </div>
-          <span className={cn('text-2xl font-black tabular-nums', cor)}>{bloco.clientes.length}</span>
+          <span className={cn('text-2xl font-semibold tabular-nums', cor)}>{bloco.clientes.length}</span>
         </div>
       </CardHeader>
       <CardContent className="p-0">
@@ -284,7 +284,7 @@ function LinhaEmAtraso({ item, onAbrir }: { item: EmAtraso; onAbrir: (c: Cliente
         <button
           type="button"
           onClick={() => onAbrir(cliente)}
-          className="block max-w-full truncate text-left text-sm font-bold hover:text-primary hover:underline"
+          className="block max-w-full truncate text-left text-sm font-semibold hover:text-primary hover:underline"
         >
           {cliente.nome}
         </button>
@@ -307,7 +307,7 @@ function LinhaEmAtraso({ item, onAbrir }: { item: EmAtraso; onAbrir: (c: Cliente
           <Badge variant="warning" className="text-[11px]">Sem retorno</Badge>
         )}
         <span className="w-28 text-right">
-          <span className="block text-sm font-black text-destructive">
+          <span className="block text-sm font-semibold text-destructive">
             {formatCurrency(divida.vencido)}
           </span>
           <Rotulo as="span" className="block">
@@ -360,7 +360,7 @@ function PainelEmAtraso({ itens, onAbrir }: {
           <div className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-destructive" />
             <div>
-              <CardTitle className="text-lg font-bold tracking-tight">Dívida vencida</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Dívida vencida</CardTitle>
               <CardDescription className="text-xs font-medium">
                 Quem está devendo hoje — título ou parcela de acordo
                 {semRetorno > 0 && ` · ${semRetorno} sem retorno agendado`}
@@ -368,7 +368,7 @@ function PainelEmAtraso({ itens, onAbrir }: {
             </div>
           </div>
           <div className="text-right">
-            <span className="block text-2xl font-black tabular-nums text-destructive">
+            <span className="block text-2xl font-semibold tabular-nums text-destructive">
               {formatCurrency(total)}
             </span>
             <Rotulo as="span">
@@ -408,7 +408,7 @@ function QuitadosDaFila({ clientes, onAbrir }: {
           <div className="flex items-center gap-2">
             <CheckCircle2 className="h-5 w-5 text-success" />
             <div>
-              <CardTitle className="text-lg font-bold tracking-tight">Já pagaram</CardTitle>
+              <CardTitle className="text-lg font-semibold tracking-tight">Já pagaram</CardTitle>
               <CardDescription className="text-xs font-medium">
                 {clientes.length === 1
                   ? '1 retorno agendado para quem não tem mais saldo em aberto'
@@ -431,7 +431,7 @@ function QuitadosDaFila({ clientes, onAbrir }: {
               <button
                 type="button"
                 onClick={() => onAbrir(cliente)}
-                className="max-w-full truncate text-left text-sm font-bold hover:text-primary hover:underline"
+                className="max-w-full truncate text-left text-sm font-semibold hover:text-primary hover:underline"
               >
                 {cliente.nome}
               </button>
@@ -512,7 +512,7 @@ export default function Fila() {
         <Card>
           <CardContent className="py-16 text-center">
             <CheckCircle2 className="mx-auto mb-3 h-12 w-12 text-success/50" />
-            <p className="text-sm font-bold uppercase tracking-widest text-muted-foreground">
+            <p className="text-sm font-medium text-muted-foreground">
               {quitados.length > 0
                 ? 'Nada a cobrar: os retornos dos próximos dias já foram pagos'
                 : 'Nenhum retorno para os próximos dias'}

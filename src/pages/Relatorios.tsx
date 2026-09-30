@@ -101,7 +101,7 @@ const IndicadorCard = ({ titulo, valor, icone: Icone, corIcone, comparacao, nota
       </div>
     </CardHeader>
     <CardContent className="relative z-10">
-      <div className="text-3xl font-black tracking-tighter">{valor}</div>
+      <div className="text-3xl font-semibold tracking-tight">{valor}</div>
       {comparacao !== undefined && (
         <div className="mt-2">
           <ComparisonIndicator value={comparacao} />
@@ -373,7 +373,7 @@ const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
   <>
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
-        <CardTitle className="text-lg font-bold tracking-tight">Títulos por Situação</CardTitle>
+        <CardTitle className="text-lg font-semibold tracking-tight">Títulos por Situação</CardTitle>
         <CardDescription className="text-xs font-medium">
           Acordo cumprido e quebrado aparecem separados de "Pago"
         </CardDescription>
@@ -399,7 +399,7 @@ const GraficosDeTitulos = ({ dados }: { dados: DadosRelatorio }) => (
 
     <Card className="overflow-hidden">
       <CardHeader variant="faixa">
-        <CardTitle className="text-lg font-bold tracking-tight">Títulos por Mês</CardTitle>
+        <CardTitle className="text-lg font-semibold tracking-tight">Títulos por Mês</CardTitle>
         <CardDescription className="text-xs font-medium">Títulos com parcela vencendo no mês</CardDescription>
       </CardHeader>
       <CardContent className="pt-6">
@@ -422,7 +422,7 @@ const GraficoComparativo = ({ dados }: { dados: DadosRelatorio }) => (
     <CardHeader variant="faixa">
       <div className="flex items-center justify-between">
         <div>
-          <CardTitle className="text-lg font-bold tracking-tight">Comparativo: Títulos vs Acordos</CardTitle>
+          <CardTitle className="text-lg font-semibold tracking-tight">Comparativo: Títulos vs Acordos</CardTitle>
           <CardDescription className="text-xs font-medium">
             Volume mensal por vencimento, nas duas frentes
           </CardDescription>
@@ -453,7 +453,7 @@ const GraficoComparativo = ({ dados }: { dados: DadosRelatorio }) => (
 const GraficoDeAcordos = ({ dados }: { dados: DadosRelatorio }) => (
   <Card className="md:col-span-2 overflow-hidden">
     <CardHeader variant="faixa">
-      <CardTitle className="text-lg font-bold tracking-tight">Acordos por Mês</CardTitle>
+      <CardTitle className="text-lg font-semibold tracking-tight">Acordos por Mês</CardTitle>
       <CardDescription className="text-xs font-medium">Acordos com parcela vencendo no mês</CardDescription>
     </CardHeader>
     <CardContent className="pt-6">
@@ -592,7 +592,7 @@ export default function Relatorios() {
         </DropdownMenu>
       </PageHeader>
 
-      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-card/50 backdrop-blur-sm p-4 rounded-2xl border border-border/50">
+      <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center bg-card/50 backdrop-blur-sm p-4 rounded-lg border border-border/50">
         <div className="flex flex-col gap-1.5 flex-1 w-full sm:w-auto">
           <label className={cn(rotuloClasses, 'ml-1')}>Tipo de Visão</label>
           <Select value={reportType} onValueChange={(v) => setReportType(v as TipoRelatorio)}>

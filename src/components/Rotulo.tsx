@@ -14,7 +14,9 @@ import { cn } from '@/lib/utils';
  * As mesmas classes para quando o elemento já é dado por outro componente
  * (`CardTitle`, `Label`, `SidebarGroupLabel`) e `<Rotulo>` não cabe.
  */
-export const rotuloClasses = 'text-[10px] font-bold uppercase tracking-widest text-muted-foreground';
+// A maiúscula espaçada é parte da identidade; o que pesava era o negrito com
+// tracking-widest em 10px. Fica semibold, 11px, tracking-wider.
+export const rotuloClasses = 'text-[11px] font-semibold uppercase tracking-wider text-muted-foreground';
 
 export function Rotulo({
   children,

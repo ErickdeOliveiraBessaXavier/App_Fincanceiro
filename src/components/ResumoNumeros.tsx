@@ -33,7 +33,7 @@ export function ResumoNumeros({ itens }: { itens: NumeroResumo[] }) {
             {Icone && <Icone className={cn('h-3.5 w-3.5', cor || 'text-muted-foreground')} />}
             <Rotulo as="span" className="line-clamp-1">{rotulo}</Rotulo>
           </div>
-          <span className={cn('text-2xl font-black tabular-nums tracking-tight', cor)}>{valor}</span>
+          <span className={cn('text-2xl font-semibold tabular-nums tracking-tight', cor)}>{valor}</span>
         </div>
       ))}
     </Card>

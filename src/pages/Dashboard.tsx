@@ -91,10 +91,10 @@ const Dashboard = () => {
         title="Resumo Executivo"
         description="Monitoramento de performance e risco da carteira."
       >
-        <div className="flex items-center gap-4 bg-card px-6 py-3 rounded-2xl shadow-card border border-border/40">
+        <div className="flex items-center gap-4 bg-card px-6 py-3 rounded-lg shadow-card border border-border/40">
           <div className="flex flex-col items-end">
             <Rotulo as="span">Atualizado em</Rotulo>
-            <span className="text-sm font-black text-foreground">
+            <span className="text-sm font-semibold text-foreground">
               {new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' })}
             </span>
           </div>
@@ -145,7 +145,7 @@ const Dashboard = () => {
             <CardHeader variant="faixa">
               <div className="flex items-center justify-between">
                 <div>
-                  <CardTitle className="text-xl font-bold tracking-tight">Evolução da Recuperação</CardTitle>
+                  <CardTitle className="text-xl font-semibold tracking-tight">Evolução da Recuperação</CardTitle>
                   <p className="text-xs text-muted-foreground font-medium mt-1">
                     Recebimentos de títulos e acordos nos últimos 6 meses
                   </p>
@@ -177,7 +177,7 @@ const Dashboard = () => {
           <div className="bg-primary/5 rounded-3xl p-1 border border-primary/10">
             <div className="bg-background rounded-[calc(1.5rem-2px)] p-6 space-y-8">
               <div>
-                <h3 className="text-lg font-black tracking-tight mb-1">Prioridades de Hoje</h3>
+                <h3 className="text-lg font-semibold tracking-tight mb-1">Prioridades de Hoje</h3>
                 <p className="text-xs text-muted-foreground font-medium">Ações imediatas para redução de risco</p>
               </div>
 
