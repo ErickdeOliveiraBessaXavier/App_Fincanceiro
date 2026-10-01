@@ -1,5 +1,11 @@
 import { FilterConfig } from '@/hooks/useGlobalFilter';
-import { ORDEM_CLASSE, ROTULO_CLASSE } from '@/domain/metricas';
+import { ORDEM_CLASSE, ROTULO_CLASSE, type ClasseTitulo } from '@/domain/metricas';
+
+// No filtro, "Vencido" fica ao lado de "Em atraso", que o contém: o rótulo diz
+// que é só a parte sem acordo. Na linha e no gráfico o selo segue "Vencido".
+const ROTULO_FILTRO_CLASSE: Partial<Record<ClasseTitulo, string>> = {
+  vencido: 'Vencido sem acordo',
+};
 
 export const titulosFilterConfig: FilterConfig[] = [
   { 
@@ -17,7 +23,7 @@ export const titulosFilterConfig: FilterConfig[] = [
     // "Em atraso" junta as duas dívidas atrasadas; as demais são uma por classe.
     options: [
       { value: 'em_atraso', label: 'Em atraso (vencido + acordo quebrado)' },
-      ...ORDEM_CLASSE.map((classe) => ({ value: classe, label: ROTULO_CLASSE[classe] })),
+      ...ORDEM_CLASSE.map((classe) => ({ value: classe, label: ROTULO_FILTRO_CLASSE[classe] ?? ROTULO_CLASSE[classe] })),
     ],
   },
   { 

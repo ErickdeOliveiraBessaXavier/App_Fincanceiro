@@ -9,7 +9,7 @@ export interface FilterPreset {
 export const titulosPresets: FilterPreset[] = [
   { id: 'todos', label: 'Todos', filters: {} },
   { id: 'em_atraso', label: 'Em atraso', filters: { status: 'em_atraso' } },
-  { id: 'vencidos', label: 'Vencidos', filters: { status: 'vencido' } },
+  { id: 'vencidos', label: 'Vencidos sem acordo', filters: { status: 'vencido' } },
   { id: 'acordos_quebrados', label: 'Acordos quebrados', filters: { status: 'acordo_quebrado' } },
   { id: 'em_acordo', label: 'Em acordo', filters: { status: 'em_acordo' } },
   { id: 'a_vencer', label: 'A Vencer', filters: { status: 'a_vencer' } },
