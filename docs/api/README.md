@@ -231,8 +231,10 @@ Em `500`, repetir é seguro: a ingestão é idempotente.
   mudanças de acordo — antes só viam o envio/cancelamento do título, e um
   pagamento lançado do nosso lado nunca chegava ao ERP por esse caminho.
   `atualizado_apos` inválido agora responde `400 parametro_invalido` (antes,
-  `500`). Recomenda-se uma varredura completa única após esta data, para
-  recuperar o que a sincronização antiga deixou passar.
+  `500`).
+
+As mudanças de 2026-10-01 foram feitas antes de qualquer ERP estar conectado.
+Daqui em diante, a v1 só recebe acréscimos; mudança incompatível vai para a v2.
 - **2026-10-01** — `situacao` passa a refletir o acordo. Antes, o título
   renegociado saía como `pago` (o acordo zera o saldo do título), inclusive com
   o acordo quebrado; agora sai `em_acordo`, `acordo_quebrado` ou

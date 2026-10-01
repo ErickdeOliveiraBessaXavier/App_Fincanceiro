@@ -78,14 +78,13 @@ caminho — ver memória `fila-e-ficha-produtividade`):
 
 ## API do ERP (api-v1)
 
-- **Avisar a INFARMA da mudança de 2026-10-01** em `situacao` (detalhes no
-  "Histórico de mudanças" de [`docs/api/README.md`](docs/api/README.md)): título
-  de acordo deixou de sair `pago` e passou a sair `em_acordo` /
-  `acordo_quebrado` / `acordo_cumprido`; parcela levada ao acordo sai
-  `renegociado`. Antes da mudança, os 59 títulos de teste saíam todos `pago`.
-- **Avisar a INFARMA também da sincronização incremental corrigida** (2026-10-01,
-  migration `20261001140000`): pedir uma varredura completa única para recuperar
-  pagamentos/acordos que a versão antiga não entregou.
+- **Nenhum ERP consome a API ainda** (confirmado pelo gestor em 2026-10-01: a
+  INFARMA não iniciou a integração). As mudanças de contrato de 2026-10-01
+  (`situacao` com acordo, sincronização incremental) não afetaram ninguém. A
+  partir do primeiro cliente conectado: **só acréscimos na v1**.
+- **Antes de entregar a chave à INFARMA:** teste de ponta a ponta com chave real
+  (lista com `atualizado_apos`, título em acordo quebrado) e o teste de
+  isolamento entre empresas (chave de uma empresa lendo título de outra → 404).
 - **Volume da sincronização** — `_api_titulos_alterados` calcula a última
   mudança na leitura (agrega razão e acordos da empresa inteira a cada chamada;
   < 1 ms com 59 títulos). Se ficar lento, materializar uma coluna "alterado_em"
