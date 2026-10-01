@@ -1,5 +1,6 @@
 import { hojeNegocio, addDiasCorridos } from '@/domain/telecobranca/statusCobranca';
 import { soDigitos } from '@/utils/format';
+import { classificarTitulo, type ClasseTitulo } from '@/domain/metricas';
 
 // Utility function to get nested values from an object
 export const getNestedValue = (obj: any, path: string): any => {
@@ -293,6 +294,23 @@ export const createAtribuicaoFilterFunctions = () => ({
     commonFilterFunctions.numberLessThan(item, value, 'total_valor'),
 });
 
+// Valor antigo do filtro que ainda pode estar em links salvos (?status=renegociado).
+const SITUACAO_LEGADA: Record<string, ClasseTitulo> = { renegociado: 'em_acordo' };
+
+/**
+ * O filtro de status da tela de Títulos usa a MESMA classificação do selo da
+ * linha, do Dashboard e dos Relatórios (`classificarTitulo`). Antes ele misturava
+ * o status do título com contadores de parcela: "Pago" trazia título com uma
+ * parcela paga e o resto vencido, "Vencido" deixava de fora o acordo quebrado e
+ * "Em acordo" trazia o quebrado com selo vermelho.
+ */
+export const tituloNaSituacao = (
+  titulo: { status?: string | null; acordo_status?: string | null },
+  situacao: string,
+): boolean =>
+  classificarTitulo({ status: titulo.status ?? '', acordo_status: titulo.acordo_status ?? null })
+    === (SITUACAO_LEGADA[situacao] ?? situacao);
+
 // For grouped data (like ClienteAgrupado)
 export const createClienteAgrupadoFilterFunctions = () => ({
   search: (item: any, value: string) => {
@@ -310,26 +328,7 @@ export const createClienteAgrupadoFilterFunctions = () => ({
   },
   status: (item: any, value: string) => {
     if (!value || value === '') return true;
-    
-    // Filtra clientes que tenham títulos com o status OU parcelas com o status
-    return item.titulos?.some((t: any) => {
-      // Verifica status do título
-      if (t.status === value) return true;
-      
-      // Verifica se tem parcelas com o status baseado nos contadores
-      switch (value) {
-        case 'pago':
-          return (t.parcelas_pagas || 0) > 0;
-        case 'a_vencer':
-          return (t.parcelas_pendentes || 0) > 0;
-        case 'vencido':
-          return (t.parcelas_vencidas || 0) > 0;
-        case 'renegociado':
-          return t.status === 'renegociado';
-        default:
-          return false;
-      }
-    }) ?? false;
+    return item.titulos?.some((t: any) => tituloNaSituacao(t, value)) ?? false;
   },
   vencimento_de: (item: any, value: string) => {
     if (!value) return true;

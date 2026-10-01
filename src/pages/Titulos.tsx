@@ -31,7 +31,7 @@ import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
 import { TablePagination } from '@/components/TablePagination';
 import { titulosFilterConfig } from '@/constants/filterConfigs';
 import { titulosPresets } from '@/constants/filterPresets';
-import { createClienteAgrupadoFilterFunctions, casaTexto } from '@/utils/filterFunctions';
+import { createClienteAgrupadoFilterFunctions, casaTexto, tituloNaSituacao } from '@/utils/filterFunctions';
 import { useCobradores } from '@/lib/queries/cobradores';
 import { useVendedores } from '@/lib/queries/vendedores';
 import { formatCpfCnpj, soDigitos } from '@/utils/format';
@@ -81,7 +81,6 @@ interface ClienteAgrupado {
   totalSaldo: number;
   totalOriginal: number;
   qtdTitulos: number;
-  temInadimplente: boolean;
   /** Mesma regra da tela de Clientes (domain/clientes/situacao). */
   situacao: SituacaoCliente;
 }
@@ -100,7 +99,6 @@ function criarClienteAgrupado(titulo: TituloConsolidado, clienteId: string): Cli
     totalSaldo: 0,
     totalOriginal: 0,
     qtdTitulos: 0,
-    temInadimplente: false,
     situacao: 'ativo',
   };
 }
@@ -116,7 +114,6 @@ function agruparTitulosPorCliente(titulos: TituloConsolidado[]): ClienteAgrupado
     cliente.totalSaldo += titulo.saldo_devedor || 0;
     cliente.totalOriginal += titulo.valor_original || 0;
     cliente.qtdTitulos++;
-    if (titulo.status === 'vencido') cliente.temInadimplente = true;
   }
   // A situação sai da MESMA regra da tela de Clientes: antes esta tela decidia
   // só entre inadimplente/ativo e o cliente "Em Acordo" aparecia como "Ativo".
@@ -124,6 +121,31 @@ function agruparTitulosPorCliente(titulos: TituloConsolidado[]): ClienteAgrupado
     cliente.situacao = derivarStatusCliente(cliente.titulos);
   }
   return Array.from(map.values()).sort((a, b) => b.totalSaldo - a.totalSaldo);
+}
+
+// Usa o mesmo `casaTexto` da busca das listagens, então procurar por um CPF
+// com máscara acha o cliente aqui também.
+function titulosDaBusca(cliente: ClienteAgrupado, busca: string): TituloConsolidado[] {
+  if (!busca) return cliente.titulos;
+  const titulosFiltrados = cliente.titulos.filter((titulo) =>
+    casaTexto(titulo.numero_documento, busca)
+    || casaTexto(titulo.id, busca)
+    || casaTexto(titulo.descricao, busca)
+  );
+  // Achou títulos específicos: mostra só eles. Senão, o match pode ter sido
+  // no cliente (nome/CPF) — aí mostra a carteira inteira dele.
+  if (titulosFiltrados.length > 0) return titulosFiltrados;
+  const clienteCasa = casaTexto(cliente.nome, busca) || casaTexto(cliente.cpf_cnpj, busca);
+  return clienteCasa ? cliente.titulos : [];
+}
+
+function recortarTitulosDosClientes(clientes: ClienteAgrupado[], busca: string, status: string): ClienteAgrupado[] {
+  if (!busca && !status) return clientes;
+  return clientes.map((cliente) => {
+    const titulos = titulosDaBusca(cliente, busca)
+      .filter((titulo) => !status || tituloNaSituacao(titulo, status));
+    return { ...cliente, titulos };
+  }).filter((cliente) => cliente.titulos.length > 0);
 }
 
 // View-model do título: concentra os defaults (|| 0/1) num só lugar.
@@ -1222,30 +1244,12 @@ export default function Titulos() {
     totalCount
   } = useGlobalFilter(clientesAgrupados, filterFunctions);
 
-  // Filtrar títulos dentro de cada cliente quando há busca ativa.
-  // Usa o mesmo `casaTexto` da busca das listagens, então procurar por um
-  // CPF com máscara acha o cliente aqui também.
-  const clientesComTitulosFiltrados = useMemo(() => {
-    const busca = String(filters.search ?? '').trim();
-    if (!busca) return filteredClientes;
-
-    return filteredClientes.map((cliente) => {
-      const titulosFiltrados = cliente.titulos.filter((titulo) =>
-        casaTexto(titulo.numero_documento, busca)
-        || casaTexto(titulo.id, busca)
-        || casaTexto(titulo.descricao, busca)
-      );
-
-      // Achou títulos específicos: mostra só eles. Senão, o match pode ter sido
-      // no cliente (nome/CPF) — aí mostra a carteira inteira dele.
-      const clienteCasa = casaTexto(cliente.nome, busca) || casaTexto(cliente.cpf_cnpj, busca);
-      const titulos = titulosFiltrados.length > 0
-        ? titulosFiltrados
-        : (clienteCasa ? cliente.titulos : []);
-
-      return { ...cliente, titulos };
-    }).filter((cliente) => cliente.titulos.length > 0);
-  }, [filteredClientes, filters.search]);
+  // Busca e status também recortam os títulos DENTRO de cada cliente: filtrar
+  // "Vencido" mostrava o cliente com a carteira inteira, pagos inclusive.
+  const clientesComTitulosFiltrados = useMemo(
+    () => recortarTitulosDosClientes(filteredClientes, String(filters.search ?? '').trim(), String(filters.status ?? '')),
+    [filteredClientes, filters.search, filters.status],
+  );
 
   const pagination = usePagination(clientesComTitulosFiltrados, 25, JSON.stringify(filters), PARAM_PAGINA);
 
@@ -1265,7 +1269,7 @@ export default function Titulos() {
   // Leva a origem e a ordem dos clientes: o breadcrumb da ficha volta a ESTA
   // lista (com filtros e página) e o Próximo/Anterior segue a mesma sequência.
   const abrirFicha = useAbrirFicha(
-    useMemo(() => clientesComTitulosFiltrados.map((c) => c.cliente_id), [clientesComTitulosFiltrados]),
+    useMemo(() => clientesComTitulosFiltrados.map((c) => c.id), [clientesComTitulosFiltrados]),
   );
 
   const openWhatsApp = (telefone: string | null, nome: string) => {

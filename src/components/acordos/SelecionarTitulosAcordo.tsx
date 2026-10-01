@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { SelecionarCliente } from '@/components/SelecionarCliente';
 import { StatusBadge } from '@/components/StatusBadge';
+import { getStatusMeta } from '@/constants/statusConfig';
 import { ChevronDown, ChevronRight, AlertTriangle, FileText } from 'lucide-react';
 import { TituloAgrupado, TituloItem, ClienteComDividas } from '@/hooks/useTitulosAgrupados';
 import { cn } from '@/lib/utils';
@@ -109,9 +110,8 @@ interface DividaCardProps {
 }
 function DividaCard({ divida, isSelected, isExpanded, onToggleSelect, onToggleExpand }: DividaCardProps) {
   const valorOriginal = divida.titulos.reduce((sum, t) => sum + t.valor, 0);
-  const situacao = divida.tem_vencido
-    ? { label: 'Vencido', variant: 'destructive' as const }
-    : { label: 'Em dia', variant: 'secondary' as const };
+  // Mesmos rótulos da tela de Títulos (antes: "Em dia").
+  const situacao = getStatusMeta('titulo', divida.tem_vencido ? 'vencido' : 'a_vencer');
 
   return (
     <div className={cn('bg-card', isSelected && 'bg-primary/5')}>

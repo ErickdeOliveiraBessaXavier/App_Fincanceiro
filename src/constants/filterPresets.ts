@@ -9,9 +9,10 @@ export interface FilterPreset {
 export const titulosPresets: FilterPreset[] = [
   { id: 'todos', label: 'Todos', filters: {} },
   { id: 'vencidos', label: 'Vencidos', filters: { status: 'vencido' } },
+  { id: 'acordos_quebrados', label: 'Acordos quebrados', filters: { status: 'acordo_quebrado' } },
+  { id: 'em_acordo', label: 'Em acordo', filters: { status: 'em_acordo' } },
   { id: 'a_vencer', label: 'A Vencer', filters: { status: 'a_vencer' } },
   { id: 'pagos', label: 'Pagos', filters: { status: 'pago' } },
-  { id: 'renegociados', label: 'Em acordo', filters: { status: 'renegociado' } },
 ];
 
 export const clientesPresets: FilterPreset[] = [

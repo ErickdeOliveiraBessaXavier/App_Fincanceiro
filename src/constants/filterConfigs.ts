@@ -1,4 +1,5 @@
 import { FilterConfig } from '@/hooks/useGlobalFilter';
+import { ORDEM_CLASSE, ROTULO_CLASSE } from '@/domain/metricas';
 
 export const titulosFilterConfig: FilterConfig[] = [
   { 
@@ -11,12 +12,9 @@ export const titulosFilterConfig: FilterConfig[] = [
     id: 'status', 
     label: 'Status', 
     type: 'select', 
-    options: [
-      { value: 'pago', label: 'Pago', color: 'green' },
-      { value: 'a_vencer', label: 'A Vencer', color: 'yellow' },
-      { value: 'vencido', label: 'Vencido', color: 'red' },
-      { value: 'renegociado', label: 'Em acordo', color: 'purple' },
-    ]
+    // Situação do título, a mesma do selo da linha (classificarTitulo): com
+    // acordo, vale o estado do acordo — a novação zera o saldo do título.
+    options: ORDEM_CLASSE.map((classe) => ({ value: classe, label: ROTULO_CLASSE[classe] })),
   },
   { 
     id: 'vencimento_de', 

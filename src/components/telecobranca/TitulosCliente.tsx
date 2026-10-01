@@ -72,24 +72,35 @@ function situacaoTitulo(grupo: TituloGrupo): StatusMeta {
   // originais (novação), então o título fica com saldo zero — sem esta regra
   // ele apareceria como "Quitado", igual a uma dívida paga em dinheiro.
   if (grupo.acordoStatus) return getStatusMeta('titulo_acordo', grupo.acordoStatus);
-  if (grupo.temVencido) return { label: 'Vencido', variant: 'destructive' };
-  // Verde para "resolvido", consistente com Título "Pago" e Cliente "Quitado".
-  if (grupo.parcelasAbertas === 0) return { label: 'Quitado', variant: 'success' };
-  return { label: 'Em dia', variant: 'secondary' };
+  // Mesmos rótulos da tela de Títulos ("Pago"/"A Vencer"); antes aqui era
+  // "Quitado"/"Em dia" para o mesmo fato.
+  if (grupo.temVencido) return getStatusMeta('titulo', 'vencido');
+  if (grupo.parcelasAbertas === 0) return getStatusMeta('titulo', 'pago');
+  return getStatusMeta('titulo', 'a_vencer');
 }
 
-// Texto do resumo. Um título com acordo ativo tem zero parcelas em aberto (a
-// novação as liquidou), mas "Sem pendências" seria enganoso: a dívida existe,
-// mudou de lugar.
+// Texto do resumo. Um título com acordo tem zero parcelas em aberto (a novação
+// as liquidou), mas "Sem pendências" seria enganoso: a dívida existe, mudou de
+// lugar — e no acordo quebrado ela está em atraso.
+const DESCRICAO_POR_ACORDO: Record<string, string> = {
+  ativo: 'Renegociado em acordo',
+  quebrado: 'Dívida no acordo, em atraso',
+  cumprido: 'Quitado pelo acordo',
+};
+
 function descricaoSituacao(grupo: TituloGrupo): string {
-  if (grupo.acordoStatus === 'ativo') return 'Renegociado em acordo';
+  const porAcordo = grupo.acordoStatus ? DESCRICAO_POR_ACORDO[grupo.acordoStatus] : undefined;
+  if (porAcordo) return porAcordo;
   if (grupo.parcelasAbertas > 0) return `${grupo.parcelasAbertas} em aberto`;
   return 'Sem pendências';
 }
 
+// Acordo quebrado é dívida em atraso como o título vencido: os dois vão ao topo.
+const exigeAcao = (grupo: TituloGrupo) => grupo.temVencido || grupo.acordoStatus === 'quebrado';
+
 function ordenarGrupos(grupos: TituloGrupo[]): TituloGrupo[] {
   return grupos.sort((a, b) => {
-    if (a.temVencido !== b.temVencido) return a.temVencido ? -1 : 1;
+    if (exigeAcao(a) !== exigeAcao(b)) return exigeAcao(a) ? -1 : 1;
     return b.valorEmAberto - a.valorEmAberto;
   });
 }

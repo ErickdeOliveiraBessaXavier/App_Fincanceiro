@@ -75,7 +75,9 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
   // Status da parcela de um acordo (parcelas_acordo.status)
   parcela_acordo: {
     paga: { label: 'Paga', variant: 'success' },
-    pendente: { label: 'Pendente', variant: 'warning' },
+    // Mesmo rótulo da parcela de título: "Pendente" aqui e "A Vencer" lá
+    // descreviam o mesmo fato com palavras diferentes.
+    pendente: { label: 'A Vencer', variant: 'warning' },
     vencida: { label: 'Vencida', variant: 'destructive' },
   },
   // Status do cliente (derivado dos títulos em useClientes)
