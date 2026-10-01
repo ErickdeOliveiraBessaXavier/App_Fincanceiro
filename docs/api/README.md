@@ -122,10 +122,26 @@ curl "$BASE/titulos/NF-4417" -H "Authorization: Bearer $CHAVE"
 }
 ```
 
-`situacao` do título: `pago` (sem saldo), `vencido` (alguma parcela em aberto
-passou do vencimento), `a_vencer`, `cancelado` ou `indefinida` (título sem
-parcelas consolidadas — não deve acontecer em uso normal). O `saldo_atual` já
-considera juros, multa, descontos e pagamentos.
+`situacao` do título:
+
+| Valor | Significado |
+|---|---|
+| `a_vencer` | Em aberto, nada vencido |
+| `vencido` | Alguma parcela em aberto passou do vencimento |
+| `pago` | Quitado pelo pagamento das parcelas |
+| `em_acordo` | Renegociado num acordo que está em dia |
+| `acordo_quebrado` | Renegociado num acordo com parcela em atraso — **dívida em aberto** |
+| `acordo_cumprido` | Quitado pelo acordo (todas as parcelas do acordo pagas) |
+| `cancelado` | Cobrança cancelada do nosso lado |
+| `indefinida` | Título sem parcelas consolidadas — não deve acontecer em uso normal |
+
+`situacao` da parcela: `a_vencer`, `vencido`, `pago` ou `renegociado` (a
+parcela foi levada para um acordo — não foi paga).
+
+O `saldo_atual` já considera juros, multa, descontos e pagamentos. **Em título
+de acordo ele é zero**: o acordo substitui a dívida do título (novação) e o
+saldo passa a viver nas parcelas do acordo, que a v1 não expõe. Por isso
+`em_acordo` e `acordo_quebrado` com saldo zero **não** significam quitado.
 
 Um título **cancelado continua respondendo aqui**, com `situacao: "cancelado"`.
 É assim que o ERP descobre que a cobrança foi encerrada do nosso lado — se ele
@@ -154,6 +170,12 @@ mesmo formato do título individual, sem a lista de parcelas.
 e use em `atualizado_apos` na próxima, com `incluir_cancelados=true`. Assim o
 ERP puxa só o que mudou — inclusive os cancelamentos — em vez de varrer a base
 inteira.
+
+> **Limitação conhecida (2026-10-01):** `atualizado_apos` olha só a data de
+> alteração do próprio título (envio pela API, importação, cancelamento).
+> Pagamento lançado do nosso lado e criação/quebra/cumprimento de acordo **não**
+> mudam essa data — a sincronização incremental não os traz. Até corrigirmos,
+> faça de tempos em tempos uma varredura completa (sem `atualizado_apos`).
 
 ---
 
@@ -187,4 +209,17 @@ Em `500`, repetir é seguro: a ingestão é idempotente.
   pelo reenvio do título com `pago: true` na parcela.
 - **Envio em lote** numa única chamada. Carga inicial grande costuma sair mais
   rápido pela importação de planilha; o dia a dia é uma chamada por título.
-- **Acordos**. Renegociação acontece no nosso lado e aparece na consulta.
+- **Acordos**. Renegociação acontece no nosso lado e aparece na consulta como
+  `situacao` do título (`em_acordo`, `acordo_quebrado`, `acordo_cumprido`); o
+  valor e as parcelas do acordo ainda não são expostos.
+
+---
+
+## Histórico de mudanças
+
+- **2026-10-01** — `situacao` passa a refletir o acordo. Antes, o título
+  renegociado saía como `pago` (o acordo zera o saldo do título), inclusive com
+  o acordo quebrado; agora sai `em_acordo`, `acordo_quebrado` ou
+  `acordo_cumprido`, e a parcela levada ao acordo sai `renegociado` em vez de
+  `pago`. **Quem tratava `pago` como "encerrado" deve tratar também
+  `acordo_cumprido`; `acordo_quebrado` é dívida em aberto.**

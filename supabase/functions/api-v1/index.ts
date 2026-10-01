@@ -162,14 +162,28 @@ type LinhaMv = {
   titulo_id: string; numero_parcela: number; valor_nominal: number; vencimento: string;
   juros: number; multa: number; descontos: number; total_pago: number;
   saldo_atual: number; status: string; data_ultimo_pagamento: string | null;
+  renegociada: boolean;
 };
 
-// Situação do título a partir das parcelas: quitado quando não há saldo,
-// vencido quando alguma parcela em aberto já passou do vencimento.
+// Acordo é novação: criar o acordo zera o saldo das parcelas do título, e pelo
+// saldo elas seriam "pago". Até 2026-10-01 a API entregava assim — o ERP via
+// como quitado um título cuja dívida só tinha mudado para o acordo (inclusive
+// acordo QUEBRADO). Mesma classificação das telas (classificarTitulo).
+const SITUACAO_POR_ACORDO: Record<string, string> = {
+  ativo: "em_acordo",
+  quebrado: "acordo_quebrado",
+  cumprido: "acordo_cumprido",
+};
+
+// Situação do título: o acordo, quando houver, manda; senão, as parcelas —
+// quitado quando não há saldo, vencido quando alguma parcela em aberto já
+// passou do vencimento.
 //
 // Sem parcelas não dá para afirmar nada — e `every` sobre lista vazia é
 // verdadeiro, o que faria um título sem consolidação ser reportado como pago.
-function situacaoDoTitulo(parcelas: LinhaMv[]): string {
+function situacaoDoTitulo(parcelas: LinhaMv[], acordoStatus?: string): string {
+  const porAcordo = acordoStatus ? SITUACAO_POR_ACORDO[acordoStatus] : undefined;
+  if (porAcordo) return porAcordo;
   if (parcelas.length === 0) return "indefinida";
   if (parcelas.every((p) => p.status === "pago")) return "pago";
   if (parcelas.some((p) => p.status === "vencido")) return "vencido";
@@ -191,7 +205,7 @@ async function parcelasDe(admin: Admin, companyId: string, tituloIds: string[]):
       // Status calculado na leitura (fuso de Brasília + próximo dia útil); o da
       // MV é gravado no refresh e fica parado entre operações.
       .from("_vw_parcelas_status")
-      .select("titulo_id, numero_parcela, valor_nominal, vencimento, juros, multa, descontos, total_pago, saldo_atual, status, data_ultimo_pagamento")
+      .select("titulo_id, numero_parcela, valor_nominal, vencimento, juros, multa, descontos, total_pago, saldo_atual, status, data_ultimo_pagamento, renegociada")
       .eq("company_id", companyId)
       .in("titulo_id", tituloIds)
       .order("numero_parcela")
@@ -201,16 +215,51 @@ async function parcelasDe(admin: Admin, companyId: string, tituloIds: string[]):
   return linhas as LinhaMv[];
 }
 
+type AcordoDoTitulo = { status: string; created_at: string };
+type LinhaAcordoTitulo = { titulo_id: string; acordos: AcordoDoTitulo };
+
+// Mesma precedência da vw_titulos_completos: acordo vigente (ativo/quebrado)
+// antes de encerrado; entre iguais, o mais recente.
+const ACORDO_VIGENTE = new Set(["ativo", "quebrado"]);
+function prevalece(novo: AcordoDoTitulo, atual: AcordoDoTitulo): boolean {
+  const novoVigente = ACORDO_VIGENTE.has(novo.status);
+  if (novoVigente !== ACORDO_VIGENTE.has(atual.status)) return novoVigente;
+  return novo.created_at > atual.created_at;
+}
+
+// Estado do acordo não cancelado de cada título (cancelado estorna a novação e
+// o título volta a valer pelo próprio saldo).
+async function acordosDe(admin: Admin, companyId: string, tituloIds: string[]): Promise<Map<string, string>> {
+  if (tituloIds.length === 0) return new Map();
+  const linhas = await buscarTodas((de, ate) =>
+    admin
+      .from("acordo_titulos")
+      .select("titulo_id, acordos!inner(status, created_at)")
+      .eq("company_id", companyId)
+      .in("titulo_id", tituloIds)
+      .neq("acordos.status", "cancelado")
+      .order("id")
+      .range(de, ate)
+  ) as LinhaAcordoTitulo[];
+
+  const escolhido = new Map<string, AcordoDoTitulo>();
+  for (const linha of linhas) {
+    const atual = escolhido.get(linha.titulo_id);
+    if (!atual || prevalece(linha.acordos, atual)) escolhido.set(linha.titulo_id, linha.acordos);
+  }
+  return new Map([...escolhido].map(([tituloId, acordo]) => [tituloId, acordo.status]));
+}
+
 type LinhaTitulo = {
   id: string; numero_documento: string; valor_original: number; vencimento_original: string;
   descricao: string | null; status: string; created_at: string; updated_at: string;
   clientes: { nome: string; cpf_cnpj: string; telefone: string | null } | null;
 };
 
-function resumoDoTitulo(t: LinhaTitulo, parcelas: LinhaMv[]) {
+function resumoDoTitulo(t: LinhaTitulo, parcelas: LinhaMv[], acordoStatus?: string) {
   return {
     numero_documento: t.numero_documento,
-    situacao: t.status === "cancelado" ? "cancelado" : situacaoDoTitulo(parcelas),
+    situacao: t.status === "cancelado" ? "cancelado" : situacaoDoTitulo(parcelas, acordoStatus),
     cliente: {
       nome: t.clientes?.nome ?? null,
       cpf_cnpj: t.clientes?.cpf_cnpj ?? null,
@@ -235,7 +284,8 @@ function detalheDaParcela(p: LinhaMv) {
     descontos: Number(p.descontos),
     total_pago: Number(p.total_pago),
     saldo_atual: Number(p.saldo_atual),
-    situacao: p.status,
+    // Liquidada por acordo: saldo zero, mas não foi paga.
+    situacao: p.renegociada ? "renegociado" : p.status,
     ultimo_pagamento_em: p.data_ultimo_pagamento,
   };
 }
@@ -259,8 +309,14 @@ async function getTitulo(admin: Admin, ctx: Contexto, numeroDocumento: string): 
   if (!encontrado) return erro(404, "titulo_nao_encontrado", `Nenhum título com numero_documento ${numeroDocumento}.`);
 
   const titulo = encontrado as unknown as LinhaTitulo;
-  const parcelas = await parcelasDe(admin, ctx.companyId, [titulo.id]);
-  return json(200, { ...resumoDoTitulo(titulo, parcelas), parcelas: parcelas.map(detalheDaParcela) });
+  const [parcelas, acordos] = await Promise.all([
+    parcelasDe(admin, ctx.companyId, [titulo.id]),
+    acordosDe(admin, ctx.companyId, [titulo.id]),
+  ]);
+  return json(200, {
+    ...resumoDoTitulo(titulo, parcelas, acordos.get(titulo.id)),
+    parcelas: parcelas.map(detalheDaParcela),
+  });
 }
 
 function paginacao(url: URL): { limite: number; offset: number } {
@@ -296,11 +352,15 @@ async function getTitulos(admin: Admin, ctx: Contexto, url: URL): Promise<Respon
   if (error) return erro(500, "falha_consulta", "Não foi possível listar os títulos.");
 
   const titulos = (data ?? []) as unknown as LinhaTitulo[];
-  const parcelas = await parcelasDe(admin, ctx.companyId, titulos.map((t) => t.id));
+  const ids = titulos.map((t) => t.id);
+  const [parcelas, acordos] = await Promise.all([
+    parcelasDe(admin, ctx.companyId, ids),
+    acordosDe(admin, ctx.companyId, ids),
+  ]);
   const porTitulo = (id: string) => parcelas.filter((p) => p.titulo_id === id);
 
   return json(200, {
-    titulos: titulos.map((t) => resumoDoTitulo(t, porTitulo(t.id))),
+    titulos: titulos.map((t) => resumoDoTitulo(t, porTitulo(t.id), acordos.get(t.id))),
     limite,
     offset,
   });

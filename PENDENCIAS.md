@@ -76,6 +76,24 @@ caminho — ver memória `fila-e-ficha-produtividade`):
   com a fila carregada (`useFilaNavegacao`), sem escolher um por um.
 - **Cancelar em lote** os retornos pendentes do bloco "Já pagaram".
 
+## API do ERP (api-v1)
+
+- **Avisar a INFARMA da mudança de 2026-10-01** em `situacao` (detalhes no
+  "Histórico de mudanças" de [`docs/api/README.md`](docs/api/README.md)): título
+  de acordo deixou de sair `pago` e passou a sair `em_acordo` /
+  `acordo_quebrado` / `acordo_cumprido`; parcela levada ao acordo sai
+  `renegociado`. Antes da mudança, os 59 títulos de teste saíam todos `pago`.
+- **Sincronização incremental incompleta** — `atualizado_apos` filtra por
+  `titulos.updated_at`, que só muda em importação/envio e cancelamento
+  (conferido em 2026-10-01: nenhuma função de pagamento ou acordo faz UPDATE em
+  `titulos`). Pagamento lançado no app e criação/quebra/cumprimento de acordo
+  não chegam ao ERP pela sincronização incremental. Caminho: uma "última
+  mudança" por título calculada do razão (`movimentos_financeiros`) e de
+  `acordos.updated_at`, usada no filtro e em `atualizado_em`. Documentado como
+  limitação no README da API até lá.
+- **Acordo não exposto** — o ERP vê o título em acordo com saldo zero; valor e
+  parcelas do acordo seriam rota nova (V2).
+
 ## Produto (futuro)
 
 - **Tela de auditoria** (`/auditoria`) — o banco já grava tudo em `audit_log`;
