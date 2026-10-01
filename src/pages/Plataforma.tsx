@@ -21,6 +21,7 @@ import {
 import { ChavesApiDialog } from '@/components/plataforma/ChavesApiDialog';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { CarregandoSecao } from '@/components/TelaCarregamento';
+import { formatCpfCnpj } from '@/utils/format';
 
 interface CompanyRow {
   id: string;
@@ -163,8 +164,12 @@ interface EmpresaRowProps extends EmpresaAcoesProps {
 function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar, onIntegracao }: EmpresaRowProps) {
   return (
     <TableRow>
-      <TableCell className="font-medium">{c.nome}</TableCell>
-      <TableCell className="hidden xl:table-cell">{c.cnpj ?? '—'}</TableCell>
+      <TableCell>
+        <div className="font-medium">{c.nome}</div>
+        {c.cnpj && (
+          <div className="text-xs text-muted-foreground tabular-nums">{formatCpfCnpj(c.cnpj)}</div>
+        )}
+      </TableCell>
       <TableCell className="capitalize">{c.plano}</TableCell>
       <TableCell>
         <Badge className={statusBadge[c.status] ?? ''}>
@@ -205,7 +210,6 @@ function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSe
               <TableHeader>
                 <TableRow>
                   <TableHead>Empresa</TableHead>
-                  <TableHead className="hidden xl:table-cell">CNPJ</TableHead>
                   <TableHead>Plano</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Títulos</TableHead>
@@ -463,7 +467,7 @@ export default function Plataforma() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl space-y-6 p-6">
+      <main className="mx-auto max-w-screen-2xl space-y-6 p-6">
         <div className="grid gap-4 sm:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
