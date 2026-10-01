@@ -82,9 +82,15 @@ caminho — ver memória `fila-e-ficha-produtividade`):
   INFARMA não iniciou a integração). As mudanças de contrato de 2026-10-01
   (`situacao` com acordo, sincronização incremental) não afetaram ninguém. A
   partir do primeiro cliente conectado: **só acréscimos na v1**.
-- **Antes de entregar a chave à INFARMA:** teste de ponta a ponta com chave real
-  (lista com `atualizado_apos`, título em acordo quebrado) e o teste de
-  isolamento entre empresas (chave de uma empresa lendo título de outra → 404).
+- **Antes de entregar a chave à INFARMA:** rodar `node scripts/testar-api-v1.mjs`
+  (só leitura; autenticação, situações, sincronização, paginação, título em
+  acordo e isolamento entre empresas). Precisa de `API_V1_CHAVE` e
+  `API_V1_CHAVE_OUTRA_EMPRESA` no `.env.local` — chaves geradas na Plataforma
+  e revogadas depois.
+- **Revogar a chave de teste "Erick - teste"** (`erp_live_vaJGMEpX…`, ativa
+  desde 2026-08-19, empresa de teste) pela Plataforma. Os dados de teste da API
+  (título `API-TESTE-1`, cliente "Teste Integracao LTDA") já estavam limpos em
+  2026-10-01.
 - **Volume da sincronização** — `_api_titulos_alterados` calcula a última
   mudança na leitura (agrega razão e acordos da empresa inteira a cada chamada;
   < 1 ms com 59 títulos). Se ficar lento, materializar uma coluna "alterado_em"

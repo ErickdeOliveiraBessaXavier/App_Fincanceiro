@@ -4,6 +4,10 @@ Documentação para a equipe de TI do cliente. É a porta oficial de entrada do
 ERP: o cliente **não recebe acesso ao banco de dados**, e todas as conexões
 partem do ERP para cá (nada precisa ser exposto na rede dele).
 
+Explicação sem jargão, para conversa comercial:
+[`PERGUNTAS-FREQUENTES.md`](PERGUNTAS-FREQUENTES.md). Antes de entregar uma
+chave, rode o teste de ponta a ponta: `node scripts/testar-api-v1.mjs`.
+
 ## Endereço e autenticação
 
 ```
