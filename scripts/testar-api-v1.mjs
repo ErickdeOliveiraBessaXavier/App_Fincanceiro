@@ -76,14 +76,21 @@ async function testarSincronizacao(chave, titulos) {
   verificar('atualizado_apos inválido → 400 parametro_invalido',
     invalida.status === 400 && invalida.corpo?.erro?.codigo === 'parametro_invalido');
 
-  // Corte no meio da lista: tem que vir exatamente quem mudou depois dele.
-  const corte = titulos[Math.floor(titulos.length / 2)]?.atualizado_em;
-  if (!corte) return;
+  // Corte no SEGUNDO horário distinto: assim sempre há títulos depois dele (o
+  // primeiro grupo). Cortar no meio da lista caía dentro de um grupo com o
+  // mesmo horário (ex.: 30 títulos de acordos quebrados pelo job das 03:10) e
+  // o teste passava comparando 0 com 0.
+  const horarios = [...new Set(titulos.map((t) => t.atualizado_em))];
+  if (horarios.length < 2) {
+    verificar('atualizado_apos (pulado: todos os títulos mudaram no mesmo instante)', true);
+    return;
+  }
+  const corte = horarios[1];
   const { corpo } = await chamar(`/titulos?limite=200&atualizado_apos=${encodeURIComponent(corte)}`, chave);
   const recebidos = corpo?.titulos ?? [];
   const esperados = titulos.filter((t) => t.atualizado_em > corte).length;
   verificar('atualizado_apos traz só (e todos) os que mudaram depois do corte',
-    recebidos.length === esperados && recebidos.every((t) => t.atualizado_em > corte),
+    esperados > 0 && recebidos.length === esperados && recebidos.every((t) => t.atualizado_em > corte),
     `${recebidos.length} recebido(s), ${esperados} esperado(s)`);
 }
 
