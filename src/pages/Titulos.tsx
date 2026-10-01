@@ -154,10 +154,18 @@ function tituloView(t: TituloConsolidado) {
     qtdParcelas: t.quantidade_parcelas || 1,
     temMultiplas: (t.quantidade_parcelas || 0) > 1,
     pagas: t.parcelas_pagas || 0,
+    renegociadas: t.parcelas_renegociadas || 0,
     saldo: t.saldo_devedor || 0,
     original: t.valor_original || 0,
     descricao: t.descricao || 'Título',
   };
+}
+
+// "3/3 parcelas pagas" num título de acordo quebrado contradizia o selo
+// "Renegociada" das parcelas: as que foram para o acordo aparecem à parte.
+function resumoParcelas(v: ReturnType<typeof tituloView>): string {
+  const pagas = `${v.pagas}/${v.qtdParcelas} parcelas pagas`;
+  return v.renegociadas > 0 ? `${pagas} · ${v.renegociadas} no acordo` : pagas;
 }
 
 /**
@@ -403,7 +411,7 @@ function TituloRow({ titulo, actions }: { titulo: TituloConsolidado; actions: Ti
               Venc: {FormatUtils.date(titulo.vencimento_original || '')}
               {v.temMultiplas && (
                 <span className="ml-2">
-                  ({v.pagas}/{v.qtdParcelas} parcelas pagas)
+                  ({resumoParcelas(v)})
                 </span>
               )}
             </div>

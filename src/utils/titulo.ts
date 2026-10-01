@@ -46,7 +46,10 @@ export interface TituloConsolidado {
   total_juros: number;
   total_multa: number;
   total_descontos: number;
+  /** Pagas de verdade: não conta a parcela liquidada por acordo. */
   parcelas_pagas: number;
+  /** Liquidadas por acordo (novação). Opcional até a migration 20261001130000. */
+  parcelas_renegociadas?: number;
   parcelas_vencidas: number;
   parcelas_pendentes: number;
   status: TituloStatus;
