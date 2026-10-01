@@ -727,7 +727,7 @@ export function calcularIndicadores(
   return {
     totalTitulos: base.titulos.length,
     valorTotal: soma(base.titulos.map((t) => Number(t.valor_original))),
-    titulosVencidos: contarClasse(base.titulos, 'vencido') + contarClasse(base.titulos, 'acordo_quebrado'),
+    titulosEmAtraso: contarClasse(base.titulos, 'vencido') + contarClasse(base.titulos, 'acordo_quebrado'),
     titulosPagos: contarClasse(base.titulos, 'pago') + contarClasse(base.titulos, 'acordo_cumprido'),
     titulosEmAcordo: contarClasse(base.titulos, 'em_acordo'),
     valorVencido,

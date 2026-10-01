@@ -289,13 +289,18 @@ export const createAtribuicaoFilterFunctions = () => ({
     commonFilterFunctions.contains(item, value, 'estado'),
   retorno: (item: any, value: string) => filtrarPorRetorno(item, value),
   valor_min: (item: any, value: string) =>
-    commonFilterFunctions.numberGreaterThan(item, value, 'total_valor'),
+    commonFilterFunctions.numberGreaterThan(item, value, 'em_aberto'),
   valor_max: (item: any, value: string) =>
-    commonFilterFunctions.numberLessThan(item, value, 'total_valor'),
+    commonFilterFunctions.numberLessThan(item, value, 'em_aberto'),
 });
 
-// Valor antigo do filtro que ainda pode estar em links salvos (?status=renegociado).
-const SITUACAO_LEGADA: Record<string, ClasseTitulo> = { renegociado: 'em_acordo' };
+// Valores do filtro que valem por mais de uma classe. "Em atraso" junta o
+// título vencido e o de acordo quebrado: os dois são dívida atrasada, só em
+// lugares diferentes. 'renegociado' é o valor antigo, de links salvos.
+const SITUACOES_AGRUPADAS: Record<string, ClasseTitulo[]> = {
+  em_atraso: ['vencido', 'acordo_quebrado'],
+  renegociado: ['em_acordo'],
+};
 
 /**
  * O filtro de status da tela de Títulos usa a MESMA classificação do selo da
@@ -307,9 +312,10 @@ const SITUACAO_LEGADA: Record<string, ClasseTitulo> = { renegociado: 'em_acordo'
 export const tituloNaSituacao = (
   titulo: { status?: string | null; acordo_status?: string | null },
   situacao: string,
-): boolean =>
-  classificarTitulo({ status: titulo.status ?? '', acordo_status: titulo.acordo_status ?? null })
-    === (SITUACAO_LEGADA[situacao] ?? situacao);
+): boolean => {
+  const classe = classificarTitulo({ status: titulo.status ?? '', acordo_status: titulo.acordo_status ?? null });
+  return (SITUACOES_AGRUPADAS[situacao] ?? [situacao]).includes(classe);
+};
 
 // For grouped data (like ClienteAgrupado)
 export const createClienteAgrupadoFilterFunctions = () => ({

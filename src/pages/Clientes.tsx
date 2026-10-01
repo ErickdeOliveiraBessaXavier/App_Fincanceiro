@@ -30,6 +30,7 @@ import { InputDocumento, InputTelefone } from '@/components/InputMascarado';
 import { useGlobalFilter } from '@/hooks/useGlobalFilter';
 import { usePagination, PARAM_PAGINA } from '@/hooks/usePagination';
 import { useAbrirFicha } from '@/hooks/useFilaNavegacao';
+import { useDividaPorCliente } from '@/lib/queries/metricas';
 import { TablePagination } from '@/components/TablePagination';
 import { clientesFilterConfig } from '@/constants/filterConfigs';
 import { clientesPresets } from '@/constants/filterPresets';
@@ -77,7 +78,6 @@ interface Cliente {
   updated_at: string;
   // Dados calculados
   total_titulos?: number;
-  total_valor?: number;
   ultima_comunicacao?: string;
 }
 
@@ -96,6 +96,10 @@ const formatCurrency = (value: number) =>
 const formatDateShort = (date: string) => formatData(date);
 
 // Célula "Próximo retorno": data + status de cobrança; destaca atrasados.
+// '—' enquanto a dívida não carregou: mostrar R$ 0,00 diria "não deve nada".
+const textoEmAberto = (cliente: ClienteRow) =>
+  cliente.em_aberto === undefined ? '—' : formatCurrency(cliente.em_aberto);
+
 function RetornoCell({ cliente }: { cliente: ClienteRow }) {
   if (!cliente.proximo_retorno) {
     return <span className="text-xs text-muted-foreground">—</span>;
@@ -152,8 +156,8 @@ function ClienteCard({ cliente, isOperador, onDetails, onEdit, onDelete }: Clien
             <p className="text-sm font-semibold">{cliente.total_titulos}</p>
           </div>
           <div>
-            <Rotulo>Total</Rotulo>
-            <p className="text-sm font-semibold text-primary">{formatCurrency(cliente.total_valor || 0)}</p>
+            <Rotulo>Em aberto</Rotulo>
+            <p className="text-sm font-semibold text-primary">{textoEmAberto(cliente)}</p>
           </div>
           <div>
             <Rotulo>Retorno</Rotulo>
@@ -212,7 +216,8 @@ function ClienteTableRow({ cliente, isOperador, onDetails, onEdit, onDelete }: C
         <div className="space-y-1">
           <StatusBadge domain="cliente" status={cliente.status} />
           <div className="text-xs">
-            <span className="font-semibold text-primary">{formatCurrency(cliente.total_valor || 0)}</span>
+            <span className="font-semibold text-primary">{textoEmAberto(cliente)}</span>
+            <span className="text-muted-foreground"> em aberto</span>
             <span className="text-muted-foreground"> · {cliente.total_titulos} tít.</span>
           </div>
         </div>
@@ -480,7 +485,16 @@ export default function Clientes() {
   const { toast } = useToast();
 
   // === Data via React Query ===
-  const { data: clientes = [], isLoading: loading } = useClientes();
+  const { data: clientesBase = [], isLoading: loading } = useClientes();
+  // Dívida viva da base única (a mesma da Fila e do Dashboard).
+  const { divida, carregada: dividaCarregada } = useDividaPorCliente();
+  const clientes = useMemo(
+    () => clientesBase.map((c) => ({
+      ...c,
+      em_aberto: dividaCarregada ? (divida.get(c.id)?.emAberto ?? 0) : undefined,
+    })),
+    [clientesBase, divida, dividaCarregada],
+  );
   const { data: cobradores = [] } = useCobradores();
   const { data: vendedores = [] } = useVendedores();
   const { isOperador, isAdmin } = useUserRole();

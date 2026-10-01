@@ -12,6 +12,7 @@ import { format, differenceInDays } from 'date-fns';
 import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { formatData, parseDataLocal } from '@/utils/format';
+import { statusExibidoParcela } from '@/utils/titulo';
 import { RegistrarPagamentoModal } from '@/components/titulos/RegistrarPagamentoModal';
 import { NovoAcordoDialog } from '@/components/acordos/NovoAcordoDialog';
 import { getStatusMeta, type StatusMeta } from '@/constants/statusConfig';
@@ -29,6 +30,7 @@ interface Parcela {
   saldo_atual: number;
   total_pago: number;
   status: string;
+  renegociada?: boolean;
 }
 
 interface TituloMeta {
@@ -217,7 +219,7 @@ function ParcelaRow({ parcela, totalParcelas, onPagar }: {
         )}
       </TableCell>
       <TableCell>
-        <StatusBadge domain="parcela" status={parcela.status} />
+        <StatusBadge domain="parcela" status={statusExibidoParcela(parcela)} />
       </TableCell>
       {onPagar && (
         <TableCell className="text-right">

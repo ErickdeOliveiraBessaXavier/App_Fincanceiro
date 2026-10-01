@@ -119,7 +119,9 @@ const Dashboard = () => {
           title="Situação de Risco"
           mainValue={indicadores.taxaInadimplencia.toFixed(1) + '%'}
           subValue={formatCurrency(indicadores.valorVencido, true)}
-          description={`Vencido sobre a carteira em aberto · ${qtdItensVencidos} ${qtdItensVencidos === 1 ? 'parcela' : 'parcelas'}`}
+          // O valor já somava título vencido e parcela de acordo em atraso; o
+          // texto dizia só "Vencido" e escondia a segunda origem.
+          description={`Em atraso (títulos + acordos) sobre a carteira em aberto · ${qtdItensVencidos} ${qtdItensVencidos === 1 ? 'parcela' : 'parcelas'}`}
           icon={AlertTriangle}
           variant="destructive"
           progress={{ value: indicadores.taxaInadimplencia, label: "Exposição ao Risco" }}

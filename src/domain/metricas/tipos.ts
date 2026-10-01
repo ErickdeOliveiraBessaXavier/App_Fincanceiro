@@ -164,7 +164,8 @@ export interface Devedor {
 export interface IndicadoresCarteira {
   totalTitulos: number;
   valorTotal: number;
-  titulosVencidos: number;
+  /** Vencido + acordo quebrado: as duas dívidas atrasadas. Não é o filtro "Vencido". */
+  titulosEmAtraso: number;
   titulosPagos: number;
   titulosEmAcordo: number;
   /** Vencido de verdade: parcelas de título + parcelas de acordo em atraso. */

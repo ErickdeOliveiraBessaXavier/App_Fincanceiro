@@ -70,6 +70,9 @@ const STATUS_CONFIG: Record<StatusDomain, Record<string, StatusMeta>> = {
     pago: { label: 'Paga', variant: 'success' },
     a_vencer: { label: 'A Vencer', variant: 'warning' },
     vencido: { label: 'Vencida', variant: 'destructive' },
+    // Liquidada pelo acordo (novação): a dívida mudou de lugar, não foi paga.
+    // Violeta, como o título "Em Acordo".
+    renegociada: { label: 'Renegociada', variant: 'primaria' },
     pendente: { label: 'A Vencer', variant: 'warning' }, // legado
   },
   // Status da parcela de um acordo (parcelas_acordo.status)

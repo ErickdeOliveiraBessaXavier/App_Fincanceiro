@@ -69,6 +69,8 @@ export interface Parcela {
   status: ParcelaStatus;
   data_ultimo_pagamento: string | null;
   total_eventos: number;
+  /** Liquidada por acordo (novação): saldo zero, mas a dívida está no acordo. */
+  renegociada?: boolean;
 }
 
 // Rótulos/cores de status agora vivem em src/constants/statusConfig.ts
@@ -103,6 +105,13 @@ export const FormatUtils = {
     return id.slice(-8);
   }
 };
+
+/**
+ * Status exibido da parcela. A liquidada por acordo tem saldo zero e a view diz
+ * 'pago'; mostrar "Paga" sob um título de acordo quebrado confundia o operador.
+ */
+export const statusExibidoParcela = (parcela: { status?: string | null; renegociada?: boolean }): string =>
+  parcela.renegociada ? 'renegociada' : (parcela.status || 'a_vencer');
 
 export const ParcelaUtils = {
   calcularValor: (valorTotal: number, numeroParcelas: number): number => {

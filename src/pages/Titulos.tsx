@@ -54,7 +54,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils } from '@/utils/titulo';
+import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils, statusExibidoParcela } from '@/utils/titulo';
 import { AvisoReimportado } from '@/components/titulos/AvisoReimportado';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SelecionarCliente } from '@/components/SelecionarCliente';
@@ -221,7 +221,7 @@ function ParcelaRow({ parcela, isOperador, isAdmin, onPagamento, onEncargo, onDe
         )}
       </TableCell>
       <TableCell>
-        <StatusBadge domain="parcela" status={parcela.status || 'a_vencer'} />
+        <StatusBadge domain="parcela" status={statusExibidoParcela(parcela)} />
       </TableCell>
       <TableCell>
         {parcela.status !== 'pago' && (
@@ -856,7 +856,7 @@ function TituloDetailsDialog({ open, onOpenChange, titulo, parcelasTitulo, isAdm
                     </div>
                     <div className="flex items-center gap-3">
                       <span>{FormatUtils.currency(parcela.saldo_atual || 0)}</span>
-                      <StatusBadge domain="parcela" status={parcela.status || 'a_vencer'} />
+                      <StatusBadge domain="parcela" status={statusExibidoParcela(parcela)} />
                     </div>
                   </div>
                 ))}

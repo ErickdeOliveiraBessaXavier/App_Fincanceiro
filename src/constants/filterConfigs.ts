@@ -14,7 +14,11 @@ export const titulosFilterConfig: FilterConfig[] = [
     type: 'select', 
     // Situação do título, a mesma do selo da linha (classificarTitulo): com
     // acordo, vale o estado do acordo — a novação zera o saldo do título.
-    options: ORDEM_CLASSE.map((classe) => ({ value: classe, label: ROTULO_CLASSE[classe] })),
+    // "Em atraso" junta as duas dívidas atrasadas; as demais são uma por classe.
+    options: [
+      { value: 'em_atraso', label: 'Em atraso (vencido + acordo quebrado)' },
+      ...ORDEM_CLASSE.map((classe) => ({ value: classe, label: ROTULO_CLASSE[classe] })),
+    ],
   },
   { 
     id: 'vencimento_de', 

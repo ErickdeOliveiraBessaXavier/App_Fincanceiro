@@ -221,7 +221,7 @@ describe('calcularIndicadores', () => {
 
   it('não conta o acordo quebrado como título pago', () => {
     expect(ind.titulosPagos).toBe(1); // só t3
-    expect(ind.titulosVencidos).toBe(2); // t1 + o quebrado t2
+    expect(ind.titulosEmAtraso).toBe(2); // t1 + o quebrado t2
   });
 
   it('soma o atraso do acordo ao valor vencido', () => {

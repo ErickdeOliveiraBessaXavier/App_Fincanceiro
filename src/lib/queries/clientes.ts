@@ -38,7 +38,12 @@ export interface ClienteRow {
   created_at: string;
   updated_at: string;
   total_titulos?: number;
-  total_valor?: number;
+  /**
+   * Dívida viva (títulos + parcelas de acordo), da base única de métricas.
+   * Preenchida pela tela; antes a lista mostrava a soma de `valor_original`
+   * de todos os títulos, pagos inclusive — não era dívida.
+   */
+  em_aberto?: number;
   ultima_comunicacao?: string;
   /** Data (ISO) do próximo retorno agendado pendente; null se não houver. */
   proximo_retorno?: string | null;
@@ -100,7 +105,7 @@ function mapProximosRetornos(agendamentos: AgendamentoRetorno[]): Map<string, Pr
 }
 
 /**
- * Lista clientes com agregados (total_titulos, total_valor) e status derivado
+ * Lista clientes com agregados (total_titulos) e status derivado
  * dos títulos. O status armazenado em `clientes.status` é ignorado para exibição,
  * pois não é mantido em sincronia com a realidade financeira.
  */
@@ -126,7 +131,7 @@ export function useClientes() {
         buscarTodas((de, ate) =>
           supabase
             .from('vw_titulos_completos')
-            .select('cliente_id, status, acordo_status, valor_original')
+            .select('cliente_id, status, acordo_status')
             .order('id')
             .range(de, ate),
         ),
@@ -148,22 +153,18 @@ export function useClientes() {
       // Agrega títulos por cliente. `acordo_status` entra junto porque a situação
       // depende dele: título renegociado fica com status 'pago' (a novação zerou
       // o saldo) e, sem o estado do acordo, um acordo QUEBRADO virava "quitado".
-      const porCliente = new Map<
-        string,
-        { total: number; valor: number; titulos: TituloSituacao[] }
-      >();
+      const porCliente = new Map<string, { total: number; titulos: TituloSituacao[] }>();
       titulos.forEach((t) => {
         if (!t.cliente_id) return;
-        const agg = porCliente.get(t.cliente_id) ?? { total: 0, valor: 0, titulos: [] };
+        const agg = porCliente.get(t.cliente_id) ?? { total: 0, titulos: [] };
         agg.total += 1;
-        agg.valor += Number(t.valor_original || 0);
         agg.titulos.push({ status: t.status, acordo_status: t.acordo_status ?? null });
         porCliente.set(t.cliente_id, agg);
       });
 
       const semRetorno: ProximoRetorno = { data: null, status_cobranca: null, atrasado: false };
       return clientes.map((c) => {
-        const { titulos, total, valor } = porCliente.get(c.id) ?? { total: 0, valor: 0, titulos: [] };
+        const { titulos, total } = porCliente.get(c.id) ?? { total: 0, titulos: [] };
         const retorno = retornos.get(c.id) ?? semRetorno;
         return {
           ...c,
@@ -171,7 +172,6 @@ export function useClientes() {
           vendedor_nome: c.vendedores?.nome ?? null,
           status: derivarStatusCliente(titulos),
           total_titulos: total,
-          total_valor: valor,
           proximo_retorno: retorno.data,
           retorno_status_cobranca: retorno.status_cobranca,
           retorno_atrasado: retorno.atrasado,

@@ -18,6 +18,13 @@ describe('tituloNaSituacao', () => {
     expect(tituloNaSituacao({ status: 'a_vencer', acordo_status: null }, 'pago')).toBe(false);
   });
 
+  it('"Em atraso" junta o título vencido e o de acordo quebrado', () => {
+    expect(tituloNaSituacao({ status: 'vencido', acordo_status: null }, 'em_atraso')).toBe(true);
+    expect(tituloNaSituacao({ status: 'renegociado', acordo_status: 'quebrado' }, 'em_atraso')).toBe(true);
+    expect(tituloNaSituacao({ status: 'renegociado', acordo_status: 'ativo' }, 'em_atraso')).toBe(false);
+    expect(tituloNaSituacao({ status: 'a_vencer', acordo_status: null }, 'em_atraso')).toBe(false);
+  });
+
   it('aceita o valor antigo "renegociado" de links salvos como "em acordo"', () => {
     expect(tituloNaSituacao({ status: 'renegociado', acordo_status: 'ativo' }, 'renegociado')).toBe(true);
   });
