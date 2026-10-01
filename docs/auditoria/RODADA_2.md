@@ -4,7 +4,10 @@
 > `cuejrnqdudadlbuiouph`. Policies, grants, triggers e funções foram lidos **do
 > banco**. Os achados de autorização foram **provados** numa transação desfeita
 > (`BEGIN … ROLLBACK`), simulando um admin e um cobrador. Nada ficou gravado.
-> Roteiro: [`Plano_Auditoria.md`](Plano_Auditoria.md), seção Rodada 2.
+> Roteiro: [`PLANO.md`](PLANO.md), seção Rodada 2.
+>
+> **Arquivado.** Corrigida em 2026-09-30 (migrations `20260930130000`,
+> `140000` e `150000`). Mantido como registro do que foi verificado.
 
 ## Veredito
 

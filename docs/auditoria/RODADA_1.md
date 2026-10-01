@@ -4,7 +4,10 @@
 > produção `cuejrnqdudadlbuiouph`. Todas as funções, triggers, policies e
 > grants foram lidos **do banco** (`pg_get_functiondef`, `pg_policies`,
 > `proacl`), não das migrations. As consultas de diagnóstico foram só de leitura.
-> Roteiro: [`Plano_Auditoria.md`](Plano_Auditoria.md).
+> Roteiro: [`PLANO.md`](PLANO.md).
+>
+> **Arquivado.** Os 18 achados foram corrigidos em 2026-09-29 (migration
+> `20260929130000`). Mantido como registro do que foi verificado.
 
 ## Veredito
 
