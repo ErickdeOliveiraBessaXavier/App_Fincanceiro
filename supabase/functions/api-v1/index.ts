@@ -23,7 +23,16 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
 };
 
-type Admin = ReturnType<typeof createClient>;
+// O tipo sai do cliente criado de verdade: `ReturnType<typeof createClient>`
+// pegava a versão genérica "vazia" e todo `rpc(...)` parecia não aceitar
+// argumentos (erros de tipo que o deploy ignorava).
+const novoAdmin = () =>
+  createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    { auth: { persistSession: false } },
+  );
+type Admin = ReturnType<typeof novoAdmin>;
 type Contexto = { companyId: string; actorId: string };
 
 const LIMITE_PADRAO = 50;
@@ -240,7 +249,9 @@ async function acordosDe(admin: Admin, companyId: string, tituloIds: string[]): 
       .neq("acordos.status", "cancelado")
       .order("id")
       .range(de, ate)
-  ) as LinhaAcordoTitulo[];
+  // Sem o schema tipado, o embed é inferido como lista; acordo_id → acordos(id)
+  // é muitos-para-um e o PostgREST devolve objeto.
+  ) as unknown as LinhaAcordoTitulo[];
 
   const escolhido = new Map<string, AcordoDoTitulo>();
   for (const linha of linhas) {
@@ -256,7 +267,10 @@ type LinhaTitulo = {
   clientes: { nome: string; cpf_cnpj: string; telefone: string | null } | null;
 };
 
-function resumoDoTitulo(t: LinhaTitulo, parcelas: LinhaMv[], acordoStatus?: string) {
+// `atualizado_em` é a última mudança REAL do título (envio, pagamento, estorno,
+// encargo, desconto, acordo), não só `titulos.updated_at` — que não muda quando
+// alguém paga ou quando o acordo quebra.
+function resumoDoTitulo(t: LinhaTitulo, parcelas: LinhaMv[], acordoStatus?: string, ultimaMudanca?: string) {
   return {
     numero_documento: t.numero_documento,
     situacao: t.status === "cancelado" ? "cancelado" : situacaoDoTitulo(parcelas, acordoStatus),
@@ -270,8 +284,28 @@ function resumoDoTitulo(t: LinhaTitulo, parcelas: LinhaMv[], acordoStatus?: stri
     descricao: t.descricao,
     total_pago: somar(parcelas, "total_pago"),
     saldo_atual: somar(parcelas, "saldo_atual"),
-    atualizado_em: t.updated_at,
+    atualizado_em: ultimaMudanca ?? t.updated_at,
   };
+}
+
+type Alteracao = { titulo_id: string; ultima_mudanca: string };
+type FiltroAlterados = { desde: string | null; incluirCancelados: boolean; limite: number; offset: number };
+
+// Títulos por última mudança real, já filtrados e paginados no banco.
+// Ver migration 20261001140000 (_api_titulos_alterados).
+async function titulosAlterados(
+  admin: Admin, companyId: string, filtro: FiltroAlterados, tituloId?: string,
+): Promise<Alteracao[]> {
+  const { data, error } = await admin.rpc("_api_titulos_alterados", {
+    p_company: companyId,
+    p_desde: filtro.desde,
+    p_incluir_cancelados: filtro.incluirCancelados,
+    p_limite: filtro.limite,
+    p_offset: filtro.offset,
+    p_titulo: tituloId ?? null,
+  });
+  if (error) throw new Error(error.message);
+  return (data ?? []) as Alteracao[];
 }
 
 function detalheDaParcela(p: LinhaMv) {
@@ -309,14 +343,27 @@ async function getTitulo(admin: Admin, ctx: Contexto, numeroDocumento: string): 
   if (!encontrado) return erro(404, "titulo_nao_encontrado", `Nenhum título com numero_documento ${numeroDocumento}.`);
 
   const titulo = encontrado as unknown as LinhaTitulo;
-  const [parcelas, acordos] = await Promise.all([
+  const umTitulo = { desde: null, incluirCancelados: true, limite: 1, offset: 0 };
+  const [parcelas, acordos, alteracao] = await Promise.all([
     parcelasDe(admin, ctx.companyId, [titulo.id]),
     acordosDe(admin, ctx.companyId, [titulo.id]),
+    titulosAlterados(admin, ctx.companyId, umTitulo, titulo.id),
   ]);
   return json(200, {
-    ...resumoDoTitulo(titulo, parcelas, acordos.get(titulo.id)),
+    ...resumoDoTitulo(titulo, parcelas, acordos.get(titulo.id), alteracao[0]?.ultima_mudanca),
     parcelas: parcelas.map(detalheDaParcela),
   });
+}
+
+async function titulosPorId(admin: Admin, companyId: string, ids: string[]): Promise<Map<string, LinhaTitulo>> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await admin
+    .from("titulos").select(CAMPOS_TITULO)
+    .eq("company_id", companyId)
+    .in("id", ids);
+  if (error) throw new Error(error.message);
+  const titulos = (data ?? []) as unknown as LinhaTitulo[];
+  return new Map(titulos.map((t) => [t.id, t]));
 }
 
 function paginacao(url: URL): { limite: number; offset: number } {
@@ -327,40 +374,45 @@ function paginacao(url: URL): { limite: number; offset: number } {
 
 async function getTitulos(admin: Admin, ctx: Contexto, url: URL): Promise<Response> {
   const { limite, offset } = paginacao(url);
-  let consulta = admin
-    .from("titulos").select(CAMPOS_TITULO)
-    .eq("company_id", ctx.companyId);
-
-  // Títulos cancelados ficam de fora por padrão. Quem sincroniza de forma
-  // incremental precisa deles: é como o ERP descobre que uma cobrança foi
-  // encerrada aqui.
-  if (url.searchParams.get("incluir_cancelados") !== "true") {
-    consulta = consulta.is("deleted_at", null);
-  }
 
   // Filtro pensado para sincronização incremental: o ERP guarda o horário da
-  // última consulta e pede só o que mudou desde então.
+  // última consulta e pede só o que mudou desde então. Antes comparava só
+  // `titulos.updated_at` e não via pagamento nem acordo.
   const desde = url.searchParams.get("atualizado_apos");
-  if (desde) consulta = consulta.gt("updated_at", desde);
+  if (desde && Number.isNaN(Date.parse(desde))) {
+    return erro(400, "parametro_invalido", "atualizado_apos deve ser uma data/hora ISO, ex.: 2026-10-01T00:00:00Z.");
+  }
 
-  const { data, error } = await consulta
-    .order("updated_at", { ascending: false })
-    // Desempate: títulos importados no mesmo lote têm o mesmo updated_at, e
-    // sem ordem total um título podia repetir ou sumir entre páginas do ERP.
-    .order("id")
-    .range(offset, offset + limite - 1);
-  if (error) return erro(500, "falha_consulta", "Não foi possível listar os títulos.");
+  // Cancelados ficam de fora por padrão. Quem sincroniza de forma incremental
+  // precisa deles: é como o ERP descobre que uma cobrança foi encerrada aqui.
+  // Ordem: última mudança desc, desempate por id (ordem total entre páginas).
+  let alterados: Alteracao[];
+  try {
+    alterados = await titulosAlterados(admin, ctx.companyId, {
+      desde,
+      incluirCancelados: url.searchParams.get("incluir_cancelados") === "true",
+      limite,
+      offset,
+    });
+  } catch {
+    return erro(500, "falha_consulta", "Não foi possível listar os títulos.");
+  }
 
-  const titulos = (data ?? []) as unknown as LinhaTitulo[];
-  const ids = titulos.map((t) => t.id);
-  const [parcelas, acordos] = await Promise.all([
+  const ids = alterados.map((a) => a.titulo_id);
+  const [titulos, parcelas, acordos] = await Promise.all([
+    titulosPorId(admin, ctx.companyId, ids),
     parcelasDe(admin, ctx.companyId, ids),
     acordosDe(admin, ctx.companyId, ids),
   ]);
   const porTitulo = (id: string) => parcelas.filter((p) => p.titulo_id === id);
 
   return json(200, {
-    titulos: titulos.map((t) => resumoDoTitulo(t, porTitulo(t.id), acordos.get(t.id))),
+    // Na ordem que o banco decidiu; título que sumiu entre as duas leituras sai.
+    titulos: alterados
+      .filter((a) => titulos.has(a.titulo_id))
+      .map((a) => resumoDoTitulo(
+        titulos.get(a.titulo_id)!, porTitulo(a.titulo_id), acordos.get(a.titulo_id), a.ultima_mudanca,
+      )),
     limite,
     offset,
   });
@@ -398,11 +450,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
   try {
-    const admin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-      { auth: { persistSession: false } },
-    );
+    const admin = novoAdmin();
 
     const ctx = await autenticar(admin, req);
     if (ctx instanceof Response) return ctx;

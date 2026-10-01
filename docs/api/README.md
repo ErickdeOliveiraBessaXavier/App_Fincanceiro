@@ -171,11 +171,19 @@ e use em `atualizado_apos` na próxima, com `incluir_cancelados=true`. Assim o
 ERP puxa só o que mudou — inclusive os cancelamentos — em vez de varrer a base
 inteira.
 
-> **Limitação conhecida (2026-10-01):** `atualizado_apos` olha só a data de
-> alteração do próprio título (envio pela API, importação, cancelamento).
-> Pagamento lançado do nosso lado e criação/quebra/cumprimento de acordo **não**
-> mudam essa data — a sincronização incremental não os traz. Até corrigirmos,
-> faça de tempos em tempos uma varredura completa (sem `atualizado_apos`).
+**O que conta como mudança** (`atualizado_apos` e `atualizado_em`): o envio ou
+cancelamento do título; qualquer lançamento nas parcelas dele (pagamento,
+estorno, encargo, desconto); e qualquer mudança no acordo do título (criado,
+quebrado, cumprido, cancelado). A lista vem da mudança mais recente para a mais
+antiga.
+
+**O que não conta:** a passagem do tempo. Um título que vira `vencido` só porque
+a data passou não aparece como alterado — o ERP já tem o vencimento de cada
+parcela. Para refletir isso, consulte o título ou faça uma varredura completa
+de tempos em tempos.
+
+Use como próximo `atualizado_apos` o maior `atualizado_em` recebido (ou o
+horário em que a consulta começou, com alguns minutos de folga).
 
 ---
 
@@ -191,6 +199,7 @@ a `mensagem` é para leitura humana e pode mudar.
 | HTTP | Código | Significado |
 |---|---|---|
 | 400 | `corpo_invalido`, `cliente_nome_obrigatorio`, `cpf_cnpj_obrigatorio`, `numero_documento_obrigatorio`, `parcelas_obrigatorias`, `parcela_invalida` | O corpo enviado está incompleto ou malformado |
+| 400 | `parametro_invalido` | Parâmetro de consulta malformado (ex.: `atualizado_apos` que não é data/hora) |
 | 401 | `chave_ausente`, `chave_invalida` | Chave não enviada, inválida ou revogada |
 | 404 | `titulo_nao_encontrado`, `rota_desconhecida` | |
 | 405 | `metodo_nao_permitido` | |
@@ -217,6 +226,13 @@ Em `500`, repetir é seguro: a ingestão é idempotente.
 
 ## Histórico de mudanças
 
+- **2026-10-01 (2)** — Sincronização incremental corrigida. `atualizado_apos` e
+  `atualizado_em` passam a considerar pagamento, estorno, encargo, desconto e
+  mudanças de acordo — antes só viam o envio/cancelamento do título, e um
+  pagamento lançado do nosso lado nunca chegava ao ERP por esse caminho.
+  `atualizado_apos` inválido agora responde `400 parametro_invalido` (antes,
+  `500`). Recomenda-se uma varredura completa única após esta data, para
+  recuperar o que a sincronização antiga deixou passar.
 - **2026-10-01** — `situacao` passa a refletir o acordo. Antes, o título
   renegociado saía como `pago` (o acordo zera o saldo do título), inclusive com
   o acordo quebrado; agora sai `em_acordo`, `acordo_quebrado` ou

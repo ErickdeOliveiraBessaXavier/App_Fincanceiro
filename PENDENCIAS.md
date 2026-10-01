@@ -83,14 +83,13 @@ caminho — ver memória `fila-e-ficha-produtividade`):
   de acordo deixou de sair `pago` e passou a sair `em_acordo` /
   `acordo_quebrado` / `acordo_cumprido`; parcela levada ao acordo sai
   `renegociado`. Antes da mudança, os 59 títulos de teste saíam todos `pago`.
-- **Sincronização incremental incompleta** — `atualizado_apos` filtra por
-  `titulos.updated_at`, que só muda em importação/envio e cancelamento
-  (conferido em 2026-10-01: nenhuma função de pagamento ou acordo faz UPDATE em
-  `titulos`). Pagamento lançado no app e criação/quebra/cumprimento de acordo
-  não chegam ao ERP pela sincronização incremental. Caminho: uma "última
-  mudança" por título calculada do razão (`movimentos_financeiros`) e de
-  `acordos.updated_at`, usada no filtro e em `atualizado_em`. Documentado como
-  limitação no README da API até lá.
+- **Avisar a INFARMA também da sincronização incremental corrigida** (2026-10-01,
+  migration `20261001140000`): pedir uma varredura completa única para recuperar
+  pagamentos/acordos que a versão antiga não entregou.
+- **Volume da sincronização** — `_api_titulos_alterados` calcula a última
+  mudança na leitura (agrega razão e acordos da empresa inteira a cada chamada;
+  < 1 ms com 59 títulos). Se ficar lento, materializar uma coluna "alterado_em"
+  por título mantida por trigger (entra na Rodada 3, "Volume").
 - **Acordo não exposto** — o ERP vê o título em acordo com saldo zero; valor e
   parcelas do acordo seriam rota nova (V2).
 
