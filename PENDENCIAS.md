@@ -87,10 +87,13 @@ caminho — ver memória `fila-e-ficha-produtividade`):
   acordo e isolamento entre empresas). Precisa de `API_V1_CHAVE` e
   `API_V1_CHAVE_OUTRA_EMPRESA` no `.env.local` — chaves geradas na Plataforma
   e revogadas depois.
-- **Revogar a chave de teste "Erick - teste"** (`erp_live_vaJGMEpX…`, ativa
-  desde 2026-08-19, empresa de teste) pela Plataforma. Os dados de teste da API
-  (título `API-TESTE-1`, cliente "Teste Integracao LTDA") já estavam limpos em
-  2026-10-01.
+- **Teste de ponta a ponta feito em 2026-10-01: 13/13**, inclusive isolamento
+  entre empresas (chave da DS Medicamentos não enxerga a empresa de teste). Chave
+  antiga "Erick - teste" revogada; dados de teste da API já estavam limpos.
+- **Revogar as 2 chaves do teste de 2026-10-01** pela Plataforma: "Nova Chave
+  Teste - 01.10" (`erp_live_zRgXgLxj…`, empresa de teste) e "Nova Chave Teste -
+  DS Medicamentos" (`erp_live_RYfKHHBR…`). A DS Medicamentos ficou com o usuário
+  técnico "Integração ERP", que será reaproveitado pela chave real.
 - **Volume da sincronização** — `_api_titulos_alterados` calcula a última
   mudança na leitura (agrega razão e acordos da empresa inteira a cada chamada;
   < 1 ms com 59 títulos). Se ficar lento, materializar uma coluna "alterado_em"
