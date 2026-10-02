@@ -48,13 +48,10 @@ acréscimos na v1**; mudança incompatível vai para a v2.
 
 ## Produto
 
-- **Cancelar título pago** (decisão do gestor em aberto) — hoje o admin cancela
-  qualquer título, inclusive pago, e os pagamentos continuam em
-  `vw_recebimentos` sem o título aparecer em lugar nenhum. Com o limite do plano,
-  cancelar também libera espaço. Proposta: título com pagamento exige estornar
-  antes; senha do admin conferida no banco (login por senha nos últimos 5 min,
-  via `amr` do JWT) para cancelar título, cancelar acordo, estornar e excluir
-  cliente.
+- **Senha em outras ações sensíveis** — cancelar título já exige a senha do
+  admin, conferida no banco (`executarComSenha` + `_senha_confirmada_recentemente`).
+  Avaliar com o gestor estender a cancelar acordo, estornar e excluir cliente:
+  é o mesmo mecanismo, uma linha na RPC e um campo no diálogo.
 
 - **Tela de feriados da empresa** (estadual/municipal) — a tabela `feriados`
   existe, sem tela. O gestor vai avaliar se é aplicável ao negócio.

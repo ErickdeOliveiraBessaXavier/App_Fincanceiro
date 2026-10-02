@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { buscarTodas } from '@/lib/buscarTodas';
+import { executarComSenha } from '@/lib/senhaConfirmada';
 import type { TituloConsolidado, Parcela } from '@/utils/titulo';
 
 // ============== Query Keys ==============
@@ -225,19 +226,19 @@ export function useHardDeleteTitulos() {
 }
 
 /**
- * Cancelamento (soft delete) de um título — só admin (validado no banco pela
- * RPC). Marca status='cancelado' + deleted_at, preservando o histórico. O
- * título some das listagens (a view filtra deleted_at IS NULL). Reversível na
- * base, ao contrário do hard delete de super admin.
+ * Cancelamento (soft delete) de um título — só admin e com a senha dele,
+ * ambos conferidos no banco pela RPC. Título com pagamento não estornado é
+ * recusado: o estorno vem antes, para o recebimento não ficar sem título.
+ * Marca status='cancelado' + deleted_at, preservando o histórico. O título
+ * some das listagens (a view filtra deleted_at IS NULL).
  */
 export function useCancelarTitulo() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ tituloId, motivo }: { tituloId: string; motivo?: string }) => {
-      const { error } = await supabase.rpc('cancelar_titulo', {
-        p_titulo_id: tituloId,
-        p_motivo: motivo ?? null,
-      });
+    mutationFn: async ({ tituloId, motivo, senha }: { tituloId: string; motivo?: string; senha: string }) => {
+      const { error } = await executarComSenha(senha, async (cliente) =>
+        await cliente.rpc('cancelar_titulo', { p_titulo_id: tituloId, p_motivo: motivo ?? null }),
+      );
       if (error) throw error;
       await supabase.rpc('refresh_mv_parcelas');
     },

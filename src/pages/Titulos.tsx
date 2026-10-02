@@ -56,6 +56,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils, statusExibidoParcela } from '@/utils/titulo';
 import { AvisoReimportado } from '@/components/titulos/AvisoReimportado';
+import { Aviso } from '@/components/Aviso';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SelecionarCliente } from '@/components/SelecionarCliente';
 import { derivarStatusCliente, type SituacaoCliente } from '@/domain/clientes/situacao';
@@ -923,10 +924,14 @@ interface CancelarTituloDialogProps {
   isPending: boolean;
   motivo: string;
   onMotivoChange: (v: string) => void;
+  senha: string;
+  onSenhaChange: (v: string) => void;
   onCancel: () => void;
   onConfirm: () => void;
 }
-function CancelarTituloDialog({ titulo, isPending, motivo, onMotivoChange, onCancel, onConfirm }: CancelarTituloDialogProps) {
+function CancelarTituloDialog({
+  titulo, isPending, motivo, onMotivoChange, senha, onSenhaChange, onCancel, onConfirm,
+}: CancelarTituloDialogProps) {
   return (
     <Dialog open={!!titulo} onOpenChange={(o) => !o && onCancel()}>
       <DialogContent>
@@ -938,6 +943,10 @@ function CancelarTituloDialog({ titulo, isPending, motivo, onMotivoChange, onCan
             histórico financeiro. A exclusão definitiva continua disponível depois, no mesmo menu.
           </DialogDescription>
         </DialogHeader>
+        <Aviso as="p">
+          Título com pagamento registrado não é cancelado: estorne o pagamento antes, para o
+          recebimento sair dos relatórios junto com o título.
+        </Aviso>
         <div className="space-y-2">
           <Label>Motivo (opcional)</Label>
           <Textarea
@@ -946,11 +955,25 @@ function CancelarTituloDialog({ titulo, isPending, motivo, onMotivoChange, onCan
             placeholder="Ex: título lançado em duplicidade"
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="cancelar-titulo-senha">Sua senha</Label>
+          <Input
+            id="cancelar-titulo-senha"
+            type="password"
+            autoComplete="current-password"
+            value={senha}
+            onChange={(e) => onSenhaChange(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter' && senha) onConfirm(); }}
+          />
+          <p className="text-xs text-muted-foreground">
+            Cancelar título exige a senha do administrador.
+          </p>
+        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onCancel} disabled={isPending}>
             Voltar
           </Button>
-          <Button variant="destructive" onClick={onConfirm} disabled={isPending}>
+          <Button variant="destructive" onClick={onConfirm} disabled={isPending || !senha}>
             {isPending ? 'Cancelando...' : 'Cancelar título'}
           </Button>
         </DialogFooter>
@@ -986,6 +1009,7 @@ export default function Titulos() {
   const [tituloToHardDelete, setTituloToHardDelete] = useState<TituloConsolidado | null>(null);
   const [tituloToCancel, setTituloToCancel] = useState<TituloConsolidado | null>(null);
   const [motivoCancel, setMotivoCancel] = useState('');
+  const [senhaCancel, setSenhaCancel] = useState('');
   const [expandedClientes, setExpandedClientes] = useState<Set<string>>(new Set());
   const [expandedTitulos, setExpandedTitulos] = useState<Set<string>>(new Set());
   // Incrementado quando o cache de parcelas é atualizado, para forçar a
@@ -1169,17 +1193,23 @@ export default function Titulos() {
   // Cancelamento (admin): soft delete reversível, preserva o histórico.
   const openCancelarTitulo = (titulo: TituloConsolidado) => {
     setMotivoCancel('');
+    setSenhaCancel('');
     setTituloToCancel(titulo);
   };
 
   const handleCancelarTitulo = async () => {
     if (!tituloToCancel) return;
     try {
-      await cancelarTituloMutation.mutateAsync({ tituloId: tituloToCancel.id, motivo: motivoCancel.trim() || undefined });
+      await cancelarTituloMutation.mutateAsync({
+        tituloId: tituloToCancel.id, motivo: motivoCancel.trim() || undefined, senha: senhaCancel,
+      });
       toast({ title: 'Título cancelado', description: 'O título saiu das listagens e o histórico foi preservado.' });
       setTituloToCancel(null);
     } catch (error) {
       toast({ title: 'Erro', description: msgErro(error, 'Não foi possível cancelar o título'), variant: 'destructive' });
+    } finally {
+      // A senha não fica guardada na tela entre uma tentativa e outra.
+      setSenhaCancel('');
     }
   };
 
@@ -1460,6 +1490,8 @@ export default function Titulos() {
         isPending={cancelarTituloMutation.isPending}
         motivo={motivoCancel}
         onMotivoChange={setMotivoCancel}
+        senha={senhaCancel}
+        onSenhaChange={setSenhaCancel}
         onCancel={() => setTituloToCancel(null)}
         onConfirm={handleCancelarTitulo}
       />
