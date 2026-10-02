@@ -16,6 +16,10 @@ import { CarregandoConteudo } from '@/components/TelaCarregamento';
 import { erroCpfCnpj, normalizarDocumento, soDigitos, parseValorPlanilha } from '@/utils/format';
 import { cn } from '@/lib/utils';
 import { rotuloClasses } from '@/components/Rotulo';
+import { Aviso } from '@/components/Aviso';
+import { BarraUsoPlano } from '@/components/plano/BarraUsoPlano';
+import { useUsoDoPlano } from '@/lib/queries/planos';
+import { ehErroDeLimite, formatarNumero } from '@/domain/plano';
 
 // ===================== Parsing de planilha (CSV ou XLSX) =====================
 // O importador entende tanto um CSV simples quanto a planilha do cliente (GRAN.xlsx),
@@ -39,7 +43,9 @@ const ALIASES: Record<string, string[]> = {
   vencimento: ['vencimento', 'data do vencimento', 'data vencimento', 'data'],
   vendedor: ['vendedor'],
   cobrador: ['cobrador'],
-  numero_documento: ['n titulo', 'no titulo', 'numero titulo', 'numero do titulo', 'titulo'],
+  // 'numero documento' é a coluna do próprio template (numero_documento); sem
+  // ela, o arquivo baixado nesta tela era recusado linha a linha.
+  numero_documento: ['n titulo', 'no titulo', 'numero titulo', 'numero do titulo', 'titulo', 'numero documento'],
   numero_parcela: ['parcela', 'n parcela', 'numero parcela'],
   cidade: ['municipio', 'cidade'],
   estado: ['uf', 'estado'],
@@ -264,10 +270,12 @@ interface ImportResult {
   errors: string[];
   /** O que o banco deixou de fazer de propósito (ex.: baixa estornada não relançada). */
   avisos: string[];
+  /** Títulos novos recusados porque o plano chegou ao limite. */
+  recusadosPorLimite: number;
 }
 
 type RpcResposta = { error?: string; parcelas_processadas?: number; avisos?: string[] };
-type ImportOutcome = { parcelas: number; avisos: string[] } | { error: string };
+type ImportOutcome = { parcelas: number; avisos: string[] } | { error: string } | { limite: true };
 
 // Parâmetros da RPC importar_titulo_completo para um grupo.
 function rpcParams(g: Grupo, companyId: string | null) {
@@ -318,6 +326,9 @@ function erroInesperado(g: Grupo, e: unknown): string {
 async function importarUmGrupo(g: Grupo, companyId: string | null): Promise<ImportOutcome> {
   try {
     const { data: res, error } = await supabase.rpc('importar_titulo_completo', rpcParams(g, companyId));
+    // Contado à parte: repetir a mesma mensagem para cada título recusado
+    // esconderia os erros de verdade.
+    if (ehErroDeLimite(error)) return { limite: true };
     return interpretarResposta(g, res as RpcResposta | null, error);
   } catch (e) {
     return { error: erroInesperado(g, e) };
@@ -437,6 +448,23 @@ function PreviewCard({ parsed }: { parsed: ParsedFile | null }) {
   );
 }
 
+// O admin vê o plano da própria empresa; o super admin, o da empresa escolhida.
+function useUsoDaImportacao(isSuperAdmin: boolean, selectedCompany: string) {
+  const alvo = isSuperAdmin ? selectedCompany || null : null;
+  return useUsoDoPlano(alvo, !isSuperAdmin || !!selectedCompany);
+}
+
+function AvisoLimite({ recusados }: { recusados: number }) {
+  if (recusados === 0) return null;
+  return (
+    <Aviso className="text-sm">
+      <strong>{formatarNumero(recusados)} título(s) novo(s) não foram importados</strong>: o plano
+      chegou ao limite de títulos. Os títulos que já existiam foram atualizados normalmente.
+      Para importar o restante, amplie o plano.
+    </Aviso>
+  );
+}
+
 function ResultCard({ result }: { result: ImportResult | null }) {
   if (!result) return null;
   return (
@@ -473,6 +501,8 @@ function ResultCard({ result }: { result: ImportResult | null }) {
           </Alert>
         )}
 
+        <AvisoLimite recusados={result.recusadosPorLimite} />
+
         {result.errors.length > 0 && (
           <Alert variant="destructive" className="rounded-xl bg-destructive/5 border-destructive/20">
             <AlertCircle className="h-4 w-4" />
@@ -505,6 +535,7 @@ export default function ImportarCSV() {
 
   const [companies, setCompanies] = useState<{ id: string; nome: string; status: string }[]>([]);
   const [selectedCompany, setSelectedCompany] = useState('');
+  const usoDoPlano = useUsoDaImportacao(isSuperAdmin, selectedCompany);
 
   // super_admin escolhe para qual empresa está importando.
   useEffect(() => {
@@ -560,6 +591,9 @@ export default function ImportarCSV() {
     if (result.titulos > 0) {
       toast({ title: 'Importação concluída', description: `${result.titulos} títulos e ${result.parcelas} parcelas importados.` });
     }
+    if (result.recusadosPorLimite > 0) {
+      toast({ title: 'Limite do plano atingido', description: `${result.recusadosPorLimite} título(s) novo(s) não foram importados.`, variant: 'destructive' });
+    }
     if (result.errors.length > 0) {
       toast({ title: 'Avisos na importação', description: `${result.errors.length} título(s) com erro.`, variant: 'destructive' });
     } else {
@@ -578,13 +612,17 @@ export default function ImportarCSV() {
 
     const grupos = parsed!.grupos;
     const companyId = isSuperAdmin ? selectedCompany : null;
-    const result: ImportResult = { titulos: 0, parcelas: 0, clientes: 0, errors: [], avisos: [] };
+    const result: ImportResult = { titulos: 0, parcelas: 0, clientes: 0, errors: [], avisos: [], recusadosPorLimite: 0 };
     const clientesVistos = new Set<string>();
 
     for (let i = 0; i < grupos.length; i++) {
       const g = grupos[i];
       setUploadProgress(Math.round(((i + 1) / grupos.length) * 100));
       const r = await importarUmGrupo(g, companyId);
+      if ('limite' in r) {
+        result.recusadosPorLimite++;
+        continue;
+      }
       if ('error' in r) {
         result.errors.push(r.error);
         continue;
@@ -599,6 +637,7 @@ export default function ImportarCSV() {
     }
 
     await supabase.rpc('refresh_mv_parcelas');
+    usoDoPlano.refetch();
     setImportResult(result);
     setUploading(false);
     setUploadProgress(0);
@@ -668,6 +707,7 @@ export default function ImportarCSV() {
               selectedCompany={selectedCompany}
               onChange={setSelectedCompany}
             />
+            {usoDoPlano.data && <BarraUsoPlano uso={usoDoPlano.data} />}
             <div
               className="border-2 border-dashed border-primary/20 bg-primary/5 rounded-lg p-12 text-center cursor-pointer hover:border-primary/40 hover:bg-primary/10 transition-all group"
               onClick={() => fileInputRef.current?.click()}

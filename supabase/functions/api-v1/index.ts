@@ -70,7 +70,12 @@ async function autenticar(admin: Admin, req: Request): Promise<Response | Contex
 
   const { data, error } = await admin.rpc("resolver_chave_api", { p_hash: await sha256Hex(chave) });
   if (error) return erro(500, "falha_autenticacao", "Não foi possível validar a chave de API.");
-  if (!data) return erro(401, "chave_invalida", "Chave de API inválida ou revogada.");
+  // A chave também deixa de valer com a empresa suspensa ou com o prazo do
+  // plano vencido (resolver_chave_api devolve null nos dois casos).
+  if (!data) {
+    return erro(401, "chave_invalida",
+      "Chave de API inválida ou revogada, ou empresa sem acesso (suspensa ou com o plano vencido).");
+  }
 
   const resolvido = data as { company_id: string; actor_id: string };
   return { companyId: resolvido.company_id, actorId: resolvido.actor_id };
@@ -132,9 +137,12 @@ function validarTitulo(body: unknown): Response | TituloEntrada {
 }
 
 // Traduz uma exceção do Postgres em resposta. Regras de negócio viram 422 (o
-// pedido chegou bem formado, mas o conteúdo não passa na regra).
-function erroDoBanco(mensagem: string): Response {
-  return erro(422, "regra_de_negocio", mensagem);
+// pedido chegou bem formado, mas o conteúdo não passa na regra). O limite do
+// plano tem código próprio: o ERP precisa distinguir "pare de enviar títulos
+// novos" de um título com dado errado.
+function erroDoBanco(e: { message: string; hint?: string | null }): Response {
+  if (e.hint === "limite_do_plano") return erro(422, "limite_do_plano", e.message);
+  return erro(422, "regra_de_negocio", e.message);
 }
 
 async function postTitulos(admin: Admin, ctx: Contexto, body: unknown): Promise<Response> {
@@ -156,7 +164,7 @@ async function postTitulos(admin: Admin, ctx: Contexto, body: unknown): Promise<
     p_estado: entrada.estado ?? null,
     p_origem: "API",
   });
-  if (error) return erroDoBanco(error.message);
+  if (error) return erroDoBanco(error);
 
   // A consolidação de saldos é materializada; sem isto uma consulta logo após a
   // gravação devolveria o estado anterior. A tela de importação faz o mesmo.

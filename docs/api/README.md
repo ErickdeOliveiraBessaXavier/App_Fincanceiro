@@ -204,10 +204,11 @@ a `mensagem` é para leitura humana e pode mudar.
 |---|---|---|
 | 400 | `corpo_invalido`, `cliente_nome_obrigatorio`, `cpf_cnpj_obrigatorio`, `numero_documento_obrigatorio`, `parcelas_obrigatorias`, `parcela_invalida` | O corpo enviado está incompleto ou malformado |
 | 400 | `parametro_invalido` | Parâmetro de consulta malformado (ex.: `atualizado_apos` que não é data/hora) |
-| 401 | `chave_ausente`, `chave_invalida` | Chave não enviada, inválida ou revogada |
+| 401 | `chave_ausente`, `chave_invalida` | Chave não enviada, inválida ou revogada — ou empresa sem acesso (suspensa ou com o prazo do plano vencido) |
 | 404 | `titulo_nao_encontrado`, `rota_desconhecida` | |
 | 405 | `metodo_nao_permitido` | |
 | 422 | `regra_de_negocio` | O corpo está bem formado, mas o conteúdo não passa numa regra (ex.: CPF/CNPJ com quantidade de dígitos inválida, parcela com movimentação reenviada com outro valor, número de título já usado por outro cliente) |
+| 422 | `limite_do_plano` | A empresa atingiu o limite de títulos do plano. Só título **novo** é recusado: reenviar um título que já existe continua funcionando. Pare de enviar títulos novos e avise o responsável para ampliar o plano |
 | 500 | `erro_interno`, `falha_consulta`, `falha_autenticacao` | Falha nossa — pode repetir a chamada |
 
 Em `500`, repetir é seguro: a ingestão é idempotente.

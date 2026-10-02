@@ -12,6 +12,8 @@ import { Clock, Ban } from 'lucide-react';
 import { ProvedorAlturaFixa } from '@/hooks/usePaginaAlturaFixa';
 import { cn } from '@/lib/utils';
 import { Rotulo } from '@/components/Rotulo';
+import { AvisoPlano } from '@/components/plano/AvisoPlano';
+import { situacaoDeAcesso, type SituacaoDeAcesso } from '@/domain/plano';
 
 interface LayoutProps {
   children: ReactNode;
@@ -34,23 +36,36 @@ const AguardandoAutorizacao = ({ onSignOut }: { onSignOut: () => void }) => (
   </div>
 );
 
-// Tela exibida quando a empresa não está "ativa" (aguardando aprovação ou suspensa).
-const EmpresaInativa = ({ status, nome, onSignOut }: { status: string; nome: string; onSignOut: () => void }) => {
-  const suspensa = status === 'suspensa' || status === 'cancelada';
+const TEXTO_BLOQUEIO: Record<Exclude<SituacaoDeAcesso, 'ativa'>, { titulo: string; texto: (nome: string) => string }> = {
+  pendente: {
+    titulo: 'Empresa aguardando aprovação',
+    texto: (nome) => `A empresa "${nome}" foi cadastrada e está aguardando aprovação. Você receberá acesso assim que for ativada.`,
+  },
+  suspensa: {
+    titulo: 'Acesso suspenso',
+    texto: () => 'O acesso da sua empresa está suspenso. Entre em contato com o suporte para regularizar.',
+  },
+  expirada: {
+    titulo: 'Período de teste encerrado',
+    texto: () => 'O período de teste da sua empresa terminou. Seus dados estão preservados: entre em contato com o suporte para contratar um plano e liberar o acesso.',
+  },
+};
+
+// Tela exibida quando a empresa não tem acesso: aguardando aprovação, suspensa
+// ou com o período de teste vencido.
+const EmpresaInativa = ({ situacao, nome, onSignOut }: {
+  situacao: Exclude<SituacaoDeAcesso, 'ativa'>; nome: string; onSignOut: () => void;
+}) => {
+  const pendente = situacao === 'pendente';
+  const { titulo, texto } = TEXTO_BLOQUEIO[situacao];
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="w-full max-w-md rounded-2xl border bg-card p-8 text-center shadow-sm">
         <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
-          {suspensa ? <Ban className="h-7 w-7 text-destructive" /> : <Clock className="h-7 w-7 text-primary" />}
+          {pendente ? <Clock className="h-7 w-7 text-primary" /> : <Ban className="h-7 w-7 text-destructive" />}
         </div>
-        <h1 className="mb-2 text-xl font-bold">
-          {suspensa ? 'Acesso suspenso' : 'Empresa aguardando aprovação'}
-        </h1>
-        <p className="mb-6 text-sm text-muted-foreground">
-          {suspensa
-            ? 'O acesso da sua empresa está suspenso. Entre em contato com o suporte para regularizar.'
-            : `A empresa "${nome}" foi cadastrada e está aguardando aprovação. Você receberá acesso assim que for ativada.`}
-        </p>
+        <h1 className="mb-2 text-xl font-bold">{titulo}</h1>
+        <p className="mb-6 text-sm text-muted-foreground">{texto(nome)}</p>
         <Button variant="outline" className="w-full" onClick={onSignOut}>Sair</Button>
       </div>
     </div>
@@ -64,7 +79,7 @@ interface ContextoAcesso {
   companyId: string | null;
   role: string | null;
   companyLoading: boolean;
-  company: { status: string; nome: string } | null;
+  company: { status: string; nome: string; acesso_expira_em: string | null } | null;
   signOut: () => void;
 }
 
@@ -93,11 +108,13 @@ function bloqueioDeAcesso(ctx: ContextoAcesso): ReactNode | null {
   // a mesma tela da etapa anterior — para o usuário, uma espera só.
   if (ctx.companyLoading) return <TelaCarregamento />;
 
-  // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) para acessar.
-  if (ctx.company && ctx.company.status !== 'ativa') {
-    return <EmpresaInativa status={ctx.company.status} nome={ctx.company.nome} onSignOut={ctx.signOut} />;
-  }
-  return null;
+  // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) e dentro do
+  // prazo do plano. O banco já bloqueia os dados (current_company_id); aqui só
+  // se explica o porquê.
+  if (!ctx.company) return null;
+  const situacao = situacaoDeAcesso(ctx.company);
+  if (situacao === 'ativa') return null;
+  return <EmpresaInativa situacao={situacao} nome={ctx.company.nome} onSignOut={ctx.signOut} />;
 }
 
 export const Layout = memo(({ children }: LayoutProps) => {
@@ -133,6 +150,7 @@ export const Layout = memo(({ children }: LayoutProps) => {
               <UsuarioMenu />
             </div>
           </header>
+          <AvisoPlano />
           
           {/* Por padrão a página cresce e o <main> rola. Uma página pode pedir a
               altura da área útil (usePaginaAlturaFixa) e cuidar da própria

@@ -820,10 +820,12 @@ export type Database = {
       }
       companies: {
         Row: {
+          acesso_expira_em: string | null
           cnpj: string | null
           created_at: string
           deleted_at: string | null
           id: string
+          limite_titulos_personalizado: number | null
           nome: string
           plano: string
           slug: string | null
@@ -831,10 +833,12 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          acesso_expira_em?: string | null
           cnpj?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
+          limite_titulos_personalizado?: number | null
           nome: string
           plano?: string
           slug?: string | null
@@ -842,17 +846,27 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          acesso_expira_em?: string | null
           cnpj?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: string
+          limite_titulos_personalizado?: number | null
           nome?: string
           plano?: string
           slug?: string | null
           status?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "companies_plano_fkey"
+            columns: ["plano"]
+            isOneToOne: false
+            referencedRelation: "planos"
+            referencedColumns: ["codigo"]
+          },
+        ]
       }
       comunicacoes: {
         Row: {
@@ -1421,6 +1435,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      planos: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          dias_teste: number | null
+          limite_titulos: number | null
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          dias_teste?: number | null
+          limite_titulos?: number | null
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          dias_teste?: number | null
+          limite_titulos?: number | null
+          nome?: string
+          ordem?: number
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -2283,6 +2327,15 @@ export type Database = {
       current_vendedor_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       data_pascoa: { Args: { p_ano: number }; Returns: string }
+      definir_plano_empresa: {
+        Args: {
+          p_acesso_expira_em?: string
+          p_company_id: string
+          p_limite_personalizado?: number
+          p_plano: string
+        }
+        Returns: Json
+      }
       estornar_movimento: {
         Args: { p_motivo: string; p_movimento_id: string }
         Returns: Json
@@ -2350,6 +2403,7 @@ export type Database = {
           company_id: string
           titulos_ativos: number
           titulos_total: number
+          limite_titulos: number
           ultima_atividade: string
           usuarios: number
         }[]
@@ -2415,6 +2469,7 @@ export type Database = {
         Args: { p_parcela_acordo_id: string }
         Returns: Json
       }
+      uso_do_plano: { Args: { p_company_id?: string }; Returns: Json }
     }
     Enums: {
       app_role:

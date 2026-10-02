@@ -16,12 +16,16 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-  Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2, UserX, KeyRound, MoreHorizontal,
+  Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2, UserX, KeyRound, MoreHorizontal, Gauge,
 } from 'lucide-react';
 import { ChavesApiDialog } from '@/components/plataforma/ChavesApiDialog';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import { CarregandoSecao } from '@/components/TelaCarregamento';
 import { formatCpfCnpj } from '@/utils/format';
+import { AlterarPlanoDialog } from '@/components/plataforma/AlterarPlanoDialog';
+import { BarraDeUso } from '@/components/plano/BarraUsoPlano';
+import { usePlanos } from '@/lib/queries/planos';
+import { calcularUso, diasRestantes, formatarNumero } from '@/domain/plano';
 
 interface CompanyRow {
   id: string;
@@ -29,6 +33,8 @@ interface CompanyRow {
   cnpj: string | null;
   status: string;
   plano: string;
+  limite_titulos_personalizado: number | null;
+  acesso_expira_em: string | null;
   created_at: string;
 }
 
@@ -46,6 +52,8 @@ interface MetricaEmpresa {
   clientes: number;
   usuarios: number;
   ultima_atividade: string | null;
+  /** Limite efetivo (personalizado ou do plano); null = sem limite. */
+  limite_titulos: number | null;
 }
 
 const statusBadge: Record<string, string> = {
@@ -69,6 +77,49 @@ const fmtAtividade = (d: string | null) => {
 };
 
 // ===================== Subcomponentes =====================
+// Uso do plano: "59 / 5.000" com a barra. Só os não cancelados contam; o total
+// aparece no tooltip quando diverge, para não parecer que sumiu título.
+function TitulosCell({ m }: { m: MetricaEmpresa }) {
+  const uso = calcularUso(m.titulos_ativos, m.limite_titulos);
+  const temCancelados = m.titulos_total !== m.titulos_ativos;
+  return (
+    <TableCell
+      className="text-right tabular-nums"
+      title={temCancelados ? `${m.titulos_total} no total (inclui cancelados)` : undefined}
+    >
+      <div>
+        {formatarNumero(uso.usados)}
+        {uso.limite !== null && (
+          <span className="text-muted-foreground"> / {formatarNumero(uso.limite)}</span>
+        )}
+      </div>
+      <BarraDeUso uso={uso} className="mt-1 ml-auto w-24" />
+    </TableCell>
+  );
+}
+
+// Prazo do acesso, quando há: "até 08/10" ou, vencido, o aviso em vermelho.
+function PrazoDoPlano({ expiraEm }: { expiraEm: string | null }) {
+  const dias = diasRestantes(expiraEm);
+  if (dias === null) return null;
+  if (dias === 0) return <div className="text-xs font-medium text-destructive">Acesso vencido</div>;
+  return <div className="text-xs text-muted-foreground">até {fmtDate(expiraEm!)}</div>;
+}
+
+function PlanoCell({ c }: { c: CompanyRow }) {
+  const { data: planos = [] } = usePlanos();
+  const nome = planos.find((p) => p.codigo === c.plano)?.nome ?? c.plano;
+  return (
+    <TableCell>
+      <div>{nome}</div>
+      {c.limite_titulos_personalizado && (
+        <div className="text-xs text-muted-foreground">limite personalizado</div>
+      )}
+      <PrazoDoPlano expiraEm={c.acesso_expira_em} />
+    </TableCell>
+  );
+}
+
 // Células de uso da empresa. Quando as métricas ainda não chegaram, mostra "—"
 // em vez de zero: zero seria mentira, "—" é "ainda não sei".
 function MetricasCells({ m }: { m?: MetricaEmpresa }) {
@@ -82,17 +133,9 @@ function MetricasCells({ m }: { m?: MetricaEmpresa }) {
       </>
     );
   }
-  // Só os ativos são faturáveis; o total aparece no tooltip quando divergem,
-  // para não parecer que sumiu título.
-  const temCancelados = m.titulos_total !== m.titulos_ativos;
   return (
     <>
-      <TableCell
-        className="text-right tabular-nums"
-        title={temCancelados ? `${m.titulos_total} no total (inclui cancelados)` : undefined}
-      >
-        {m.titulos_ativos}
-      </TableCell>
+      <TitulosCell m={m} />
       <TableCell className="hidden xl:table-cell text-right tabular-nums">{m.clientes}</TableCell>
       <TableCell className="hidden xl:table-cell text-right tabular-nums">{m.usuarios}</TableCell>
       <TableCell className="text-muted-foreground">{fmtAtividade(m.ultima_atividade)}</TableCell>
@@ -106,10 +149,11 @@ interface EmpresaAcoesProps {
   onSetStatus: (id: string, status: string) => void;
   onLimpar: (c: CompanyRow) => void;
   onIntegracao: (c: CompanyRow) => void;
+  onPlano: (c: CompanyRow) => void;
 }
 // Mudança de status fica visível (é a decisão do dia a dia); o resto vai para o
 // menu. Sem isso, cada ação nova alarga a linha e a tabela ganha scroll lateral.
-function BotaoStatus({ c, statusPending, onSetStatus }: Omit<EmpresaAcoesProps, 'onLimpar' | 'onIntegracao'>) {
+function BotaoStatus({ c, statusPending, onSetStatus }: Pick<EmpresaAcoesProps, 'c' | 'statusPending' | 'onSetStatus'>) {
   if (c.status === 'pendente') {
     return (
       <Button size="sm" disabled={statusPending} onClick={() => onSetStatus(c.id, 'ativa')}>
@@ -133,7 +177,7 @@ function BotaoStatus({ c, statusPending, onSetStatus }: Omit<EmpresaAcoesProps, 
   );
 }
 
-function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao }: EmpresaAcoesProps) {
+function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao, onPlano }: EmpresaAcoesProps) {
   return (
     <div className="flex items-center justify-end gap-2">
       <BotaoStatus c={c} statusPending={statusPending} onSetStatus={onSetStatus} />
@@ -144,6 +188,9 @@ function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao }:
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem onClick={() => onPlano(c)}>
+            <Gauge className="mr-2 h-4 w-4" /> Alterar plano
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onIntegracao(c)}>
             <KeyRound className="mr-2 h-4 w-4" /> Integração (chaves de API)
           </DropdownMenuItem>
@@ -161,7 +208,7 @@ function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao }:
 interface EmpresaRowProps extends EmpresaAcoesProps {
   m?: MetricaEmpresa;
 }
-function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar, onIntegracao }: EmpresaRowProps) {
+function EmpresaRow({ c, m, ...acoes }: EmpresaRowProps) {
   return (
     <TableRow>
       <TableCell>
@@ -170,7 +217,7 @@ function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar, onIntegracao }
           <div className="text-xs text-muted-foreground tabular-nums">{formatCpfCnpj(c.cnpj)}</div>
         )}
       </TableCell>
-      <TableCell className="capitalize">{c.plano}</TableCell>
+      <PlanoCell c={c} />
       <TableCell>
         <Badge className={statusBadge[c.status] ?? ''}>
           <span className="capitalize">{c.status}</span>
@@ -179,23 +226,18 @@ function EmpresaRow({ c, m, statusPending, onSetStatus, onLimpar, onIntegracao }
       <MetricasCells m={m} />
       <TableCell className="hidden xl:table-cell">{fmtDate(c.created_at)}</TableCell>
       <TableCell className="text-right">
-        <EmpresaAcoes c={c} statusPending={statusPending} onSetStatus={onSetStatus}
-          onLimpar={onLimpar} onIntegracao={onIntegracao} />
+        <EmpresaAcoes c={c} {...acoes} />
       </TableCell>
     </TableRow>
   );
 }
 
-interface EmpresasTableCardProps {
+interface EmpresasTableCardProps extends Omit<EmpresaAcoesProps, 'c'> {
   companies: CompanyRow[];
   metricas: Map<string, MetricaEmpresa>;
   isLoading: boolean;
-  statusPending: boolean;
-  onSetStatus: (id: string, status: string) => void;
-  onLimpar: (c: CompanyRow) => void;
-  onIntegracao: (c: CompanyRow) => void;
 }
-function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSetStatus, onLimpar, onIntegracao }: EmpresasTableCardProps) {
+function EmpresasTableCard({ companies, metricas, isLoading, ...acoes }: EmpresasTableCardProps) {
   return (
     <Card>
       <CardHeader><CardTitle>Empresas cadastradas</CardTitle></CardHeader>
@@ -222,15 +264,7 @@ function EmpresasTableCard({ companies, metricas, isLoading, statusPending, onSe
               </TableHeader>
               <TableBody>
                 {companies.map((c) => (
-                  <EmpresaRow
-                    key={c.id}
-                    c={c}
-                    m={metricas.get(c.id)}
-                    statusPending={statusPending}
-                    onSetStatus={onSetStatus}
-                    onLimpar={onLimpar}
-                    onIntegracao={onIntegracao}
-                  />
+                  <EmpresaRow key={c.id} c={c} m={metricas.get(c.id)} {...acoes} />
                 ))}
               </TableBody>
             </Table>
@@ -352,7 +386,7 @@ export default function Plataforma() {
     queryFn: async (): Promise<CompanyRow[]> => {
       const { data, error } = await supabase
         .from('companies')
-        .select('id, nome, cnpj, status, plano, created_at')
+        .select('id, nome, cnpj, status, plano, limite_titulos_personalizado, acesso_expira_em, created_at')
         .order('created_at', { ascending: false });
       if (error) throw error;
       return (data ?? []) as CompanyRow[];
@@ -395,6 +429,7 @@ export default function Plataforma() {
   // Chaves de API da empresa: liberar a integração é decisão de plataforma, não
   // configuração que o admin da empresa se concede.
   const [integracaoAlvo, setIntegracaoAlvo] = useState<CompanyRow | null>(null);
+  const [planoAlvo, setPlanoAlvo] = useState<CompanyRow | null>(null);
 
   // Cadastro abandonado no meio do caminho. Sem poder descartar, a lista só
   // cresce e esconde o próximo caso que realmente precisa de atenção.
@@ -503,10 +538,12 @@ export default function Plataforma() {
           onSetStatus={(id, status) => setStatus.mutate({ id, status })}
           onLimpar={(c) => { setConfirmacao(''); setLimparAlvo(c); }}
           onIntegracao={setIntegracaoAlvo}
+          onPlano={setPlanoAlvo}
         />
       </main>
 
       <ChavesApiDialog empresa={integracaoAlvo} onClose={() => setIntegracaoAlvo(null)} />
+      <AlterarPlanoDialog empresa={planoAlvo} onClose={() => setPlanoAlvo(null)} />
 
       <ConfirmarAcaoDestrutiva
         open={!!descartarAlvo}

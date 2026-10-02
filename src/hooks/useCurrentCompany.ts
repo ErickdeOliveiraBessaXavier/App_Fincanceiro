@@ -9,6 +9,8 @@ export interface Company {
   slug: string | null;
   status: string;
   plano: string;
+  /** Fim do acesso (teste). null = sem prazo. */
+  acesso_expira_em: string | null;
 }
 
 /**
@@ -25,7 +27,7 @@ export function useCurrentCompany() {
     queryFn: async (): Promise<Company | null> => {
       const { data, error } = await supabase
         .from('companies')
-        .select('id, nome, cnpj, slug, status, plano')
+        .select('id, nome, cnpj, slug, status, plano, acesso_expira_em')
         .eq('id', companyId!)
         .maybeSingle();
       if (error) throw error;

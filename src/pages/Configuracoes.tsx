@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { InputMoeda } from '@/components/InputMoeda';
+import { CardPlano } from '@/components/plano/CardPlano';
 import { useToast } from '@/hooks/use-toast';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useConfiguracaoEmpresa, useSalvarConfiguracaoEmpresa } from '@/lib/queries/configuracoes';
@@ -170,6 +171,8 @@ export default function Configuracoes() {
         title="Configurações"
         description="Parâmetros de negócio que valem para toda a empresa."
       />
+
+      <CardPlano />
 
       <Card>
         <CardHeader variant="faixa">
