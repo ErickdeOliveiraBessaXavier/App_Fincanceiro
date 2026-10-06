@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
+import { buscarSituacaoFinanceira } from '@/lib/queries/assinaturas';
 
 export interface Company {
   id: string;
@@ -11,6 +12,8 @@ export interface Company {
   plano: string;
   /** Fim do acesso (teste). null = sem prazo. */
   acesso_expira_em: string | null;
+  /** Fatura da plataforma atrasada além da tolerância: acesso bloqueado. */
+  inadimplente: boolean;
 }
 
 /**
@@ -25,13 +28,19 @@ export function useCurrentCompany() {
     enabled: !!companyId,
     staleTime: 5 * 60 * 1000,
     queryFn: async (): Promise<Company | null> => {
-      const { data, error } = await supabase
-        .from('companies')
-        .select('id, nome, cnpj, slug, status, plano, acesso_expira_em')
-        .eq('id', companyId!)
-        .maybeSingle();
-      if (error) throw error;
-      return data as Company | null;
+      // A inadimplência não é coluna: o banco calcula pelas faturas, que a
+      // empresa não lê direto. situacao_financeira responde mesmo bloqueada.
+      const [empresa, financeiro] = await Promise.all([
+        supabase
+          .from('companies')
+          .select('id, nome, cnpj, slug, status, plano, acesso_expira_em')
+          .eq('id', companyId!)
+          .maybeSingle(),
+        buscarSituacaoFinanceira(),
+      ]);
+      if (empresa.error) throw empresa.error;
+      if (!empresa.data) return null;
+      return { ...empresa.data, inadimplente: financeiro.inadimplente } as Company;
     },
   });
 

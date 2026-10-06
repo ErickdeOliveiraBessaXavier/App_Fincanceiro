@@ -15,6 +15,8 @@ export interface Plano {
   nome: string;
   limite_titulos: number | null;
   dias_teste: number | null;
+  valor_mensal: number;
+  valor_implantacao: number;
 }
 
 export interface PlanoDaEmpresa extends UsoDoPlano {
@@ -45,7 +47,7 @@ export function usePlanos(enabled = true) {
     queryFn: async (): Promise<Plano[]> => {
       const { data, error } = await supabase
         .from('planos')
-        .select('codigo, nome, limite_titulos, dias_teste')
+        .select('codigo, nome, limite_titulos, dias_teste, valor_mensal, valor_implantacao')
         .eq('ativo', true)
         .order('ordem');
       if (error) throw error;

@@ -438,6 +438,47 @@ export type Database = {
           },
         ]
       }
+      assinaturas: {
+        Row: {
+          ativa: boolean
+          company_id: string
+          created_at: string
+          dia_vencimento: number
+          dias_tolerancia: number
+          inicio_cobranca: string
+          updated_at: string
+          valor_mensal_personalizado: number | null
+        }
+        Insert: {
+          ativa?: boolean
+          company_id: string
+          created_at?: string
+          dia_vencimento: number
+          dias_tolerancia?: number
+          inicio_cobranca: string
+          updated_at?: string
+          valor_mensal_personalizado?: number | null
+        }
+        Update: {
+          ativa?: boolean
+          company_id?: string
+          created_at?: string
+          dia_vencimento?: number
+          dias_tolerancia?: number
+          inicio_cobranca?: string
+          updated_at?: string
+          valor_mensal_personalizado?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assinaturas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: true
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       audit_log: {
         Row: {
           action: string
@@ -1033,6 +1074,59 @@ export type Database = {
           },
         ]
       }
+      faturas_assinatura: {
+        Row: {
+          company_id: string
+          competencia: string | null
+          created_at: string
+          forma_pagamento: string | null
+          id: string
+          observacao: string | null
+          pago_em: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor: number
+          vencimento: string
+        }
+        Insert: {
+          company_id: string
+          competencia?: string | null
+          created_at?: string
+          forma_pagamento?: string | null
+          id?: string
+          observacao?: string | null
+          pago_em?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+          valor: number
+          vencimento: string
+        }
+        Update: {
+          company_id?: string
+          competencia?: string | null
+          created_at?: string
+          forma_pagamento?: string | null
+          id?: string
+          observacao?: string | null
+          pago_em?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+          valor?: number
+          vencimento?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "faturas_assinatura_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       feriados: {
         Row: {
           company_id: string
@@ -1445,6 +1539,8 @@ export type Database = {
           limite_titulos: number | null
           nome: string
           ordem: number
+          valor_implantacao: number
+          valor_mensal: number
         }
         Insert: {
           ativo?: boolean
@@ -1454,6 +1550,8 @@ export type Database = {
           limite_titulos?: number | null
           nome: string
           ordem?: number
+          valor_implantacao?: number
+          valor_mensal?: number
         }
         Update: {
           ativo?: boolean
@@ -1463,6 +1561,8 @@ export type Database = {
           limite_titulos?: number | null
           nome?: string
           ordem?: number
+          valor_implantacao?: number
+          valor_mensal?: number
         }
         Relationships: []
       }
@@ -1660,6 +1760,7 @@ export type Database = {
           juros: number | null
           multa: number | null
           numero_parcela: number | null
+          renegociada: boolean | null
           saldo_atual: number | null
           status: string | null
           titulo_id: string | null
@@ -1961,6 +2062,7 @@ export type Database = {
           juros: number | null
           multa: number | null
           numero_parcela: number | null
+          renegociada: boolean | null
           saldo_atual: number | null
           status: string | null
           titulo_id: string | null
@@ -2101,6 +2203,7 @@ export type Database = {
           numero_documento: string | null
           parcelas_pagas: number | null
           parcelas_pendentes: number | null
+          parcelas_renegociadas: number | null
           parcelas_vencidas: number | null
           proximo_vencimento: string | null
           quantidade_parcelas: number | null
@@ -2150,10 +2253,51 @@ export type Database = {
       }
     }
     Functions: {
+      _api_titulos_alterados: {
+        Args: {
+          p_company: string
+          p_desde: string
+          p_incluir_cancelados: boolean
+          p_limite: number
+          p_offset: number
+          p_titulo?: string
+        }
+        Returns: {
+          titulo_id: string
+          ultima_mudanca: string
+        }[]
+      }
       _creditar_pagamentos_acordo: {
         Args: { p_acordo_id: string; p_motivo: string; p_valor: number }
         Returns: number
       }
+      _empresa_inadimplente: { Args: { p_company: string }; Returns: boolean }
+      _empresa_liberada: { Args: { p_company: string }; Returns: boolean }
+      _exigir_motivo: { Args: { p_motivo: string }; Returns: string }
+      _fatura_para_alterar: {
+        Args: { p_fatura_id: string; p_status_esperado: string }
+        Returns: {
+          company_id: string
+          competencia: string | null
+          created_at: string
+          forma_pagamento: string | null
+          id: string
+          observacao: string | null
+          pago_em: string | null
+          status: string
+          tipo: string
+          updated_at: string
+          valor: number
+          vencimento: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "faturas_assinatura"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      _gerar_mensalidades: { Args: { p_company?: string }; Returns: number }
       _importar_baixa: {
         Args: {
           p_actor: string
@@ -2195,15 +2339,25 @@ export type Database = {
         }
         Returns: Json
       }
+      _limite_titulos: { Args: { p_company: string }; Returns: number }
       _processar_quebra_acordos: { Args: never; Returns: Json }
       _saldo_parcela_titulo: { Args: { p_parcela_id: string }; Returns: number }
       _saldo_titulo: { Args: { p_titulo_id: string }; Returns: number }
+      _senha_confirmada_recentemente: {
+        Args: { p_segundos?: number }
+        Returns: boolean
+      }
       _status_devido_acordo: { Args: { p_acordo_id: string }; Returns: string }
       _titulo_em_acordo_vigente: {
         Args: { p_titulo_id: string }
         Returns: boolean
       }
+      _titulo_tem_dinheiro_registrado: {
+        Args: { p_titulo_id: string }
+        Returns: boolean
+      }
       _titulo_tem_historico: { Args: { p_titulo_id: string }; Returns: boolean }
+      _titulos_contabilizados: { Args: { p_company: string }; Returns: number }
       _travar_parcela_titulo: {
         Args: { p_parcela_id: string }
         Returns: string
@@ -2212,6 +2366,7 @@ export type Database = {
         Args: { p_cronograma: Json; p_parcelas: number; p_valor_acordo: number }
         Returns: undefined
       }
+      _valor_mensal: { Args: { p_company: string }; Returns: number }
       agendar_retorno: {
         Args: {
           p_acordo_id?: string
@@ -2221,6 +2376,10 @@ export type Database = {
           p_tipo_evento?: string
           p_titulo_id?: string
         }
+        Returns: Json
+      }
+      alterar_valor_fatura: {
+        Args: { p_fatura_id: string; p_motivo: string; p_valor: number }
         Returns: Json
       }
       aplicar_encargo_parcela: {
@@ -2259,6 +2418,10 @@ export type Database = {
       }
       cancelar_acordo: {
         Args: { p_acordo_id: string; p_motivo: string }
+        Returns: Json
+      }
+      cancelar_fatura: {
+        Args: { p_fatura_id: string; p_motivo: string }
         Returns: Json
       }
       cancelar_titulo: {
@@ -2336,8 +2499,21 @@ export type Database = {
         }
         Returns: Json
       }
+      definir_precos_plano: {
+        Args: {
+          p_codigo: string
+          p_valor_implantacao: number
+          p_valor_mensal: number
+        }
+        Returns: Json
+      }
+      encerrar_assinatura: { Args: { p_company_id: string }; Returns: Json }
       estornar_movimento: {
         Args: { p_motivo: string; p_movimento_id: string }
+        Returns: Json
+      }
+      estornar_pagamento_fatura: {
+        Args: { p_fatura_id: string; p_motivo: string }
         Returns: Json
       }
       excluir_acordos_definitivo: {
@@ -2401,9 +2577,9 @@ export type Database = {
         Returns: {
           clientes: number
           company_id: string
+          limite_titulos: number
           titulos_ativos: number
           titulos_total: number
-          limite_titulos: number
           ultima_atividade: string
           usuarios: number
         }[]
@@ -2434,6 +2610,15 @@ export type Database = {
         Returns: Json
       }
       refresh_mv_parcelas: { Args: never; Returns: undefined }
+      registrar_pagamento_fatura: {
+        Args: {
+          p_fatura_id: string
+          p_forma_pagamento?: string
+          p_observacao?: string
+          p_pago_em: string
+        }
+        Returns: Json
+      }
       registrar_pagamento_parcela: {
         Args: {
           p_data_pagamento?: string
@@ -2465,10 +2650,23 @@ export type Database = {
         Args: { _role: Database["public"]["Enums"]["app_role"] }
         Returns: number
       }
+      salvar_assinatura: {
+        Args: {
+          p_company_id: string
+          p_dia_vencimento: number
+          p_dias_tolerancia?: number
+          p_inicio_cobranca: string
+          p_valor_implantacao?: number
+          p_valor_mensal_personalizado?: number
+          p_vencimento_implantacao?: string
+        }
+        Returns: Json
+      }
       sincronizar_parcela_acordo: {
         Args: { p_parcela_acordo_id: string }
         Returns: Json
       }
+      situacao_financeira: { Args: never; Returns: Json }
       uso_do_plano: { Args: { p_company_id?: string }; Returns: Json }
     }
     Enums: {

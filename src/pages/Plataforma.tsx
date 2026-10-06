@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import {
   Building2, ShieldCheck, LogOut, Check, Pause, Play, Upload, Trash2, UserX, KeyRound, MoreHorizontal, Gauge,
+  Receipt, Tags,
 } from 'lucide-react';
 import { ChavesApiDialog } from '@/components/plataforma/ChavesApiDialog';
 import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
@@ -26,6 +27,12 @@ import { AlterarPlanoDialog } from '@/components/plataforma/AlterarPlanoDialog';
 import { BarraDeUso } from '@/components/plano/BarraUsoPlano';
 import { usePlanos } from '@/lib/queries/planos';
 import { calcularUso, diasRestantes, formatarNumero } from '@/domain/plano';
+import { formatarReais, type ResumoCobrancaEmpresa } from '@/domain/assinatura';
+import { CobrancaEmpresaDialog } from '@/components/plataforma/cobranca/CobrancaEmpresaDialog';
+import { PrecosPlanosDialog } from '@/components/plataforma/cobranca/PrecosPlanosDialog';
+import {
+  useResumoCobrancaPlataforma, type CobrancaDaEmpresa, type ResumoPlataforma,
+} from '@/components/plataforma/cobranca/resumoPlataforma';
 
 interface CompanyRow {
   id: string;
@@ -106,7 +113,26 @@ function PrazoDoPlano({ expiraEm }: { expiraEm: string | null }) {
   return <div className="text-xs text-muted-foreground">até {fmtDate(expiraEm!)}</div>;
 }
 
-function PlanoCell({ c }: { c: CompanyRow }) {
+const AVISO_SITUACAO: Partial<Record<NonNullable<ResumoCobrancaEmpresa['situacao']>, { texto: string; cor: string }>> = {
+  vencida: { texto: 'Fatura vencida', cor: 'text-warning-strong' },
+  bloqueando: { texto: 'Em atraso — bloqueada', cor: 'font-medium text-destructive' },
+};
+
+/** Linhas extras da célula do plano: mensalidade e atraso. */
+export function LinhasCobranca({ cobranca }: { cobranca?: CobrancaDaEmpresa }) {
+  if (!cobranca) return null;
+  const aviso = cobranca.situacao ? AVISO_SITUACAO[cobranca.situacao] : undefined;
+  return (
+    <>
+      {cobranca.mensal !== null && (
+        <div className="text-xs text-muted-foreground tabular-nums">{formatarReais(cobranca.mensal)}/mês</div>
+      )}
+      {aviso && <div className={`text-xs ${aviso.cor}`}>{aviso.texto}</div>}
+    </>
+  );
+}
+
+function PlanoCell({ c, cobranca }: { c: CompanyRow; cobranca?: CobrancaDaEmpresa }) {
   const { data: planos = [] } = usePlanos();
   const nome = planos.find((p) => p.codigo === c.plano)?.nome ?? c.plano;
   return (
@@ -116,6 +142,7 @@ function PlanoCell({ c }: { c: CompanyRow }) {
         <div className="text-xs text-muted-foreground">limite personalizado</div>
       )}
       <PrazoDoPlano expiraEm={c.acesso_expira_em} />
+      <LinhasCobranca cobranca={cobranca} />
     </TableCell>
   );
 }
@@ -150,6 +177,7 @@ interface EmpresaAcoesProps {
   onLimpar: (c: CompanyRow) => void;
   onIntegracao: (c: CompanyRow) => void;
   onPlano: (c: CompanyRow) => void;
+  onCobranca: (c: CompanyRow) => void;
 }
 // Mudança de status fica visível (é a decisão do dia a dia); o resto vai para o
 // menu. Sem isso, cada ação nova alarga a linha e a tabela ganha scroll lateral.
@@ -177,7 +205,7 @@ function BotaoStatus({ c, statusPending, onSetStatus }: Pick<EmpresaAcoesProps, 
   );
 }
 
-function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao, onPlano }: EmpresaAcoesProps) {
+function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao, onPlano, onCobranca }: EmpresaAcoesProps) {
   return (
     <div className="flex items-center justify-end gap-2">
       <BotaoStatus c={c} statusPending={statusPending} onSetStatus={onSetStatus} />
@@ -190,6 +218,9 @@ function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao, o
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => onPlano(c)}>
             <Gauge className="mr-2 h-4 w-4" /> Alterar plano
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onCobranca(c)}>
+            <Receipt className="mr-2 h-4 w-4" /> Cobrança (mensalidade)
           </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onIntegracao(c)}>
             <KeyRound className="mr-2 h-4 w-4" /> Integração (chaves de API)
@@ -207,8 +238,9 @@ function EmpresaAcoes({ c, statusPending, onSetStatus, onLimpar, onIntegracao, o
 
 interface EmpresaRowProps extends EmpresaAcoesProps {
   m?: MetricaEmpresa;
+  cobranca?: CobrancaDaEmpresa;
 }
-function EmpresaRow({ c, m, ...acoes }: EmpresaRowProps) {
+function EmpresaRow({ c, m, cobranca, ...acoes }: EmpresaRowProps) {
   return (
     <TableRow>
       <TableCell>
@@ -217,7 +249,7 @@ function EmpresaRow({ c, m, ...acoes }: EmpresaRowProps) {
           <div className="text-xs text-muted-foreground tabular-nums">{formatCpfCnpj(c.cnpj)}</div>
         )}
       </TableCell>
-      <PlanoCell c={c} />
+      <PlanoCell c={c} cobranca={cobranca} />
       <TableCell>
         <Badge className={statusBadge[c.status] ?? ''}>
           <span className="capitalize">{c.status}</span>
@@ -235,9 +267,10 @@ function EmpresaRow({ c, m, ...acoes }: EmpresaRowProps) {
 interface EmpresasTableCardProps extends Omit<EmpresaAcoesProps, 'c'> {
   companies: CompanyRow[];
   metricas: Map<string, MetricaEmpresa>;
+  cobranca: Map<string, CobrancaDaEmpresa>;
   isLoading: boolean;
 }
-function EmpresasTableCard({ companies, metricas, isLoading, ...acoes }: EmpresasTableCardProps) {
+function EmpresasTableCard({ companies, metricas, cobranca, isLoading, ...acoes }: EmpresasTableCardProps) {
   return (
     <Card>
       <CardHeader><CardTitle>Empresas cadastradas</CardTitle></CardHeader>
@@ -264,7 +297,7 @@ function EmpresasTableCard({ companies, metricas, isLoading, ...acoes }: Empresa
               </TableHeader>
               <TableBody>
                 {companies.map((c) => (
-                  <EmpresaRow key={c.id} c={c} m={metricas.get(c.id)} {...acoes} />
+                  <EmpresaRow key={c.id} c={c} m={metricas.get(c.id)} cobranca={cobranca.get(c.id)} {...acoes} />
                 ))}
               </TableBody>
             </Table>
@@ -375,6 +408,26 @@ function LimparTitulosDialog({ alvo, confirmacao, setConfirmacao, isPending, onC
   );
 }
 
+// Receita: o que entra todo mês (assinaturas ativas) e o que está atrasado.
+function CardsReceita({ resumo }: { resumo: ResumoPlataforma }) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Receita mensal contratada</CardTitle></CardHeader>
+        <CardContent><div className="text-2xl font-semibold tabular-nums">{formatarReais(resumo.mrr)}</div></CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-medium">Faturas vencidas em aberto</CardTitle></CardHeader>
+        <CardContent>
+          <div className={`text-2xl font-semibold tabular-nums ${resumo.emAtraso > 0 ? 'text-red-600' : ''}`}>
+            {formatarReais(resumo.emAtraso)}
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 export default function Plataforma() {
   const { user, isSuperAdmin, loading, signOut } = useAuth();
   const { toast } = useToast();
@@ -430,6 +483,9 @@ export default function Plataforma() {
   // configuração que o admin da empresa se concede.
   const [integracaoAlvo, setIntegracaoAlvo] = useState<CompanyRow | null>(null);
   const [planoAlvo, setPlanoAlvo] = useState<CompanyRow | null>(null);
+  const [cobrancaAlvo, setCobrancaAlvo] = useState<CompanyRow | null>(null);
+  const [precosAbertos, setPrecosAbertos] = useState(false);
+  const resumoCobranca = useResumoCobrancaPlataforma(companiesQuery.data, isSuperAdmin);
 
   // Cadastro abandonado no meio do caminho. Sem poder descartar, a lista só
   // cresce e esconde o próximo caso que realmente precisa de atenção.
@@ -493,6 +549,9 @@ export default function Plataforma() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={() => setPrecosAbertos(true)}>
+            <Tags className="mr-2 h-4 w-4" /> Preços dos planos
+          </Button>
           <Button variant="outline" size="sm" asChild>
             <Link to="/plataforma/importar"><Upload className="mr-2 h-4 w-4" /> Importar títulos</Link>
           </Button>
@@ -525,6 +584,8 @@ export default function Plataforma() {
           </Card>
         </div>
 
+        <CardsReceita resumo={resumoCobranca} />
+
         <CadastrosIncompletosCard
           cadastros={incompletosQuery.data ?? []}
           onExcluir={setDescartarAlvo}
@@ -533,17 +594,21 @@ export default function Plataforma() {
         <EmpresasTableCard
           companies={companies}
           metricas={metricas}
+          cobranca={resumoCobranca.porEmpresa}
           isLoading={companiesQuery.isLoading}
           statusPending={setStatus.isPending}
           onSetStatus={(id, status) => setStatus.mutate({ id, status })}
           onLimpar={(c) => { setConfirmacao(''); setLimparAlvo(c); }}
           onIntegracao={setIntegracaoAlvo}
           onPlano={setPlanoAlvo}
+          onCobranca={setCobrancaAlvo}
         />
       </main>
 
       <ChavesApiDialog empresa={integracaoAlvo} onClose={() => setIntegracaoAlvo(null)} />
       <AlterarPlanoDialog empresa={planoAlvo} onClose={() => setPlanoAlvo(null)} />
+      <CobrancaEmpresaDialog empresa={cobrancaAlvo} onClose={() => setCobrancaAlvo(null)} />
+      <PrecosPlanosDialog open={precosAbertos} onClose={() => setPrecosAbertos(false)} />
 
       <ConfirmarAcaoDestrutiva
         open={!!descartarAlvo}

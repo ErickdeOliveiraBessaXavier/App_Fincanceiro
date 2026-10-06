@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { usePlanos, useDefinirPlanoEmpresa, type Plano } from '@/lib/queries/planos';
 import { fimDoDiaNoBrasil, formatarNumero } from '@/domain/plano';
 import { isoDeData } from '@/utils/format';
+import { formatarReais } from '@/domain/assinatura';
 
 /**
  * Plano, limite personalizado e prazo de acesso de uma empresa.
@@ -43,6 +44,11 @@ function camposDaEmpresa(e: EmpresaDoPlano): Campos {
 function descreverLimite(plano: Plano | undefined): string {
   if (!plano) return '';
   return plano.limite_titulos === null ? 'sem limite' : `${formatarNumero(plano.limite_titulos)} títulos`;
+}
+
+/** " · R$ 297,00/mês"; vazio para plano sem mensalidade (teste, cortesia). */
+function descreverPreco(plano: Plano): string {
+  return plano.valor_mensal > 0 ? ` · ${formatarReais(plano.valor_mensal)}/mês` : '';
 }
 
 /** O que acontece com o prazo se o campo ficar vazio. */
@@ -123,7 +129,7 @@ export function AlterarPlanoDialog({ empresa, onClose }: Props) {
               className="h-10 rounded-md border border-input bg-background px-3 text-sm"
             >
               {planos.map((p) => (
-                <option key={p.codigo} value={p.codigo}>{p.nome} — {descreverLimite(p)}</option>
+                <option key={p.codigo} value={p.codigo}>{p.nome} — {descreverLimite(p)}{descreverPreco(p)}</option>
               ))}
             </select>
           </div>

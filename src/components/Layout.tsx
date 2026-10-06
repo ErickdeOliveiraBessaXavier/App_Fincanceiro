@@ -45,14 +45,18 @@ const TEXTO_BLOQUEIO: Record<Exclude<SituacaoDeAcesso, 'ativa'>, { titulo: strin
     titulo: 'Acesso suspenso',
     texto: () => 'O acesso da sua empresa está suspenso. Entre em contato com o suporte para regularizar.',
   },
+  inadimplente: {
+    titulo: 'Acesso bloqueado por pendência financeira',
+    texto: () => 'Há uma fatura do sistema em aberto além do prazo de tolerância. Seus dados estão preservados: o administrador da empresa pode regularizar com o suporte e o acesso volta assim que o pagamento for registrado.',
+  },
   expirada: {
     titulo: 'Período de teste encerrado',
     texto: () => 'O período de teste da sua empresa terminou. Seus dados estão preservados: entre em contato com o suporte para contratar um plano e liberar o acesso.',
   },
 };
 
-// Tela exibida quando a empresa não tem acesso: aguardando aprovação, suspensa
-// ou com o período de teste vencido.
+// Tela exibida quando a empresa não tem acesso: aguardando aprovação, suspensa,
+// com fatura atrasada ou com o período de teste vencido.
 const EmpresaInativa = ({ situacao, nome, onSignOut }: {
   situacao: Exclude<SituacaoDeAcesso, 'ativa'>; nome: string; onSignOut: () => void;
 }) => {
@@ -79,7 +83,7 @@ interface ContextoAcesso {
   companyId: string | null;
   role: string | null;
   companyLoading: boolean;
-  company: { status: string; nome: string; acesso_expira_em: string | null } | null;
+  company: { status: string; nome: string; acesso_expira_em: string | null; inadimplente: boolean } | null;
   signOut: () => void;
 }
 
@@ -108,8 +112,8 @@ function bloqueioDeAcesso(ctx: ContextoAcesso): ReactNode | null {
   // a mesma tela da etapa anterior — para o usuário, uma espera só.
   if (ctx.companyLoading) return <TelaCarregamento />;
 
-  // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin) e dentro do
-  // prazo do plano. O banco já bloqueia os dados (current_company_id); aqui só
+  // Gate: empresa precisa estar "ativa" (aprovada pelo super_admin), em dia com
+  // a mensalidade e dentro do prazo do plano. O banco já bloqueia os dados (current_company_id); aqui só
   // se explica o porquê.
   if (!ctx.company) return null;
   const situacao = situacaoDeAcesso(ctx.company);

@@ -27,7 +27,10 @@ regras de senha, "Esqueci minha senha" e reenvio de confirmação.
 - **Domínio próprio** — quando existir, trocar Site URL e Redirect URLs.
 - **Limpar títulos da empresa** (Plataforma) apaga pagamentos em cascata. Aceito
   só enquanto os dados forem de teste; rever antes do primeiro cliente real.
-- **Billing/assinatura** das empresas (ex.: Stripe). Nada implementado.
+- **Cobrança da plataforma**: implantação + mensalidade com controle manual
+  (Plataforma › Cobrança), bloqueio após a tolerância. Falta: gateway (boleto/PIX
+  automático, ex.: Asaas) e aviso por e-mail antes do vencimento (depende do SMTP).
+  Preços iniciais são referência de mercado — validar com os parceiros.
 - **Proteção contra senha vazada** — exige plano Pro do Supabase.
 
 ## API do ERP (api-v1)

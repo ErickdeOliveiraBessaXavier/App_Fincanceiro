@@ -65,15 +65,19 @@ export function diasRestantes(expiraEm: string | null, agora: Date = new Date())
   return ms <= 0 ? 0 : Math.ceil(ms / MS_POR_DIA);
 }
 
-export type SituacaoDeAcesso = 'ativa' | 'pendente' | 'suspensa' | 'expirada';
+export type SituacaoDeAcesso = 'ativa' | 'pendente' | 'suspensa' | 'inadimplente' | 'expirada';
 
-/** Mesma regra de `current_company_id()`: ativa e dentro do prazo. */
+/**
+ * Mesma regra de `current_company_id()`: ativa, dentro do prazo e sem fatura
+ * atrasada além da tolerância (`inadimplente`, calculado pelo banco).
+ */
 export function situacaoDeAcesso(
-  empresa: { status: string; acesso_expira_em?: string | null },
+  empresa: { status: string; acesso_expira_em?: string | null; inadimplente?: boolean },
   agora: Date = new Date(),
 ): SituacaoDeAcesso {
   if (empresa.status === 'pendente') return 'pendente';
   if (empresa.status !== 'ativa') return 'suspensa';
+  if (empresa.inadimplente) return 'inadimplente';
   return diasRestantes(empresa.acesso_expira_em ?? null, agora) === 0 ? 'expirada' : 'ativa';
 }
 
