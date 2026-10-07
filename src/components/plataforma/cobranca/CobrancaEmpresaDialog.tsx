@@ -30,6 +30,7 @@ export interface EmpresaDaCobranca {
   id: string;
   nome: string;
   plano: string;
+  limite_titulos_personalizado: number | null;
 }
 
 const COR_SITUACAO: Record<string, string> = {
@@ -120,7 +121,7 @@ function ConteudoCobranca({ empresa }: { empresa: EmpresaDaCobranca }) {
       <section className="grid gap-3">
         <h3 className="text-sm font-semibold">Contrato</h3>
         <FormAssinatura companyId={empresa.id} assinatura={data.assinatura} plano={plano}
-          implantacaoEmitida={implantacaoEmitida} />
+          limite={empresa.limite_titulos_personalizado} implantacaoEmitida={implantacaoEmitida} />
       </section>
       <section className="grid gap-3">
         <h3 className="text-sm font-semibold">Faturas</h3>

@@ -10,6 +10,7 @@ import { usePlanos, useDefinirPlanoEmpresa, type Plano } from '@/lib/queries/pla
 import { fimDoDiaNoBrasil, formatarNumero } from '@/domain/plano';
 import { isoDeData } from '@/utils/format';
 import { formatarReais } from '@/domain/assinatura';
+import { precoDoLimite } from '@/domain/precificacao';
 
 /**
  * Plano, limite personalizado e prazo de acesso de uma empresa.
@@ -49,6 +50,15 @@ function descreverLimite(plano: Plano | undefined): string {
 /** " · R$ 297,00/mês"; vazio para plano sem mensalidade (teste, cortesia). */
 function descreverPreco(plano: Plano): string {
   return plano.valor_mensal > 0 ? ` · ${formatarReais(plano.valor_mensal)}/mês` : '';
+}
+
+/** Mensalidade e implantação que o limite digitado resulta, pela regra do plano. */
+function descreverPrecoDoLimite(plano: Plano | undefined, limiteTexto: string): string {
+  if (!plano || plano.valor_mensal === 0) return '';
+  const limite = Number(limiteTexto) > 0 ? Number(limiteTexto) : null;
+  const preco = precoDoLimite(plano, limite);
+  const blocos = preco.blocosExcedentes > 0 ? ` (${preco.blocosExcedentes} bloco(s) de excedente)` : '';
+  return `Preço: ${formatarReais(preco.mensal)}/mês + ${formatarReais(preco.implantacao)} de implantação${blocos}.`;
 }
 
 /** O que acontece com o prazo se o campo ficar vazio. */
@@ -148,6 +158,7 @@ export function AlterarPlanoDialog({ empresa, onClose }: Props) {
             <p className="text-xs text-muted-foreground">
               Vazio usa o limite do plano. Use para o Enterprise acima de 30 mil (50 mil, 100 mil…).
             </p>
+            <p className="text-xs font-medium">{descreverPrecoDoLimite(planoEscolhido, campos.limite)}</p>
           </div>
 
           <div className="grid gap-2">

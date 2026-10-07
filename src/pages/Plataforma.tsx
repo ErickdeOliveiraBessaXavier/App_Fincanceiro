@@ -29,7 +29,7 @@ import { usePlanos } from '@/lib/queries/planos';
 import { calcularUso, diasRestantes, formatarNumero } from '@/domain/plano';
 import { formatarReais, type ResumoCobrancaEmpresa } from '@/domain/assinatura';
 import { CobrancaEmpresaDialog } from '@/components/plataforma/cobranca/CobrancaEmpresaDialog';
-import { PrecosPlanosDialog } from '@/components/plataforma/cobranca/PrecosPlanosDialog';
+import { TabelaPrecosDialog } from '@/components/plataforma/precos/TabelaPrecosDialog';
 import {
   useResumoCobrancaPlataforma, type CobrancaDaEmpresa, type ResumoPlataforma,
 } from '@/components/plataforma/cobranca/resumoPlataforma';
@@ -608,7 +608,7 @@ export default function Plataforma() {
       <ChavesApiDialog empresa={integracaoAlvo} onClose={() => setIntegracaoAlvo(null)} />
       <AlterarPlanoDialog empresa={planoAlvo} onClose={() => setPlanoAlvo(null)} />
       <CobrancaEmpresaDialog empresa={cobrancaAlvo} onClose={() => setCobrancaAlvo(null)} />
-      <PrecosPlanosDialog open={precosAbertos} onClose={() => setPrecosAbertos(false)} />
+      <TabelaPrecosDialog open={precosAbertos} onClose={() => setPrecosAbertos(false)} empresas={companies} />
 
       <ConfirmarAcaoDestrutiva
         open={!!descartarAlvo}

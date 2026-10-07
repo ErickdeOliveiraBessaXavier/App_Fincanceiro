@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,6 +15,7 @@ import {
 } from '@/domain/assinatura';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
 import { formatData } from '@/utils/format';
+import { precoDoLimite, type Preco } from '@/domain/precificacao';
 
 /**
  * Contrato de cobrança de uma empresa: mensalidade (do plano ou negociada),
@@ -36,7 +37,7 @@ type SetCampos = (parcial: Partial<Campos>) => void;
 
 const DIA_VENCIMENTO_PADRAO = 10;
 
-function camposIniciais(a: Assinatura | null, plano: Plano | undefined): Campos {
+function camposIniciais(a: Assinatura | null, preco: Preco | null): Campos {
   const hoje = hojeIso();
   const contrato = a ?? {
     valor_mensal_personalizado: null,
@@ -49,7 +50,7 @@ function camposIniciais(a: Assinatura | null, plano: Plano | undefined): Campos 
     dia: String(contrato.dia_vencimento),
     inicio: contrato.inicio_cobranca,
     tolerancia: String(contrato.dias_tolerancia),
-    implantacao: plano?.valor_implantacao ?? 0,
+    implantacao: preco?.implantacao ?? 0,
     vencimentoImplantacao: hoje,
   };
 }
@@ -211,18 +212,21 @@ interface Props {
   companyId: string;
   assinatura: Assinatura | null;
   plano: Plano | undefined;
+  /** Limite personalizado da empresa: entra no preço pela regra de excedente. */
+  limite: number | null;
   /** Já existe implantação emitida (não cancelada): não oferece outra. */
   implantacaoEmitida: boolean;
 }
 
-export function FormAssinatura({ companyId, assinatura, plano, implantacaoEmitida }: Props) {
+export function FormAssinatura({ companyId, assinatura, plano, limite, implantacaoEmitida }: Props) {
   const acoes = useAcoesAssinatura(companyId, implantacaoEmitida);
-  const [c, setC] = useState<Campos>(() => camposIniciais(assinatura, plano));
+  const preco = useMemo(() => (plano ? precoDoLimite(plano, limite) : null), [plano, limite]);
+  const [c, setC] = useState<Campos>(() => camposIniciais(assinatura, preco));
   const set: SetCampos = (parcial) => setC((atual) => ({ ...atual, ...parcial }));
 
-  useEffect(() => { setC(camposIniciais(assinatura, plano)); }, [assinatura, plano]);
+  useEffect(() => { setC(camposIniciais(assinatura, preco)); }, [assinatura, preco]);
 
-  const mensalDoPlano = plano?.valor_mensal ?? 0;
+  const mensalDoPlano = preco?.mensal ?? 0;
   const mensal = valorMensalEfetivo(c.mensalPersonalizada || null, mensalDoPlano);
 
   return (

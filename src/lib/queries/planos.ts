@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { calcularUso, type UsoDoPlano } from '@/domain/plano';
+import type { PlanoPrecificavel } from '@/domain/precificacao';
 
 /**
  * Plano da empresa (limite de títulos e prazo de acesso).
@@ -10,13 +11,9 @@ import { calcularUso, type UsoDoPlano } from '@/domain/plano';
  * troca feita por qualquer outro caminho.
  */
 
-export interface Plano {
-  codigo: string;
-  nome: string;
-  limite_titulos: number | null;
+/** Catálogo, com preço e regra de excedente (ver domain/precificacao). */
+export interface Plano extends PlanoPrecificavel {
   dias_teste: number | null;
-  valor_mensal: number;
-  valor_implantacao: number;
 }
 
 export interface PlanoDaEmpresa extends UsoDoPlano {
@@ -47,7 +44,8 @@ export function usePlanos(enabled = true) {
     queryFn: async (): Promise<Plano[]> => {
       const { data, error } = await supabase
         .from('planos')
-        .select('codigo, nome, limite_titulos, dias_teste, valor_mensal, valor_implantacao')
+        // Uma string literal só: o tipo do retorno é inferido dela.
+        .select('codigo, nome, limite_titulos, dias_teste, valor_mensal, valor_implantacao, excedente_bloco_titulos, excedente_valor_mensal, excedente_valor_implantacao')
         .eq('ativo', true)
         .order('ordem');
       if (error) throw error;

@@ -185,3 +185,20 @@ export function useDefinirPrecosPlano() {
       p_valor_implantacao: i.valorImplantacao,
     }));
 }
+
+export interface DefinirExcedenteInput {
+  codigo: string;
+  /** null desliga a regra. */
+  blocoTitulos: number | null;
+  valorMensal: number;
+  valorImplantacao: number;
+}
+
+export function useDefinirExcedentePlano() {
+  return useMutacaoCobranca((i: DefinirExcedenteInput) => supabase.rpc('definir_excedente_plano', {
+    p_codigo: i.codigo,
+    p_bloco_titulos: i.blocoTitulos ?? undefined,
+    p_valor_mensal: i.valorMensal,
+    p_valor_implantacao: i.valorImplantacao,
+  }));
+}

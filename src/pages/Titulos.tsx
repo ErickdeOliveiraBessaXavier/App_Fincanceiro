@@ -3,7 +3,7 @@ import { CarregandoConteudo, CarregandoSecao } from '@/components/TelaCarregamen
 import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Plus, Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, XCircle } from 'lucide-react';
+import { Eye, ChevronDown, ChevronRight, User, Trash2, MoreHorizontal, DollarSign, Percent, Tag, MessageSquare, Mail, XCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import {
   useTitulos,
@@ -56,6 +56,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { TituloConsolidado, Parcela, FormatUtils, ParcelaUtils, statusExibidoParcela } from '@/utils/titulo';
 import { AvisoReimportado } from '@/components/titulos/AvisoReimportado';
+import { BotaoNovoTitulo } from '@/components/titulos/BotaoNovoTitulo';
+import { ehErroDeLimite } from '@/domain/plano';
 import { Aviso } from '@/components/Aviso';
 import { StatusBadge } from '@/components/StatusBadge';
 import { SelecionarCliente } from '@/components/SelecionarCliente';
@@ -69,6 +71,12 @@ import { useUserRole } from '@/hooks/useUserRole';
 // Extrai a mensagem de um erro desconhecido, com fallback para o toast.
 const msgErro = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
+
+// Limite do plano tem mensagem própria: o genérico esconderia o motivo.
+const msgErroCriacao = (error: unknown) =>
+  ehErroDeLimite(error as { hint?: string })
+    ? 'O plano chegou ao limite de títulos. Os títulos já cadastrados seguem funcionando; para cadastrar novos, fale com o suporte.'
+    : 'Não foi possível criar o título';
 
 interface ClienteAgrupado {
   id: string;
@@ -1123,7 +1131,7 @@ export default function Titulos() {
       console.error('Erro ao criar título:', error);
       toast({
         title: "Erro",
-        description: "Não foi possível criar o título",
+        description: msgErroCriacao(error),
         variant: "destructive",
       });
     }
@@ -1387,14 +1395,7 @@ export default function Titulos() {
         title="Títulos"
         description="Gestão detalhada de faturas e parcelas de cobrança."
       >
-        {isOperador && (
-          <Button 
-            onClick={() => setIsCreateModalOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Novo Título
-          </Button>
-        )}
+        {isOperador && <BotaoNovoTitulo onClick={() => setIsCreateModalOpen(true)} />}
       </PageHeader>
 
       <Card className="overflow-hidden">

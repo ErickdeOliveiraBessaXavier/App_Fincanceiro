@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { buscarTodas } from '@/lib/buscarTodas';
 import { executarComSenha } from '@/lib/senhaConfirmada';
+import { planosKeys } from '@/lib/queries/planos';
 import type { TituloConsolidado, Parcela } from '@/utils/titulo';
 
 // ============== Query Keys ==============
@@ -201,6 +202,8 @@ export function useCreateTitulo() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: titulosKeys.all });
+      // Título novo ocupa o limite: barra e avisos do plano precisam refletir.
+      qc.invalidateQueries({ queryKey: planosKeys.all });
     },
   });
 }

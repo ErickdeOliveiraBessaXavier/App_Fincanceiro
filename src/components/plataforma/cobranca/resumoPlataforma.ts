@@ -1,6 +1,7 @@
 import { useCobrancaPlataforma, type Assinatura, type FaturaDaEmpresa } from '@/lib/queries/assinaturas';
 import { usePlanos, type Plano } from '@/lib/queries/planos';
 import { hojeIso } from '@/domain/telecobranca/statusCobranca';
+import { precoDoLimite } from '@/domain/precificacao';
 import {
   TOLERANCIA_PADRAO_DIAS, resumirCobranca, valorMensalEfetivo, type ResumoCobrancaEmpresa,
 } from '@/domain/assinatura';
@@ -22,6 +23,7 @@ interface EmpresaBase {
   id: string;
   plano: string;
   status: string;
+  limite_titulos_personalizado: number | null;
 }
 
 function agruparPorEmpresa(faturas: FaturaDaEmpresa[]): Map<string, FaturaDaEmpresa[]> {
@@ -30,9 +32,11 @@ function agruparPorEmpresa(faturas: FaturaDaEmpresa[]): Map<string, FaturaDaEmpr
   return mapa;
 }
 
-function mensalidadeAtiva(a: Assinatura | undefined, plano: Plano | undefined): number | null {
+/** Mesma regra de `_valor_mensal`: negociada, ou a do plano pelo limite da empresa. */
+function mensalidadeAtiva(a: Assinatura | undefined, plano: Plano | undefined, limite: number | null): number | null {
   if (!a?.ativa) return null;
-  return valorMensalEfetivo(a.valor_mensal_personalizado, plano?.valor_mensal ?? 0);
+  const doPlano = plano ? precoDoLimite(plano, limite).mensal : 0;
+  return valorMensalEfetivo(a.valor_mensal_personalizado, doPlano);
 }
 
 export function montarResumoPlataforma(
@@ -53,7 +57,7 @@ export function montarResumoPlataforma(
     const a = assinaturaPorEmpresa.get(e.id);
     const tolerancia = a?.dias_tolerancia ?? TOLERANCIA_PADRAO_DIAS;
     const resumo = resumirCobranca(faturasPorEmpresa.get(e.id) ?? [], tolerancia, hoje);
-    const mensal = mensalidadeAtiva(a, planoPorCodigo.get(e.plano));
+    const mensal = mensalidadeAtiva(a, planoPorCodigo.get(e.plano), e.limite_titulos_personalizado);
     porEmpresa.set(e.id, { ...resumo, mensal });
     if (e.status === 'ativa') mrr += mensal ?? 0;
     emAtraso += resumo.emAtraso;

@@ -1536,6 +1536,9 @@ export type Database = {
           codigo: string
           created_at: string
           dias_teste: number | null
+          excedente_bloco_titulos: number | null
+          excedente_valor_implantacao: number
+          excedente_valor_mensal: number
           limite_titulos: number | null
           nome: string
           ordem: number
@@ -1547,6 +1550,9 @@ export type Database = {
           codigo: string
           created_at?: string
           dias_teste?: number | null
+          excedente_bloco_titulos?: number | null
+          excedente_valor_implantacao?: number
+          excedente_valor_mensal?: number
           limite_titulos?: number | null
           nome: string
           ordem?: number
@@ -1558,6 +1564,9 @@ export type Database = {
           codigo?: string
           created_at?: string
           dias_teste?: number | null
+          excedente_bloco_titulos?: number | null
+          excedente_valor_implantacao?: number
+          excedente_valor_mensal?: number
           limite_titulos?: number | null
           nome?: string
           ordem?: number
@@ -2267,6 +2276,10 @@ export type Database = {
           ultima_mudanca: string
         }[]
       }
+      _blocos_excedentes: {
+        Args: { p_bloco: number; p_limite: number; p_limite_plano: number }
+        Returns: number
+      }
       _creditar_pagamentos_acordo: {
         Args: { p_acordo_id: string; p_motivo: string; p_valor: number }
         Returns: number
@@ -2490,6 +2503,15 @@ export type Database = {
       current_vendedor_id: { Args: never; Returns: string }
       custom_access_token_hook: { Args: { event: Json }; Returns: Json }
       data_pascoa: { Args: { p_ano: number }; Returns: string }
+      definir_excedente_plano: {
+        Args: {
+          p_bloco_titulos: number
+          p_codigo: string
+          p_valor_implantacao: number
+          p_valor_mensal: number
+        }
+        Returns: Json
+      }
       definir_plano_empresa: {
         Args: {
           p_acesso_expira_em?: string

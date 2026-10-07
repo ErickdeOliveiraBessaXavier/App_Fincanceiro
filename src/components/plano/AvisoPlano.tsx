@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useUserRole } from '@/hooks/useUserRole';
 import { useUsoDoPlano, type PlanoDaEmpresa } from '@/lib/queries/planos';
 import { useSituacaoFinanceira, type SituacaoFinanceira } from '@/lib/queries/assinaturas';
-import { descreverUso, diasRestantes, usoMereceAviso } from '@/domain/plano';
+import { descreverUso, diasRestantes, formatarNumero, usoMereceAviso } from '@/domain/plano';
 import {
   TOLERANCIA_PADRAO_DIAS, dataDoBloqueio, descreverFatura, formatarReais, situacaoDaFatura,
 } from '@/domain/assinatura';
@@ -27,9 +27,17 @@ function mensagensDoPlano(p: PlanoDaEmpresa): Mensagem[] {
     mensagens.push({ texto: `Plano ${p.planoNome}: o acesso ${textoDoPrazo(dias)}.`, urgente: false });
   }
   if (usoMereceAviso(p)) {
-    mensagens.push({ texto: `Uso do plano: ${descreverUso(p)}.`, urgente: p.faixa === 'esgotado' });
+    mensagens.push({ texto: textoDoUso(p), urgente: p.faixa === 'esgotado' });
   }
   return mensagens;
+}
+
+/** 80% e 90%: quanto ainda cabe. 100%: o que para e o que segue funcionando. */
+function textoDoUso(p: PlanoDaEmpresa): string {
+  if (p.faixa === 'esgotado') {
+    return `Limite do plano atingido (${descreverUso(p)}): não é possível cadastrar ou importar títulos novos. Os já cadastrados seguem funcionando normalmente.`;
+  }
+  return `Uso do plano: ${descreverUso(p)}. Restam ${formatarNumero(p.restantes ?? 0)} títulos novos.`;
 }
 
 /**
