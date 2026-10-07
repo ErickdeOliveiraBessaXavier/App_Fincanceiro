@@ -66,10 +66,14 @@ export function montarResumoPlataforma(
 }
 
 /** Resumo da cobrança para a Plataforma (super admin). */
-export function useResumoCobrancaPlataforma(empresas: EmpresaBase[] | undefined, enabled: boolean): ResumoPlataforma {
+export function useResumoCobrancaPlataforma(
+  empresas: EmpresaBase[] | undefined, enabled: boolean,
+): ResumoPlataforma & { carregado: boolean } {
   const { data: planos } = usePlanos(enabled);
   const { data } = useCobrancaPlataforma(enabled);
-  return montarResumoPlataforma(
+  const resumo = montarResumoPlataforma(
     empresas ?? [], planos ?? [], data?.assinaturas ?? [], data?.faturasAbertas ?? [], hojeIso(),
   );
+  // Antes de carregar, toda empresa pareceria "sem assinatura".
+  return { ...resumo, carregado: !!planos && !!data };
 }

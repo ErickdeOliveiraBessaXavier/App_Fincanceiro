@@ -3,12 +3,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Aviso } from '@/components/Aviso';
-import {
-  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Copy, KeyRound, Ban } from 'lucide-react';
 import { CarregandoSecao } from '@/components/TelaCarregamento';
+import { ConfirmarAcaoDestrutiva } from '@/components/ConfirmarAcaoDestrutiva';
 import {
   useChavesApi, useCriarChaveApi, useRevogarChaveApi, type ChaveApi, type ChaveGerada,
 } from '@/lib/queries/chavesApi';
@@ -155,30 +153,21 @@ function ListaChaves({ chaves, carregando, revogando, onRevogar }: ListaChavesPr
   );
 }
 
-// ===================== Diálogo =====================
+// ===================== Aba =====================
 
-interface ChavesApiDialogProps {
-  empresa: { id: string; nome: string } | null;
-  onClose: () => void;
-}
-
-export function ChavesApiDialog({ empresa, onClose }: ChavesApiDialogProps) {
+export function AbaIntegracao({ empresa }: { empresa: { id: string; nome: string } }) {
   const { toast } = useToast();
   const [nome, setNome] = useState('');
   const [gerada, setGerada] = useState<ChaveGerada | null>(null);
+  // Revogar corta o ERP na hora: pede confirmação antes.
+  const [revogarAlvo, setRevogarAlvo] = useState<ChaveApi | null>(null);
 
-  const chavesQuery = useChavesApi(empresa?.id ?? null);
+  const chavesQuery = useChavesApi(empresa.id);
   const criar = useCriarChaveApi();
   const revogar = useRevogarChaveApi();
 
-  const fechar = () => {
-    setNome('');
-    setGerada(null);
-    onClose();
-  };
-
   const gerar = () => {
-    if (!empresa || !nome.trim()) return;
+    if (!nome.trim()) return;
     criar.mutate({ companyId: empresa.id, nome: nome.trim() }, {
       onSuccess: (chave) => {
         setGerada(chave);
@@ -190,52 +179,54 @@ export function ChavesApiDialog({ empresa, onClose }: ChavesApiDialogProps) {
   };
 
   const revogarChave = (id: string) => {
-    if (!empresa) return;
     revogar.mutate({ id, companyId: empresa.id }, {
-      onSuccess: () => toast({ title: 'Chave revogada', description: 'O ERP perde o acesso imediatamente.' }),
+      onSuccess: () => {
+        setRevogarAlvo(null);
+        toast({ title: 'Chave revogada', description: 'O ERP perde o acesso imediatamente.' });
+      },
       onError: (e: Error) =>
         toast({ title: 'Erro ao revogar', description: e.message, variant: 'destructive' }),
     });
   };
 
   return (
-    <Dialog open={!!empresa} onOpenChange={(o) => { if (!o) fechar(); }}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <KeyRound className="h-5 w-5" /> Integração de {empresa?.nome}
-          </DialogTitle>
-          <DialogDescription>
-            Chaves que o ERP deste cliente usa para enviar títulos e consultar saldos.
-            O acesso é limitado a esta empresa.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="grid min-w-0 gap-4">
+      <p className="text-sm text-muted-foreground">
+        Só é preciso se o sistema (ERP) deste cliente for enviar títulos sozinho. Gere uma chave, copie e
+        entregue ao responsável técnico do cliente. O acesso fica limitado a esta empresa.
+      </p>
 
-        {gerada && <ChaveRecemGerada chave={gerada} />}
+      {gerada && <ChaveRecemGerada chave={gerada} />}
 
-        <div className="flex gap-2">
-          <Input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Nome da chave (ex.: ERP do cliente)"
-            onKeyDown={(e) => { if (e.key === 'Enter') gerar(); }}
-          />
-          <Button className="shrink-0" disabled={criar.isPending || !nome.trim()} onClick={gerar}>
-            {criar.isPending ? 'Gerando…' : 'Gerar chave'}
-          </Button>
-        </div>
-
-        <ListaChaves
-          chaves={chavesQuery.data ?? []}
-          carregando={chavesQuery.isLoading}
-          revogando={revogar.isPending}
-          onRevogar={revogarChave}
+      <div className="flex gap-2">
+        <Input
+          value={nome}
+          onChange={(e) => setNome(e.target.value)}
+          placeholder="Nome da chave (ex.: ERP do cliente)"
+          onKeyDown={(e) => { if (e.key === 'Enter') gerar(); }}
         />
+        <Button className="shrink-0" disabled={criar.isPending || !nome.trim()} onClick={gerar}>
+          <KeyRound className="mr-1 h-4 w-4" />
+          {criar.isPending ? 'Gerando…' : 'Gerar chave'}
+        </Button>
+      </div>
 
-        <DialogFooter>
-          <Button variant="ghost" onClick={fechar}>Fechar</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      <ListaChaves
+        chaves={chavesQuery.data ?? []}
+        carregando={chavesQuery.isLoading}
+        revogando={revogar.isPending}
+        onRevogar={(id) => setRevogarAlvo(chavesQuery.data?.find((c) => c.id === id) ?? null)}
+      />
+
+      <ConfirmarAcaoDestrutiva
+        open={!!revogarAlvo}
+        onOpenChange={(o) => { if (!o) setRevogarAlvo(null); }}
+        titulo="Revogar chave"
+        descricao={<>O sistema que usa a chave <strong>{revogarAlvo?.nome}</strong> para de enviar títulos na hora. Não dá para reativar: se precisar, gere uma chave nova.</>}
+        rotuloConfirmar="Revogar chave"
+        isPending={revogar.isPending}
+        onConfirm={() => revogarAlvo && revogarChave(revogarAlvo.id)}
+      />
+    </div>
   );
 }

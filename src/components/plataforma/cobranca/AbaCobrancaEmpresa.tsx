@@ -1,9 +1,6 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
-  Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
-} from '@/components/ui/dialog';
-import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -22,8 +19,9 @@ import { FormAssinatura } from './FormAssinatura';
 import { AcaoFaturaDialog, type AcaoFatura } from './AcaoFaturaDialog';
 
 /**
- * Cobrança de uma empresa na Plataforma: o contrato (mensalidade, vencimento,
+ * Aba Cobrança da empresa na Plataforma: o contrato (mensalidade, vencimento,
  * carência, tolerância) e as faturas emitidas, com as ações do dia a dia.
+ * Registrar pagamento fica à vista; o resto, no menu da fatura.
  */
 
 export interface EmpresaDaCobranca {
@@ -40,9 +38,9 @@ const COR_SITUACAO: Record<string, string> = {
   bloqueando: 'text-destructive font-medium',
 };
 
+/** Ações do menu; "Registrar pagamento" da fatura aberta vai num botão à vista. */
 const ACOES_POR_STATUS: Record<FaturaAssinatura['status'], { acao: AcaoFatura; rotulo: string }[]> = {
   aberta: [
-    { acao: 'pagar', rotulo: 'Registrar pagamento' },
     { acao: 'ajustar', rotulo: 'Ajustar valor' },
     { acao: 'cancelar', rotulo: 'Cancelar fatura' },
   ],
@@ -70,7 +68,7 @@ function FaturasTabela({ faturas, tolerancia, onAcao }: TabelaProps) {
             <TableHead>Vencimento</TableHead>
             <TableHead className="text-right">Valor</TableHead>
             <TableHead>Situação</TableHead>
-            <TableHead className="w-10" />
+            <TableHead className="text-right">Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -85,7 +83,10 @@ function FaturasTabela({ faturas, tolerancia, onAcao }: TabelaProps) {
               <TableCell className={cn('text-xs', COR_SITUACAO[situacaoDaFatura(f, tolerancia, hoje)])}>
                 {descreverSituacao(f, tolerancia, hoje)}
               </TableCell>
-              <TableCell>
+              <TableCell className="whitespace-nowrap text-right">
+                {f.status === 'aberta' && (
+                  <Button size="sm" variant="outline" onClick={() => onAcao(f, 'pagar')}>Registrar pagamento</Button>
+                )}
                 {ACOES_POR_STATUS[f.status].length > 0 && (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -107,7 +108,7 @@ function FaturasTabela({ faturas, tolerancia, onAcao }: TabelaProps) {
   );
 }
 
-function ConteudoCobranca({ empresa }: { empresa: EmpresaDaCobranca }) {
+export function AbaCobrancaEmpresa({ empresa }: { empresa: EmpresaDaCobranca }) {
   const { data, isLoading } = useCobrancaEmpresa(empresa.id);
   const { data: planos = [] } = usePlanos();
   const [acaoAlvo, setAcaoAlvo] = useState<{ fatura: FaturaAssinatura; acao: AcaoFatura } | null>(null);
@@ -119,7 +120,10 @@ function ConteudoCobranca({ empresa }: { empresa: EmpresaDaCobranca }) {
   return (
     <div className="grid gap-6">
       <section className="grid gap-3">
-        <h3 className="text-sm font-semibold">Contrato</h3>
+        <div>
+          <h3 className="text-sm font-semibold">Contrato</h3>
+          <p className="text-xs text-muted-foreground">Quanto e quando esta empresa paga. Preencha uma vez; as mensalidades saem sozinhas.</p>
+        </div>
         <FormAssinatura companyId={empresa.id} assinatura={data.assinatura} plano={plano}
           limite={empresa.limite_titulos_personalizado} implantacaoEmitida={implantacaoEmitida} />
       </section>
@@ -134,24 +138,5 @@ function ConteudoCobranca({ empresa }: { empresa: EmpresaDaCobranca }) {
       </section>
       <AcaoFaturaDialog alvo={acaoAlvo} onClose={() => setAcaoAlvo(null)} />
     </div>
-  );
-}
-
-interface Props {
-  empresa: EmpresaDaCobranca | null;
-  onClose: () => void;
-}
-
-export function CobrancaEmpresaDialog({ empresa, onClose }: Props) {
-  return (
-    <Dialog open={!!empresa} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent className="max-h-[90vh] max-w-3xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Cobrança</DialogTitle>
-          <DialogDescription>{empresa?.nome} · implantação e mensalidade</DialogDescription>
-        </DialogHeader>
-        {empresa && <ConteudoCobranca empresa={empresa} />}
-      </DialogContent>
-    </Dialog>
   );
 }
