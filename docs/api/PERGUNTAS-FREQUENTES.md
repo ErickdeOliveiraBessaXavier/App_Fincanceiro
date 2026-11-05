@@ -109,3 +109,82 @@ por um prazo combinado. As mudanças ficam no "Histórico de mudanças" do
 Depende de quem programa do lado do cliente. A chamada é simples: quem já
 integra nota fiscal costuma fazer em poucos dias. Do nosso lado, entregar a chave
 e a documentação é imediato.
+
+---
+
+# Perguntas comerciais e de confiança
+
+Respostas para a reunião, não para a TI. Itens marcados **A DEFINIR** dependem
+de decisão dos sócios: não improvise na hora, diga que retorna.
+
+## A integração tem custo à parte?
+
+**A DEFINIR.** Hoje o preço é implantação + mensalidade (Plataforma › Preços dos
+planos), mas não está decidido se a API vem incluída ou é cobrada separada.
+
+## O cliente tem algum custo do lado dele?
+
+Pode ter. Quem programa a chamada é a TI dele ou o **fornecedor do ERP**, e o
+fornecedor pode cobrar por esse serviço. Isso é entre o cliente e o fornecedor;
+nós entregamos a chave, a documentação e o suporte durante a integração.
+
+Diga isso no início da conversa, não depois do contrato.
+
+## Os dados ficam seguros? E a LGPD?
+
+O que já existe, e pode ser dito:
+
+- Cada empresa só enxerga os próprios dados, inclusive pela API (testado).
+- A comunicação é criptografada (HTTPS) e a chave não fica guardada em texto.
+- Cada pessoa da equipe do cliente tem login próprio e papel próprio (admin,
+  financeiro, cobrador, vendedor), com o que cada um pode ver e fazer.
+
+O que **ainda não existe**, e não deve ser prometido:
+
+- **Backup diário automático** — entra ao assinar o Supabase Pro.
+- **Termos de Uso e Política de Privacidade** (LGPD).
+
+Resposta honesta: *"Estamos em fase de implantação. Backup diário e os termos de
+privacidade entram antes de rodar com os seus dados reais."* Se não estiverem
+prontos até lá, comece como **piloto** (ver `docs/IMPLANTACAO_CLIENTE.md`).
+
+## O que pode fazer a integração parar de funcionar?
+
+Avise o cliente destes três casos, para não parecer defeito:
+
+1. **Limite de títulos do plano.** Ao chegar a 100% do plano, o ERP não consegue
+   mais enviar títulos **novos** (erro `limite_do_plano`). Os títulos que já
+   existem continuam sendo atualizados e consultados. O sistema avisa a partir
+   de 80%; para voltar, amplia-se o plano.
+2. **Fim do teste de 30 dias** sem plano contratado: a chave deixa de ser aceita.
+3. **Mensalidade em atraso** além da tolerância: a empresa é bloqueada, e a chave
+   junto.
+
+Nos casos 2 e 3, o ERP recebe "chave inválida". Para a TI do cliente parece que
+a chave quebrou: oriente a falar com o suporte antes de mexer na integração.
+
+## O sistema fica no ar 24 horas? Tem garantia (SLA)?
+
+O sistema fica no ar o tempo todo, hospedado no Supabase (infraestrutura em
+nuvem usada por milhares de empresas). **Não oferecemos garantia formal de
+disponibilidade (SLA)** por enquanto: é "melhor esforço".
+
+Se o ERP não conseguir falar com a API por um momento, basta tentar de novo: a
+documentação diz quais erros podem ser repetidos, e reenviar não duplica nada.
+
+## Qual é o horário do suporte? Quem atende?
+
+**A DEFINIR** — horário, canal (e-mail, WhatsApp) e prazo de resposta. Hoje o
+contato na documentação é um e-mail provisório.
+
+## Se o cliente sair, ele leva os dados?
+
+**A DEFINIR** — formato (planilha, arquivo), prazo para pedir e por quanto tempo
+os dados ficam guardados depois do fim do contrato. Isso também entra na
+Política de Privacidade.
+
+## Em nome de quem sai o contrato?
+
+**A DEFINIR** — ainda não há CNPJ próprio. Até lá, a alternativa é um piloto
+(teste de 30 dias ou plano Cortesia) com o cliente ciente da fase de
+implantação.

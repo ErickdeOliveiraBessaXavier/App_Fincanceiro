@@ -22,6 +22,13 @@ ERP já usa para emitir nota fiscal.
       mensalidade (Plataforma › Preços dos planos › Simulador).
 - [ ] Contrato. Sem CNPJ próprio ainda, definir em nome de quem ele sai.
 
+- [ ] Antes da reunião, decidir com os sócios os itens **A DEFINIR** da seção
+      "Perguntas comerciais e de confiança" do FAQ: preço da integração,
+      horário de suporte, saída de dados e em nome de quem sai o contrato.
+- [ ] Avisar o cliente de que o **fornecedor do ERP pode cobrar** para programar
+      a integração, e do que faz a chave parar (limite do plano, fim do teste,
+      mensalidade atrasada).
+
 Respostas prontas para as dúvidas do cliente: [`api/PERGUNTAS-FREQUENTES.md`](api/PERGUNTAS-FREQUENTES.md).
 
 ## Fase 2: implantação no sistema (mesmo dia)
