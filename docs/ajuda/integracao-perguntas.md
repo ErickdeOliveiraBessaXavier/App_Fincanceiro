@@ -45,22 +45,36 @@ Não pedimos senha nem acesso ao seu sistema. Só três respostas:
 ## O que dá para fazer hoje?
 
 - **Enviar um título** com as parcelas. Reenviar o mesmo título não duplica.
-- **Informar um pagamento** feito do seu lado (reenviando o título com a parcela
-  marcada como paga).
+- **Enviar vários títulos de uma vez** (até 100 por chamada). Se um tiver erro,
+  os outros entram normalmente.
+- **Informar um pagamento** feito do seu lado, com o valor (inteiro ou parcial),
+  a data real e o meio (PIX, boleto…). Repetir o mesmo pagamento não lança duas
+  vezes.
+- **Cancelar um título** (nota devolvida, venda desfeita). Se o título já tiver
+  pagamento ou acordo, o cancelamento é recusado e a equipe de cobrança resolve
+  antes.
 - **Consultar um título**: situação, quanto foi pago, quanto falta, cada parcela.
 - **Buscar só o que mudou** desde a última consulta: pagamentos lançados por nós,
   acordos feitos, quebrados ou cumpridos, cancelamentos.
 
+## Regras que costumam gerar dúvida
+
+- **Corrigir um título já enviado:** pode, enquanto não houver movimentação do
+  nosso lado (pagamento, desconto, encargo ou acordo). Depois disso as parcelas
+  ficam fixas.
+- **Nome e telefone do cliente** corrigidos pela equipe de cobrança não são
+  sobrescritos pelo ERP.
+- **Parcela que deixa de vir no reenvio** não é apagada: continua sendo cobrada.
+- **Pagamento enviado por engano** não se desfaz pelo ERP: a equipe de cobrança
+  estorna.
+- **Com que frequência consultar:** a cada 15 minutos já é bem atualizado.
+
 ## O que ainda não dá?
 
-- **Cancelar um título pelo ERP** (por exemplo, nota devolvida). Hoje o
-  cancelamento é pedido à equipe de cobrança, e o ERP fica sabendo pela consulta.
-- **Informar um pagamento parcial** ou com outra data. Hoje a parcela informada
-  como paga é quitada pelo valor restante, com a data do envio.
 - **Avisos automáticos** (nós chamarmos o ERP quando algo muda). Hoje o ERP
   consulta de tempos em tempos.
-- **Enviar muitos títulos numa chamada só.** Para a carga inicial, a importação
-  por planilha é mais rápida.
+- **Carga inicial de milhares de títulos** pela API. Funciona em lotes de 100,
+  mas a importação por planilha é mais rápida.
 - **Ver o acordo em detalhe** (valor e parcelas do acordo). Hoje o ERP vê que o
   título está em acordo, e se o acordo está em dia, quebrado ou cumprido.
 
