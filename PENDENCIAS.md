@@ -51,8 +51,9 @@ acréscimos na v1**; mudança incompatível vai para a v2.
 - **Antes de entregar uma chave:** rodar `node scripts/testar-api-v1.mjs` (só
   leitura). Precisa de `API_V1_CHAVE` e `API_V1_CHAVE_OUTRA_EMPRESA` no
   `.env.local` — chaves geradas na Plataforma e **revogadas depois**. Último
-  resultado: 14/14 em 2026-11-05 (Teste × TS Distribuidora). **Revogar a chave
-  da TS Distribuidora** usada no teste; na entrega, gerar uma nova.
+  resultado: 14/14 em 2026-11-05 (Teste × TS Distribuidora, as duas empresas de
+  teste). A chave da TS foi revogada depois: para rodar o isolamento de novo,
+  gere outra e troque `API_V1_CHAVE_OUTRA_EMPRESA`.
 - **E-mail do suporte provisório** — eobx@hotmail.com em dois lugares:
   `docs/api/README.md` e o rodapé de `src/pages/Ajuda.tsx` (/faq). Trocar pelo
   e-mail com o domínio da empresa quando existir.
