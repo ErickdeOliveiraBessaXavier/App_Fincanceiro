@@ -15,6 +15,12 @@ Revisado em **2026-10-19**.
    [`docs/api/PERGUNTAS-FREQUENTES.md`](docs/api/PERGUNTAS-FREQUENTES.md).
    Roteiro completo de implantação de um cliente novo (com checklist):
    [`docs/IMPLANTACAO_CLIENTE.md`](docs/IMPLANTACAO_CLIENTE.md).
+   **Antes da reunião com o cliente (sócios decidem):** os itens **A DEFINIR**
+   da seção "Perguntas comerciais e de confiança" do FAQ: preço da integração
+   (incluída ou à parte), horário/canal do suporte, saída de dados ao fim do
+   contrato e em nome de quem sai o contrato (sem CNPJ). Confirmar também se
+   INFARMA é o nome do ERP ou da empresa. Não mandar o artifact comercial de
+   agosto (desatualizado); a TI recebe o `docs/api/README.md`.
 3. **Volume, tela de auditoria, CNAB** — quando a operação real pedir.
 
 ## Antes de lançar para cliente externo
