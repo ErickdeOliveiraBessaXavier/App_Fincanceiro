@@ -13,6 +13,8 @@ Revisado em **2026-10-19**.
 2. **API do ERP**: aguardando a INFARMA responder as três perguntas (qual ERP e
    quem programa; frequência; se querem aviso automático). Texto pronto em
    [`docs/api/PERGUNTAS-FREQUENTES.md`](docs/api/PERGUNTAS-FREQUENTES.md).
+   Roteiro completo de implantação de um cliente novo (com checklist):
+   [`docs/IMPLANTACAO_CLIENTE.md`](docs/IMPLANTACAO_CLIENTE.md).
 3. **Volume, tela de auditoria, CNAB** — quando a operação real pedir.
 
 ## Antes de lançar para cliente externo
