@@ -56,12 +56,10 @@ acréscimos na v1**; mudança incompatível vai para a v2.
 - **E-mail do suporte provisório** — eobx@hotmail.com em dois lugares:
   `docs/api/README.md` e o rodapé de `src/pages/Ajuda.tsx` (/faq). Trocar pelo
   e-mail com o domínio da empresa quando existir.
-- **Lote, pagamento com valor/data e cancelamento pelo ERP: escritos, falta
-  publicar** (2026-11-05). Ordem: `supabase db push` (migration
-  `20261105120000`) → `supabase functions deploy api-v1` → rodar
-  `node scripts/testar-api-v1-escrita.mjs` com `API_V1_CHAVE_TESTE_ESCRITA`
-  (chave de empresa de **teste**: o script grava) e o teste de leitura. A
-  função nova sem a migration responde 500 nas rotas novas; as antigas seguem.
+- **Depois de mudar a API:** rodar também `node scripts/testar-api-v1-escrita.mjs`
+  (grava dados; usa `API_V1_CHAVE_TESTE_ESCRITA`, hoje a chave da Empresa Teste
+  Erick). Último resultado: 20/20 em 2026-11-05, com lote, pagamento e
+  cancelamento publicados.
 - **Acordo não exposto** — o ERP vê o título em acordo com saldo zero; valor e
   parcelas do acordo seriam rota nova.
 - **Avisos automáticos (webhooks)** — se a INFARMA quiser ser avisada.
