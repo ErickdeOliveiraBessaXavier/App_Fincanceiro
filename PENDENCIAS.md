@@ -3,13 +3,13 @@
 Tudo o que está em aberto, num lugar só. **Item feito sai daqui** — o registro do
 que foi feito fica nos commits, nas migrations e em [`docs/`](docs/).
 
-Revisado em **2026-10-01**.
+Revisado em **2026-10-19**.
 
 ---
 
 ## Por onde retomar
 
-1. **Pré-lançamento** (abaixo): SMTP e domínio próprio. Billing pode esperar.
+1. **Pré-lançamento** (abaixo): contas e infraestrutura, na ordem listada. Billing pode esperar.
 2. **API do ERP**: aguardando a INFARMA responder as três perguntas (qual ERP e
    quem programa; frequência; se querem aviso automático). Texto pronto em
    [`docs/api/PERGUNTAS-FREQUENTES.md`](docs/api/PERGUNTAS-FREQUENTES.md).
@@ -20,18 +20,26 @@ Revisado em **2026-10-01**.
 Já conferido: confirmação de e-mail ligada, JWT hook, URLs de redirecionamento,
 regras de senha, "Esqueci minha senha" e reenvio de confirmação.
 
-- **SMTP próprio** — passo a passo em [`docs/CONFIGURAR_SMTP.md`](docs/CONFIGURAR_SMTP.md).
-  **Bloqueado por domínio próprio** (decisão/compra do gestor). Até lá o envio
-  embutido aceita 2 e-mails por hora, divididos entre confirmação, reenvio e
-  redefinição de senha.
-- **Domínio próprio** — quando existir, trocar Site URL e Redirect URLs.
+### Contas e infraestrutura
+
+Passo a passo, por importância e urgência, em
+[`docs/GUIA_LANCAMENTO.md`](docs/GUIA_LANCAMENTO.md). Resumo:
+
+1. **Agora:** Supabase Pro (backup diário), decidir o nome, revisar
+   "Limpar títulos da empresa" (item abaixo).
+2. **Com o nome:** marca no INPI, domínio, site no Cloudflare Pages (o Vercel
+   Hobby proíbe uso comercial), SMTP pelo Resend (hoje são 2 e-mails/hora),
+   Google Workspace.
+3. **Depois:** Termos de Uso e Política de Privacidade (LGPD).
+
+### Outros itens
 - **Limpar títulos da empresa** (Plataforma) apaga pagamentos em cascata. Aceito
   só enquanto os dados forem de teste; rever antes do primeiro cliente real.
 - **Cobrança da plataforma**: implantação + mensalidade com controle manual
   (Plataforma › Cobrança), bloqueio após a tolerância. Falta: gateway (boleto/PIX
   automático, ex.: Asaas) e aviso por e-mail antes do vencimento (depende do SMTP).
   Preços iniciais são referência de mercado — validar com os parceiros.
-- **Proteção contra senha vazada** — exige plano Pro do Supabase.
+- **Proteção contra senha vazada** — exige plano Pro do Supabase (passo 1 do guia).
 
 ## API do ERP (api-v1)
 
@@ -41,7 +49,14 @@ acréscimos na v1**; mudança incompatível vai para a v2.
 - **Antes de entregar uma chave:** rodar `node scripts/testar-api-v1.mjs` (só
   leitura). Precisa de `API_V1_CHAVE` e `API_V1_CHAVE_OUTRA_EMPRESA` no
   `.env.local` — chaves geradas na Plataforma e **revogadas depois**. Último
-  resultado: 13/13 em 2026-10-01.
+  resultado: 14/14 em 2026-11-05 (Teste × TS Distribuidora). **Revogar a chave
+  da TS Distribuidora** usada no teste; na entrega, gerar uma nova.
+- **E-mail do suporte provisório** — eobx@hotmail.com em dois lugares:
+  `docs/api/README.md` e o rodapé de `src/pages/Ajuda.tsx` (/faq). Trocar pelo
+  e-mail com o domínio da empresa quando existir.
+- **Lacunas genéricas (esperar o 1º cliente confirmar)** — cancelar título pelo
+  ERP, baixa com data real e valor parcial, envio em lote. Todas entram como
+  acréscimo na v1.
 - **Acordo não exposto** — o ERP vê o título em acordo com saldo zero; valor e
   parcelas do acordo seriam rota nova.
 - **Avisos automáticos (webhooks)** — se a INFARMA quiser ser avisada.

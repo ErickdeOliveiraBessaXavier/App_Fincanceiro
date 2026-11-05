@@ -131,18 +131,39 @@ function validarTitulo(body: unknown): Response | TituloEntrada {
   }
   if (t.parcelas.some(parcelaInvalida)) {
     return erro(400, "parcela_invalida",
-      "Cada parcela precisa de numero (inteiro >= 1), valor (> 0) e vencimento no formato AAAA-MM-DD.");
+      "Cada parcela precisa de numero (inteiro >= 1) e valor (> 0) como números JSON, sem aspas, e vencimento no formato AAAA-MM-DD.");
   }
   return t;
+}
+
+// Erro que é culpa do CONTEÚDO enviado: RAISE EXCEPTION das nossas regras
+// (P0001), dado que o Postgres não aceita — data inexistente como 2026-02-30,
+// número grande demais (classe 22) — e CHECK violado (23514).
+function erroDeConteudo(codigo?: string | null): boolean {
+  const c = codigo ?? "";
+  return c === "P0001" || c === "23514" || c.startsWith("22");
 }
 
 // Traduz uma exceção do Postgres em resposta. Regras de negócio viram 422 (o
 // pedido chegou bem formado, mas o conteúdo não passa na regra). O limite do
 // plano tem código próprio: o ERP precisa distinguir "pare de enviar títulos
-// novos" de um título com dado errado.
-function erroDoBanco(e: { message: string; hint?: string | null }): Response {
+// novos" de um título com dado errado. O resto (queda de conexão, timeout,
+// conflito de gravação simultânea) é falha nossa e passageira: 500, que o ERP
+// pode repetir — antes virava 422 e o ERP desistia de um envio que daria certo.
+function erroDoBanco(e: { message: string; hint?: string | null; code?: string | null }): Response {
   if (e.hint === "limite_do_plano") return erro(422, "limite_do_plano", e.message);
-  return erro(422, "regra_de_negocio", e.message);
+  if (erroDeConteudo(e.code)) return erro(422, "regra_de_negocio", e.message);
+  return erro(500, "erro_interno", "Falha temporária ao gravar o título. Pode repetir a chamada.");
+}
+
+// JSON malformado é erro de quem envia (400), não nosso: antes estourava como
+// 500 e o ERP repetia para sempre uma chamada que nunca daria certo.
+async function lerCorpo(req: Request): Promise<unknown> {
+  try {
+    return await req.json();
+  } catch {
+    return null;
+  }
 }
 
 async function postTitulos(admin: Admin, ctx: Contexto, body: unknown): Promise<Response> {
@@ -374,9 +395,15 @@ async function titulosPorId(admin: Admin, companyId: string, ids: string[]): Pro
   return new Map(titulos.map((t) => [t.id, t]));
 }
 
+// Inteiro >= mínimo, ou o padrão. Antes `limite=-5` passava direto para o banco.
+function inteiroOuPadrao(valor: string | null, minimo: number, padrao: number): number {
+  const n = Number(valor);
+  return Number.isInteger(n) && n >= minimo ? n : padrao;
+}
+
 function paginacao(url: URL): { limite: number; offset: number } {
-  const limite = Math.min(Number(url.searchParams.get("limite")) || LIMITE_PADRAO, LIMITE_MAXIMO);
-  const offset = Math.max(Number(url.searchParams.get("offset")) || 0, 0);
+  const limite = Math.min(inteiroOuPadrao(url.searchParams.get("limite"), 1, LIMITE_PADRAO), LIMITE_MAXIMO);
+  const offset = inteiroOuPadrao(url.searchParams.get("offset"), 0, 0);
   return { limite, offset };
 }
 
@@ -438,7 +465,8 @@ function segmentosDaRota(url: URL): string[] {
 
 async function rotearGet(admin: Admin, ctx: Contexto, url: URL, rota: string[]): Promise<Response> {
   if (rota.length === 1) return await getTitulos(admin, ctx, url);
-  if (rota.length === 2) return await getTitulo(admin, ctx, decodeURIComponent(rota[1]));
+  // trim: o envio grava o número sem espaços nas pontas; a consulta tem que achá-lo igual.
+  if (rota.length === 2) return await getTitulo(admin, ctx, decodeURIComponent(rota[1]).trim());
   return erro(404, "rota_desconhecida", "Rota não encontrada.");
 }
 
@@ -450,7 +478,7 @@ async function rotear(admin: Admin, ctx: Contexto, req: Request): Promise<Respon
     return erro(404, "rota_desconhecida", "Rota não encontrada. Rotas disponíveis: /titulos.");
   }
   if (req.method === "GET") return await rotearGet(admin, ctx, url, rota);
-  if (req.method === "POST" && rota.length === 1) return await postTitulos(admin, ctx, await req.json());
+  if (req.method === "POST" && rota.length === 1) return await postTitulos(admin, ctx, await lerCorpo(req));
   return erro(405, "metodo_nao_permitido", `Método ${req.method} não permitido nesta rota.`);
 }
 

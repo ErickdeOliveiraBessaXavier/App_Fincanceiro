@@ -8,7 +8,7 @@ import { NotificationBell } from '@/components/NotificationBell';
 import { UsuarioMenu } from '@/components/UsuarioMenu';
 import { TelaCarregamento, CarregandoConteudo } from '@/components/TelaCarregamento';
 import { Button } from '@/components/ui/button';
-import { Clock, Ban } from 'lucide-react';
+import { Clock, Ban, LifeBuoy } from 'lucide-react';
 import { ProvedorAlturaFixa } from '@/hooks/usePaginaAlturaFixa';
 import { cn } from '@/lib/utils';
 import { Rotulo } from '@/components/Rotulo';
@@ -150,6 +150,13 @@ export const Layout = memo(({ children }: LayoutProps) => {
               </div>
             </div>
             <div className="flex items-center gap-1 sm:gap-3">
+              {/* Nova aba: a ajuda fica fora do sistema e não pode tirar o
+                  usuário da tela em que ele está trabalhando. */}
+              <Button asChild variant="ghost" size="icon" className="h-9 w-9 rounded-xl" title="Central de ajuda">
+                <a href="/faq" target="_blank" rel="noopener noreferrer" aria-label="Central de ajuda">
+                  <LifeBuoy className="h-5 w-5" />
+                </a>
+              </Button>
               <NotificationBell />
               <UsuarioMenu />
             </div>

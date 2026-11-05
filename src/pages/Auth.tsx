@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Sparkles, MailCheck, KeyRound } from 'lucide-react';
+import { Sparkles, MailCheck, KeyRound, LifeBuoy } from 'lucide-react';
 import { REGRAS_SENHA, SENHA_MIN, validarSenha } from '@/utils/senha';
 import { useToast } from '@/hooks/use-toast';
 import { TelaCarregamento, SpinnerInline } from '@/components/TelaCarregamento';
@@ -327,6 +327,15 @@ const Auth = () => {
             </CardContent>
           </Card>
           )}
+
+          {/* Pública: a TI do cliente chega aqui sem conta e precisa achar a documentação. */}
+          <Link
+            to="/faq"
+            className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-primary"
+          >
+            <LifeBuoy className="h-4 w-4" />
+            Precisa de ajuda? Acesse a Central de ajuda
+          </Link>
         </div>
       </div>
     </div>

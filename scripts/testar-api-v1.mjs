@@ -57,10 +57,23 @@ async function testarAutenticacao() {
   verificar('chave inválida → 401 chave_invalida', invalida.status === 401 && invalida.corpo?.erro?.codigo === 'chave_invalida');
 }
 
+// Não grava nada: o corpo é recusado antes de chegar ao banco.
+async function testarCorpoMalformado(chave) {
+  const resposta = await fetch(`${BASE}/titulos`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${chave}`, 'Content-Type': 'application/json' },
+    body: '{ isto não é json',
+  });
+  const corpo = await resposta.json().catch(() => null);
+  verificar('JSON malformado → 400 corpo_invalido (não 500)',
+    resposta.status === 400 && corpo?.erro?.codigo === 'corpo_invalido');
+}
+
 async function testarListagem(chave) {
   const { status, corpo } = await chamar('/titulos?limite=200', chave);
   const titulos = corpo?.titulos ?? [];
-  verificar('lista → 200 com títulos', status === 200 && titulos.length > 0, `${titulos.length} título(s)`);
+  verificar('lista → 200 com títulos', status === 200 && titulos.length > 0,
+    status === 200 ? `${titulos.length} título(s)` : `HTTP ${status} ${corpo?.erro?.codigo ?? ''} — confira API_V1_CHAVE`);
 
   const foraDoContrato = titulos.filter((t) => !SITUACOES_TITULO.has(t.situacao));
   verificar('toda situação de título é um valor documentado', foraDoContrato.length === 0,
@@ -120,9 +133,15 @@ async function testarTituloEmAcordo(chave, titulos) {
   verificar('toda situação de parcela é um valor documentado', parcelas.every((p) => SITUACOES_PARCELA.has(p.situacao)));
 }
 
-async function testarIsolamento(chaveOutra, titulos) {
+async function testarIsolamento(chaveOutra, titulos, chavePrincipal) {
   if (!chaveOutra) {
     console.log('… isolamento entre empresas: pulado (defina API_V1_CHAVE_OUTRA_EMPRESA)');
+    return;
+  }
+  // Mesma chave nos dois lugares = mesma empresa lendo o que é dela: o teste
+  // "reprovaria" sem haver vazamento nenhum.
+  if (chaveOutra === chavePrincipal) {
+    console.log('… isolamento entre empresas: pulado (API_V1_CHAVE_OUTRA_EMPRESA é a mesma chave; use a de OUTRA empresa)');
     return;
   }
   const alvo = titulos[0].numero_documento;
@@ -143,12 +162,13 @@ async function main() {
   }
 
   await testarAutenticacao();
+  await testarCorpoMalformado(env.API_V1_CHAVE);
   const titulos = await testarListagem(env.API_V1_CHAVE);
   if (titulos.length > 0) {
     await testarSincronizacao(env.API_V1_CHAVE, titulos);
     await testarPaginacao(env.API_V1_CHAVE);
     await testarTituloEmAcordo(env.API_V1_CHAVE, titulos);
-    await testarIsolamento(env.API_V1_CHAVE_OUTRA_EMPRESA, titulos);
+    await testarIsolamento(env.API_V1_CHAVE_OUTRA_EMPRESA, titulos, env.API_V1_CHAVE);
   }
 
   const falhas = resultados.filter((r) => !r.ok).length;

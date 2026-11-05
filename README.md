@@ -44,6 +44,7 @@ Referência, em [`docs/`](docs/):
 - [`docs/api/README.md`](docs/api/README.md) — API de integração v1, técnica (para a TI do cliente).
 - [`docs/api/PERGUNTAS-FREQUENTES.md`](docs/api/PERGUNTAS-FREQUENTES.md) — a mesma API sem jargão, para conversa comercial.
 - [`docs/DESIGN_SYSTEM.md`](docs/DESIGN_SYSTEM.md) — padrões visuais e componentes base.
+- [`docs/GUIA_LANCAMENTO.md`](docs/GUIA_LANCAMENTO.md) — contas e infraestrutura para lançar, em ordem de urgência.
 - [`docs/CONFIGURAR_SMTP.md`](docs/CONFIGURAR_SMTP.md) — e-mail próprio (pré-lançamento).
 - [`docs/auditoria/`](docs/auditoria/) — roteiro da auditoria em 3 rodadas (`PLANO.md`) e os relatórios das rodadas já feitas.
 - [`supabase/functions/enviar-campanha/README.md`](supabase/functions/enviar-campanha/README.md) — canal de WhatsApp.

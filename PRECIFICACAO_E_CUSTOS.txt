@@ -16,20 +16,45 @@ ao cliente e escada de crescimento pra nos, nao pra cobrir custo.
 1. CUSTO FIXO (base, independente de quantos clientes tivermos)
 ----------------------------------------------------------------
 
-  Supabase Pro (banco + auth + API)........ R$ 130,00 / mes
-  Dominio .br (R$ 40/ano)..................  R$   3,33 / mes
-  Hospedagem front-end (Vercel Pro)........ R$ 110,00 / mes
-                                            -----------------
-  TOTAL BASE............................... R$ 243,33 / mes
-                                            (~R$ 2.920 / ano)
+(Revisado em 19/10/2026: hospedagem passa do Vercel para o
+Cloudflare Pages; entram e-mail da equipe, e-mail do sistema e os
+custos unicos de lancamento.)
 
-Observacao sobre a Vercel: hoje o app roda no plano Hobby, que e
-gratuito — mas os termos de uso da Vercel proibem uso comercial no
-Hobby. No momento em que cobrarmos do primeiro cliente, precisamos
-migrar pro plano Pro (US$ 20/mes). Ja incluí esse valor acima pra
-nao criar surpresa. Se preferirmos evitar, da pra hospedar o
-front-end em outro lugar mais barato — mas nao recomendo comecar
-uma operacao paga violando o termo de uso do fornecedor.
+  Supabase Pro (banco + auth + API)........ R$ 130,00 / mes
+  E-mail da equipe (Google Workspace, 2)...  R$  70,00 / mes
+  Dominio .com.br (R$ 40/ano)..............  R$   3,33 / mes
+  Hospedagem front-end (Cloudflare Pages)..  R$   0,00 / mes
+  E-mail do sistema (Resend, ate 3.000/mes)  R$   0,00 / mes
+                                            -----------------
+  TOTAL BASE............................... R$ 203,33 / mes
+                                            (~R$ 2.440 / ano)
+
+Por que saimos do Vercel: o app rodava no plano Hobby, gratuito,
+mas os termos da Vercel proibem uso comercial nele. Ficar exigiria
+o Pro (US$ 20/mes, ~R$ 104). O front-end e um site estatico — todo
+o backend esta no Supabase — e o Cloudflare Pages hospeda isso de
+graca, com uso comercial permitido e sem limite de trafego. A
+conta Cloudflare ja existe e tambem cuidara do DNS do dominio.
+
+E-mail da equipe x e-mail do sistema: o Workspace e a caixa onde
+nos escrevemos (contato@, suporte@, financeiro@ podem ser apelidos
+gratuitos de uma mesma conta). O Resend e quem envia os e-mails
+automaticos do app (confirmacao de cadastro, redefinicao de senha).
+Passando de 3.000 e-mails/mes, o Resend custa US$ 20/mes.
+
+CUSTOS UNICOS DE LANCAMENTO (fora da conta mensal):
+
+  Registro da marca no INPI (1 classe)..... R$ 440 com desconto
+                                            ME/MEI; ~R$ 1.100 sem
+                                            (pedido + concessao,
+                                            vale 10 anos)
+  Termos de Uso + Politica de Privacidade.. R$ 500 a R$ 2.000
+    (LGPD — obrigatorio: guardamos CPF e dividas de terceiros)
+  Dominio .com (opcional, protege o nome)..  R$ 70 / ano
+                                            -----------------
+  TOTAL UNICO.............................. R$ 940 a R$ 3.100
+
+  (Logo e identidade visual ficam com o Erick, sem custo externo.)
 
 
 ----------------------------------------------------------------
@@ -106,18 +131,19 @@ Nao precisamos de um ambiente por cliente. Por isso o custo por
 empresa despenca conforme crescemos:
 
   CENARIO A — 5 empresas x 5.000 titulos = 25.000 titulos
-    Infra: Pro (Micro). Custo total: R$ 243/mes
-    Custo por empresa: R$ 49/mes
+    Infra: Pro (Micro). Custo total: R$ 203/mes
+    Custo por empresa: R$ 41/mes
 
   CENARIO B — 15 empresas x 10.000 titulos = 150.000 titulos
-    Infra: Pro + Small. Custo total: ~R$ 325/mes
-    Custo por empresa: R$ 22/mes
+    Infra: Pro + Small. Custo total: ~R$ 285/mes
+    Custo por empresa: R$ 19/mes
 
   CENARIO C — 40 empresas x 10.000 titulos = 400.000 titulos
-    Infra: Pro + Medium + disco extra. Custo total: ~R$ 570/mes
-    Custo por empresa: R$ 14/mes
+    Infra: Pro + Medium + disco extra + Resend pago. Custo total:
+    ~R$ 630/mes
+    Custo por empresa: R$ 16/mes
 
-O custo de infraestrutura por cliente fica entre R$ 14 e R$ 49 por
+O custo de infraestrutura por cliente fica entre R$ 16 e R$ 41 por
 mes. E irrisorio perto de qualquer preco de mercado.
 
 
@@ -195,7 +221,7 @@ MARGEM ESPERADA:
 PONTO DE EQUILIBRIO:
 
   UM unico cliente no plano Essencial (R$ 347) ja paga toda a nossa
-  infraestrutura (R$ 243) com sobra. Do segundo cliente em diante,
+  infraestrutura (R$ 203) com sobra. Do segundo cliente em diante,
   praticamente tudo que entra vira margem ou remuneracao do nosso
   tempo.
 
@@ -251,7 +277,7 @@ tipo de decisao que corroi a margem sem a gente perceber.
   4) Vamos entrar com envio automatico de mensagens no roadmap? A
      resposta muda a estrutura de custo dos planos (ver item 7).
 
-  5) Confirmo os precos atuais de Supabase e Vercel direto no site
+  5) Confirmo os precos atuais de Supabase e Workspace direto no site
      antes de fecharmos os numeros? Os valores deste documento sao
      ordem de grandeza e os fornecedores reajustam.
 
@@ -260,10 +286,11 @@ tipo de decisao que corroi a margem sem a gente perceber.
 9. RESUMO PRA DECISAO RAPIDA
 ----------------------------------------------------------------
 
-  Custo fixo hoje................. R$ 243 / mes
+  Custo fixo hoje................. R$ 203 / mes
+  Custo unico de lancamento....... R$ 940 a R$ 3.100
   Capacidade do plano atual....... 300 a 500 mil titulos
   Gargalo real.................... usuarios simultaneos, nao espaco
-  Custo de infra por cliente...... R$ 14 a R$ 49 / mes
+  Custo de infra por cliente...... R$ 16 a R$ 41 / mes
   Maior custo real................ nosso tempo (suporte/implantacao)
   Ponto de equilibrio............. 1 cliente no menor plano
   Plano ancora sugerido........... R$ 797/mes (ate 10.000 titulos)

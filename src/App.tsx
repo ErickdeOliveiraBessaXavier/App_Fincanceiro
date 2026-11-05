@@ -30,6 +30,7 @@ const SetupEmpresa = React.lazy(() => import("./pages/SetupEmpresa"));
 const Plataforma = React.lazy(() => import("./pages/Plataforma"));
 const PlataformaImportar = React.lazy(() => import("./pages/PlataformaImportar"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
+const Ajuda = React.lazy(() => import("./pages/Ajuda"));
 
 const queryClient = new QueryClient();
 
@@ -72,6 +73,8 @@ const App = () => (
             <Routes>
               <Route path="/auth" element={<Auth />} />
               <Route path="/convite" element={<Convite />} />
+              {/* Pública: a TI do cliente lê sem ter login no sistema. */}
+              <Route path="/faq" element={<Ajuda />} />
               <Route path="/redefinir-senha" element={<RedefinirSenha />} />
               <Route path="/setup-empresa" element={<SetupEmpresa />} />
               <Route path="/plataforma" element={<Plataforma />} />

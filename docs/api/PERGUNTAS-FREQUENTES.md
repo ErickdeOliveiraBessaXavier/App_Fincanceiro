@@ -2,7 +2,12 @@
 
 Respostas curtas, sem jargão, para quando um cliente (ou a TI dele) perguntar
 sobre a integração. A documentação técnica, com endereços e exemplos, está em
-[`README.md`](README.md).
+[`README.md`](README.md) — é esse arquivo que vai para a TI do cliente; este
+FAQ é interno.
+
+**Antes de entregar uma chave,** rode o teste de ponta a ponta:
+`node scripts/testar-api-v1.mjs`. E preencha o contato de suporte no topo do
+README.
 
 ---
 
