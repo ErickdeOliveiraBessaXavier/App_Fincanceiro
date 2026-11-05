@@ -66,6 +66,24 @@ Não precisa de senha nem de acesso ao banco dele. Só três respostas:
 - **Buscar só o que mudou** desde a última consulta: pagamentos lançados por nós,
   acordos feitos, quebrados ou cumpridos, cancelamentos.
 
+## Regras do dia a dia que o cliente costuma perguntar
+
+- **O ERP pode corrigir um título depois de enviado?** Sim, enquanto não houver
+  movimentação do nosso lado (pagamento, desconto, encargo ou acordo). Depois
+  disso as parcelas ficam fixas, e um valor diferente é recusado dizendo qual
+  parcela divergiu.
+- **O ERP sobrescreve o que a equipe de cobrança corrigiu?** Não no nome e no
+  telefone do cliente. Cidade, estado, cobrador e vendedor são atualizados.
+- **Parcela que some do reenvio é apagada?** Não, continua sendo cobrada. Para
+  encerrar, cancela-se o título inteiro; tirar só uma parcela é com a equipe.
+- **Pagamento enviado por engano se desfaz pelo ERP?** Não. A equipe de cobrança
+  estorna na tela.
+- **Cancelar um título já pago ou em acordo?** É recusado. A equipe estorna o
+  pagamento ou cancela o acordo antes, para os relatórios ficarem certos.
+- **Com que frequência consultar?** A cada 15 minutos já é bem atualizado. Não há
+  limite rígido de chamadas, mas pedimos bom senso (uma de cada vez, ou poucas
+  em paralelo).
+
 ## O que ainda não dá?
 
 - **Avisos automáticos** (nós chamarmos o ERP quando algo muda). Hoje o ERP
