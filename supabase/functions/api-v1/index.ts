@@ -6,6 +6,9 @@
 //
 // Rotas (base: /functions/v1/api-v1):
 //   POST /titulos                      -> cria ou atualiza um título (idempotente)
+//   POST /titulos/lote                 -> vários títulos numa chamada, resultado por título
+//   POST /titulos/:numero/cancelar     -> cancela o título (idempotente)
+//   POST /titulos/:numero/parcelas/:n/pagamentos -> baixa avulsa (idempotente por id_pagamento)
 //   GET  /titulos                      -> lista títulos com saldo e situação
 //   GET  /titulos/:numero_documento    -> um título com as parcelas
 //
@@ -150,8 +153,13 @@ function erroDeConteudo(codigo?: string | null): boolean {
 // novos" de um título com dado errado. O resto (queda de conexão, timeout,
 // conflito de gravação simultânea) é falha nossa e passageira: 500, que o ERP
 // pode repetir — antes virava 422 e o ERP desistia de um envio que daria certo.
+// HINTs que as funções do banco usam para dizer "não achei": viram 404 com
+// código próprio, em vez de 422 genérico.
+const HINT_NAO_ENCONTRADO = new Set(["titulo_nao_encontrado", "parcela_nao_encontrada"]);
+
 function erroDoBanco(e: { message: string; hint?: string | null; code?: string | null }): Response {
   if (e.hint === "limite_do_plano") return erro(422, "limite_do_plano", e.message);
+  if (e.hint && HINT_NAO_ENCONTRADO.has(e.hint)) return erro(404, e.hint, e.message);
   if (erroDeConteudo(e.code)) return erro(422, "regra_de_negocio", e.message);
   return erro(500, "erro_interno", "Falha temporária ao gravar o título. Pode repetir a chamada.");
 }
@@ -166,7 +174,8 @@ async function lerCorpo(req: Request): Promise<unknown> {
   }
 }
 
-async function postTitulos(admin: Admin, ctx: Contexto, body: unknown): Promise<Response> {
+// Grava um título, sem atualizar a consolidação: o lote atualiza uma vez só no fim.
+async function gravarTitulo(admin: Admin, ctx: Contexto, body: unknown): Promise<Response> {
   const entrada = validarTitulo(body);
   if (entrada instanceof Response) return entrada;
 
@@ -186,11 +195,140 @@ async function postTitulos(admin: Admin, ctx: Contexto, body: unknown): Promise<
     p_origem: "API",
   });
   if (error) return erroDoBanco(error);
+  return json(200, data);
+}
 
-  // A consolidação de saldos é materializada; sem isto uma consulta logo após a
-  // gravação devolveria o estado anterior. A tela de importação faz o mesmo.
+// A consolidação de saldos é materializada; sem isto uma consulta logo após a
+// gravação devolveria o estado anterior. A tela de importação faz o mesmo.
+async function atualizarConsolidacao(admin: Admin): Promise<void> {
   await admin.rpc("refresh_mv_parcelas");
+}
 
+async function postTitulos(admin: Admin, ctx: Contexto, body: unknown): Promise<Response> {
+  const resposta = await gravarTitulo(admin, ctx, body);
+  if (resposta.ok) await atualizarConsolidacao(admin);
+  return resposta;
+}
+
+// ===================== Lote =====================
+
+const LOTE_MAXIMO = 100;
+
+function numeroDoItem(item: unknown): string | null {
+  const numero = (item as { numero_documento?: unknown } | null)?.numero_documento;
+  return typeof numero === "string" ? numero.trim() : null;
+}
+
+// Um título por vez, cada um na sua transação: um título com erro não desfaz
+// nem impede os outros. O resultado de cada um tem a mesma forma da resposta
+// do envio individual, mais `repetir` (só falha nossa vale repetir).
+async function resultadoDoItem(admin: Admin, ctx: Contexto, item: unknown, indice: number) {
+  const resposta = await gravarTitulo(admin, ctx, item);
+  const corpo = await resposta.json();
+  const base = { indice, numero_documento: numeroDoItem(item), status: resposta.status };
+  if (resposta.ok) return { ...base, ...corpo };
+  return { ...base, sucesso: false, erro: corpo.erro, repetir: resposta.status >= 500 };
+}
+
+async function postLote(admin: Admin, ctx: Contexto, body: unknown): Promise<Response> {
+  const lista = (body as { titulos?: unknown } | null)?.titulos;
+  if (!Array.isArray(lista) || lista.length === 0) {
+    return erro(400, "titulos_obrigatorios", 'Envie { "titulos": [ ... ] } com ao menos um título.');
+  }
+  if (lista.length > LOTE_MAXIMO) {
+    return erro(400, "lote_grande_demais", `No máximo ${LOTE_MAXIMO} títulos por lote; divida o envio.`);
+  }
+
+  const resultados = [];
+  for (const [indice, item] of lista.entries()) {
+    resultados.push(await resultadoDoItem(admin, ctx, item, indice));
+  }
+  await atualizarConsolidacao(admin);
+
+  const comErro = resultados.filter((r) => !r.sucesso).length;
+  return json(200, {
+    processados: resultados.length,
+    com_sucesso: resultados.length - comErro,
+    com_erro: comErro,
+    resultados,
+  });
+}
+
+// ===================== Baixa avulsa =====================
+
+// Mesma lista do CHECK de movimentos_financeiros.meio_pagamento.
+const MEIOS_PAGAMENTO = new Set(["pix", "dinheiro", "boleto", "transferencia", "cartao", "outro"]);
+const DATA_ISO = /^\d{4}-\d{2}-\d{2}$/;
+
+type PagamentoEntrada = {
+  id_pagamento: string; valor: number; data_pagamento?: string;
+  meio_pagamento?: string; descricao?: string;
+};
+
+function idPagamentoInvalido(id: unknown): boolean {
+  return typeof id !== "string" || !id.trim() || id.length > 100;
+}
+
+function opcionalInvalido(p: PagamentoEntrada): boolean {
+  const dataRuim = p.data_pagamento != null && !DATA_ISO.test(String(p.data_pagamento));
+  const meioRuim = p.meio_pagamento != null && !MEIOS_PAGAMENTO.has(String(p.meio_pagamento));
+  return dataRuim || meioRuim;
+}
+
+// Forma do corpo. Saldo, data futura, acordo e parcela existente são do banco.
+function validarPagamento(body: unknown): Response | PagamentoEntrada {
+  const p = body as PagamentoEntrada | null;
+  if (!p || typeof p !== "object") return erro(400, "corpo_invalido", "Envie um objeto JSON com o pagamento.");
+  if (idPagamentoInvalido(p.id_pagamento)) {
+    return erro(400, "id_pagamento_obrigatorio",
+      "Informe id_pagamento (texto, até 100 caracteres): é ele que impede o pagamento de ser lançado duas vezes.");
+  }
+  if (typeof p.valor !== "number" || !(p.valor > 0) || opcionalInvalido(p)) {
+    return erro(400, "pagamento_invalido",
+      `valor deve ser um número JSON maior que zero; data_pagamento no formato AAAA-MM-DD; meio_pagamento um de: ${[...MEIOS_PAGAMENTO].join(", ")}.`);
+  }
+  return p;
+}
+
+async function postPagamento(
+  admin: Admin, ctx: Contexto, numeroDocumento: string, numeroParcela: string, body: unknown,
+): Promise<Response> {
+  const parcela = Number(numeroParcela);
+  if (!Number.isInteger(parcela) || parcela < 1) {
+    return erro(400, "parcela_invalida", "O número da parcela no endereço deve ser um inteiro >= 1.");
+  }
+  const entrada = validarPagamento(body);
+  if (entrada instanceof Response) return entrada;
+
+  const { data, error } = await admin.rpc("_api_registrar_pagamento", {
+    p_company: ctx.companyId,
+    p_actor: ctx.actorId,
+    p_numero_documento: numeroDocumento,
+    p_numero_parcela: parcela,
+    p_id_externo: entrada.id_pagamento,
+    p_valor: entrada.valor,
+    p_data_pagamento: entrada.data_pagamento ?? null,
+    p_meio_pagamento: entrada.meio_pagamento ?? null,
+    p_descricao: entrada.descricao ?? null,
+  });
+  if (error) return erroDoBanco(error);
+  await atualizarConsolidacao(admin);
+  return json(200, { numero_documento: numeroDocumento, ...data });
+}
+
+// ===================== Cancelamento =====================
+
+async function postCancelar(admin: Admin, ctx: Contexto, numeroDocumento: string, body: unknown): Promise<Response> {
+  // Corpo opcional: sem corpo, cancela sem motivo.
+  const motivo = (body as { motivo?: unknown } | null)?.motivo;
+  const { data, error } = await admin.rpc("_api_cancelar_titulo", {
+    p_company: ctx.companyId,
+    p_actor: ctx.actorId,
+    p_numero_documento: numeroDocumento,
+    p_motivo: typeof motivo === "string" ? motivo : null,
+  });
+  if (error) return erroDoBanco(error);
+  await atualizarConsolidacao(admin);
   return json(200, data);
 }
 
@@ -463,11 +601,35 @@ function segmentosDaRota(url: URL): string[] {
   return inicio === -1 ? partes : partes.slice(inicio + 1);
 }
 
+// trim: o envio grava o número sem espaços nas pontas; a consulta tem que achá-lo igual.
+function numeroDaRota(segmento: string): string {
+  return decodeURIComponent(segmento).trim();
+}
+
+const rotaDesconhecida = () => erro(404, "rota_desconhecida", "Rota não encontrada.");
+
 async function rotearGet(admin: Admin, ctx: Contexto, url: URL, rota: string[]): Promise<Response> {
   if (rota.length === 1) return await getTitulos(admin, ctx, url);
-  // trim: o envio grava o número sem espaços nas pontas; a consulta tem que achá-lo igual.
-  if (rota.length === 2) return await getTitulo(admin, ctx, decodeURIComponent(rota[1]).trim());
-  return erro(404, "rota_desconhecida", "Rota não encontrada.");
+  if (rota.length === 2) return await getTitulo(admin, ctx, numeroDaRota(rota[1]));
+  return rotaDesconhecida();
+}
+
+// /titulos/:numero/... — o resto do caminho diz a ação sobre o título.
+async function rotearAcaoNoTitulo(admin: Admin, ctx: Contexto, rota: string[], body: unknown): Promise<Response> {
+  const numero = numeroDaRota(rota[1]);
+  if (rota.length === 3 && rota[2] === "cancelar") return await postCancelar(admin, ctx, numero, body);
+  if (rota.length === 5 && rota[2] === "parcelas" && rota[4] === "pagamentos") {
+    return await postPagamento(admin, ctx, numero, rota[3], body);
+  }
+  return rotaDesconhecida();
+}
+
+async function rotearPost(admin: Admin, ctx: Contexto, req: Request, rota: string[]): Promise<Response> {
+  const body = await lerCorpo(req);
+  if (rota.length === 1) return await postTitulos(admin, ctx, body);
+  if (rota.length === 2 && rota[1] === "lote") return await postLote(admin, ctx, body);
+  if (rota.length >= 3) return await rotearAcaoNoTitulo(admin, ctx, rota, body);
+  return erro(405, "metodo_nao_permitido", "Método POST não permitido nesta rota.");
 }
 
 async function rotear(admin: Admin, ctx: Contexto, req: Request): Promise<Response> {
@@ -478,7 +640,7 @@ async function rotear(admin: Admin, ctx: Contexto, req: Request): Promise<Respon
     return erro(404, "rota_desconhecida", "Rota não encontrada. Rotas disponíveis: /titulos.");
   }
   if (req.method === "GET") return await rotearGet(admin, ctx, url, rota);
-  if (req.method === "POST" && rota.length === 1) return await postTitulos(admin, ctx, await lerCorpo(req));
+  if (req.method === "POST") return await rotearPost(admin, ctx, req, rota);
   return erro(405, "metodo_nao_permitido", `Método ${req.method} não permitido nesta rota.`);
 }
 

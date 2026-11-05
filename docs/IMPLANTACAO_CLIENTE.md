@@ -50,9 +50,10 @@ Respostas prontas para as dúvidas do cliente: [`api/PERGUNTAS-FREQUENTES.md`](a
 
 ## O que a API ainda não faz
 
-Avisar o ERP automaticamente, cancelar título pelo ERP, dar baixa com valor
-parcial ou data real, e enviar muitos títulos numa chamada só. Só construir se o
-cliente pedir; tudo entra como acréscimo na v1, sem quebrar o que existe.
+Avisar o ERP automaticamente (webhooks) e mostrar o detalhe do acordo (valor e
+parcelas). Só construir se o cliente pedir; tudo entra como acréscimo na v1, sem
+quebrar o que existe. Envio em lote, pagamento com valor/data/meio e
+cancelamento pelo ERP já existem (desde 2026-11-05).
 
 Se o ERP **não conseguir** chamar uma API: fazer um **conector específico** só
 para ele (arquivo, planilha, acesso que ele liberar), cobrado como serviço de

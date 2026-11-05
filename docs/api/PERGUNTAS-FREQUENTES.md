@@ -6,8 +6,9 @@ sobre a integração. A documentação técnica, com endereços e exemplos, est�
 FAQ é interno.
 
 **Antes de entregar uma chave,** rode o teste de ponta a ponta:
-`node scripts/testar-api-v1.mjs`. E preencha o contato de suporte no topo do
-README.
+`node scripts/testar-api-v1.mjs` (só leitura). Depois de mudar a API, rode
+também `node scripts/testar-api-v1-escrita.mjs`, que grava dados: só com a chave
+de uma empresa de teste (`API_V1_CHAVE_TESTE_ESCRITA`).
 
 ---
 
@@ -53,8 +54,14 @@ Não precisa de senha nem de acesso ao banco dele. Só três respostas:
 ## O que dá para fazer hoje?
 
 - **Enviar um título** com suas parcelas. Reenviar o mesmo título não duplica.
-- **Informar um pagamento** feito do lado do cliente (reenviando o título com a
-  parcela marcada como paga).
+- **Enviar vários títulos de uma vez** (até 100 por chamada). Se um tiver erro,
+  os outros entram normalmente.
+- **Informar um pagamento** feito do lado do cliente, com o valor (inteiro ou
+  parcial), a data real e o meio (PIX, boleto…). Repetir o mesmo pagamento não
+  lança duas vezes.
+- **Cancelar um título** (nota devolvida, venda desfeita). Se o título já tiver
+  pagamento ou acordo, o cancelamento é recusado e a equipe de cobrança resolve
+  antes.
 - **Consultar um título**: situação, quanto foi pago, quanto falta, cada parcela.
 - **Buscar só o que mudou** desde a última consulta: pagamentos lançados por nós,
   acordos feitos, quebrados ou cumpridos, cancelamentos.
@@ -63,8 +70,8 @@ Não precisa de senha nem de acesso ao banco dele. Só três respostas:
 
 - **Avisos automáticos** (nós chamarmos o ERP quando algo muda). Hoje o ERP
   consulta de tempos em tempos.
-- **Enviar muitos títulos numa chamada só.** Para a carga inicial, a importação
-  por planilha é mais rápida.
+- **Carga inicial de milhares de títulos** pela API. Funciona em lotes de 100,
+  mas a importação por planilha é mais rápida.
 - **Ver o acordo em detalhe** (valor e parcelas do acordo). Hoje o ERP vê que o
   título está em acordo, e se o acordo está em dia, quebrado ou cumprido.
 

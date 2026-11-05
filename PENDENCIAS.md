@@ -56,9 +56,12 @@ acréscimos na v1**; mudança incompatível vai para a v2.
 - **E-mail do suporte provisório** — eobx@hotmail.com em dois lugares:
   `docs/api/README.md` e o rodapé de `src/pages/Ajuda.tsx` (/faq). Trocar pelo
   e-mail com o domínio da empresa quando existir.
-- **Lacunas genéricas (esperar o 1º cliente confirmar)** — cancelar título pelo
-  ERP, baixa com data real e valor parcial, envio em lote. Todas entram como
-  acréscimo na v1.
+- **Lote, pagamento com valor/data e cancelamento pelo ERP: escritos, falta
+  publicar** (2026-11-05). Ordem: `supabase db push` (migration
+  `20261105120000`) → `supabase functions deploy api-v1` → rodar
+  `node scripts/testar-api-v1-escrita.mjs` com `API_V1_CHAVE_TESTE_ESCRITA`
+  (chave de empresa de **teste**: o script grava) e o teste de leitura. A
+  função nova sem a migration responde 500 nas rotas novas; as antigas seguem.
 - **Acordo não exposto** — o ERP vê o título em acordo com saldo zero; valor e
   parcelas do acordo seriam rota nova.
 - **Avisos automáticos (webhooks)** — se a INFARMA quiser ser avisada.

@@ -140,8 +140,9 @@ envio do ERP não sobrescreve isso.
   sem mudar nada. Reenviar um valor ou vencimento diferente, ou uma parcela nova,
   devolve `422` dizendo qual parcela divergiu.
 - **Parcela que deixa de vir no reenvio não é apagada.** Ela continua sendo
-  cobrada. Para encerrar uma cobrança, fale com a equipe de cobrança (veja
-  "O que ainda não existe na v1").
+  cobrada. Para encerrar a cobrança do título inteiro, use
+  `POST /titulos/{numero_documento}/cancelar`. Para tirar só uma parcela, fale
+  com a equipe de cobrança.
 
 ### Pagamento
 
@@ -149,7 +150,9 @@ envio do ERP não sobrescreve isso.
 parcela paga não duplica o pagamento.
 
 - A data do pagamento registrada é a **data em que o envio chegou**. Envie a
-  baixa assim que ela acontecer no ERP.
+  baixa assim que ela acontecer no ERP. Para informar a **data real**, um
+  **valor parcial** ou o **meio de pagamento**, use a rota de pagamento
+  (`POST /titulos/{numero_documento}/parcelas/{numero}/pagamentos`, abaixo).
 - `pago: false`, ou o campo ausente, **não desfaz** um pagamento já registrado.
   Pagamento lançado por engano é estornado pela equipe de cobrança.
 
@@ -158,6 +161,139 @@ A baixa **não** é lançada, e o motivo vem em `avisos`, quando:
 - o título está em acordo: o pagamento passa a acontecer nas parcelas do acordo;
 - a baixa daquela parcela foi estornada do nosso lado: o estorno prevalece
   sobre o reenvio.
+
+---
+
+## `POST /titulos/lote` — enviar vários títulos numa chamada
+
+Até **100 títulos** por chamada. Cada título segue exatamente as regras do
+`POST /titulos` e é gravado separadamente: **um título com erro não impede os
+outros**.
+
+```bash
+curl -X POST "$BASE/titulos/lote" \
+  -H "Authorization: Bearer $CHAVE" \
+  -H "Content-Type: application/json" \
+  -d '{ "titulos": [ { …título 1… }, { …título 2… } ] }'
+```
+
+Resposta `200` (mesmo quando algum título falhou):
+
+```json
+{
+  "processados": 2,
+  "com_sucesso": 1,
+  "com_erro": 1,
+  "resultados": [
+    { "indice": 0, "numero_documento": "NF-4417", "status": 200, "sucesso": true,
+      "titulo_id": "3f0c…", "cliente_id": "9a71…", "novo": true, "parcelas_processadas": 3, "avisos": [] },
+    { "indice": 1, "numero_documento": "NF-4418", "status": 422, "sucesso": false,
+      "erro": { "codigo": "regra_de_negocio", "mensagem": "CPF/CNPJ inválido…" }, "repetir": false }
+  ]
+}
+```
+
+- `indice` é a posição do título na lista enviada (começa em 0).
+- `status` e `erro` são os mesmos que o envio individual daria.
+- **Reenvie só os itens com `repetir: true`** (falha temporária do nosso lado).
+  Os de `repetir: false` precisam de correção no dado. Reenviar o lote inteiro
+  também é seguro, porque o envio nunca duplica, só é mais lento.
+- Lote vazio ou com mais de 100 títulos é recusado inteiro (`400`).
+
+---
+
+## `POST /titulos/{numero_documento}/parcelas/{numero}/pagamentos` — registrar um pagamento
+
+Registra um pagamento numa parcela com **valor** (total ou parcial), **data
+real** e **meio de pagamento**.
+
+```bash
+curl -X POST "$BASE/titulos/NF-4417/parcelas/2/pagamentos" \
+  -H "Authorization: Bearer $CHAVE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id_pagamento": "BX-99812",
+    "valor": 500.00,
+    "data_pagamento": "2026-10-12",
+    "meio_pagamento": "pix",
+    "descricao": "Baixa 99812 do ERP"
+  }'
+```
+
+| Campo | Obrigatório | Observação |
+|---|---|---|
+| `id_pagamento` | sim | O identificador da baixa **no ERP** (até 100 caracteres). Único por empresa: é ele que impede o pagamento de ser lançado duas vezes |
+| `valor` | sim | Maior que zero, em reais, como número JSON. Não pode passar do saldo da parcela |
+| `data_pagamento` | não | `AAAA-MM-DD`. Não pode ser futura. Sem ela, vale a data de hoje (horário de Brasília) |
+| `meio_pagamento` | não | `pix`, `dinheiro`, `boleto`, `transferencia`, `cartao` ou `outro` |
+| `descricao` | não | Texto livre que aparece no histórico da parcela |
+
+Resposta `200`:
+
+```json
+{
+  "numero_documento": "NF-4417",
+  "sucesso": true,
+  "repetido": false,
+  "estornado": false,
+  "id_pagamento": "BX-99812",
+  "parcela": 2,
+  "tipo": "pagamento_parcial",
+  "valor_pago": 500.00,
+  "data_pagamento": "2026-10-12",
+  "saldo_anterior": 1500.00,
+  "saldo_atual": 1000.00
+}
+```
+
+`tipo` é `pagamento_total` quando o valor quita o saldo da parcela, e
+`pagamento_parcial` quando sobra saldo.
+
+**Repetir é seguro.** Reenviar o mesmo `id_pagamento` com os mesmos dados não
+lança de novo: a resposta vem com `repetido: true` e o saldo atual. Usar um
+`id_pagamento` que já existe com **outra** parcela ou **outro** valor devolve
+`422`, porque provavelmente é um erro do lado do ERP.
+
+`estornado: true` (só aparece em `repetido: true`) quer dizer que a equipe de
+cobrança estornou esse pagamento. O estorno prevalece: o reenvio não relança.
+Se o pagamento é legítimo, envie com um `id_pagamento` novo.
+
+O pagamento é recusado (`422`, com o motivo em `mensagem`) quando:
+
+- o valor passa do saldo da parcela, ou a parcela já está paga;
+- a data é futura;
+- o título está em acordo: o pagamento passa a acontecer nas parcelas do acordo.
+
+Título ou parcela que não existem devolvem `404` (`titulo_nao_encontrado` ou
+`parcela_nao_encontrada`).
+
+---
+
+## `POST /titulos/{numero_documento}/cancelar` — cancelar um título
+
+Encerra a cobrança de um título, por exemplo numa nota devolvida ou cancelada no
+ERP. O corpo é opcional:
+
+```bash
+curl -X POST "$BASE/titulos/NF-4417/cancelar" \
+  -H "Authorization: Bearer $CHAVE" \
+  -H "Content-Type: application/json" \
+  -d '{ "motivo": "Nota fiscal devolvida" }'
+```
+
+Resposta `200`:
+
+```json
+{ "sucesso": true, "numero_documento": "NF-4417", "situacao": "cancelado", "ja_estava_cancelado": false }
+```
+
+- **Cancelar de novo não é erro:** a resposta vem com `ja_estava_cancelado: true`.
+- O cancelamento é **recusado** (`422`) quando o título tem pagamento registrado
+  ou está em acordo. Nesses casos, fale com a equipe de cobrança: eles estornam
+  o pagamento ou cancelam o acordo antes, para que os relatórios fiquem certos.
+- Depois de cancelado, o título continua aparecendo na consulta, com
+  `situacao: "cancelado"`. O mesmo `numero_documento` pode ser enviado de novo
+  depois disso, e vira um título novo.
 
 ---
 
@@ -295,9 +431,10 @@ completa de tempos em tempos (ex.: uma vez por dia).
 
 Não há limite rígido de chamadas hoje, mas pedimos bom senso:
 
-- **Envio:** uma chamada por título, quando ele é criado ou muda no ERP. Para
-  uma carga inicial muito grande (milhares de títulos), fale com o suporte:
-  pode sair mais rápido pela importação de planilha.
+- **Envio:** uma chamada por título, quando ele é criado ou muda no ERP, ou
+  `POST /titulos/lote` para vários de uma vez (até 100 por chamada). Para uma
+  carga inicial muito grande (milhares de títulos), fale com o suporte: pode
+  sair mais rápido pela importação de planilha.
 - **Consulta incremental:** a cada 15 minutos já é bem atualizado; não há
   ganho em consultar a cada poucos segundos.
 - Envie as chamadas **uma de cada vez** (ou poucas em paralelo), não centenas
@@ -319,8 +456,11 @@ programa; a `mensagem` é para leitura humana e pode mudar.
 | 400 | `corpo_invalido` | O corpo não é um JSON válido, ou não é um objeto | Não: corrija o envio |
 | 400 | `cliente_nome_obrigatorio`, `cpf_cnpj_obrigatorio`, `numero_documento_obrigatorio`, `parcelas_obrigatorias`, `parcela_invalida` | Falta um campo obrigatório ou ele veio no formato errado | Não: corrija o envio |
 | 400 | `parametro_invalido` | Parâmetro de consulta malformado (ex.: `atualizado_apos` que não é data/hora) | Não: corrija o envio |
+| 400 | `titulos_obrigatorios`, `lote_grande_demais` | Lote vazio, sem a lista `titulos`, ou com mais de 100 títulos | Não: corrija o envio |
+| 400 | `id_pagamento_obrigatorio`, `pagamento_invalido` | Pagamento sem `id_pagamento`, ou com valor, data ou meio de pagamento no formato errado | Não: corrija o envio |
 | 401 | `chave_ausente`, `chave_invalida` | Chave não enviada, inválida ou revogada, ou empresa sem acesso (suspensa ou com o prazo do plano vencido) | Não: fale com o suporte |
 | 404 | `titulo_nao_encontrado` | Não existe título com esse número nesta empresa | Não |
+| 404 | `parcela_nao_encontrada` | O título existe, mas não tem a parcela informada no endereço | Não |
 | 404 | `rota_desconhecida` | Endereço errado | Não: confira o endereço |
 | 405 | `metodo_nao_permitido` | Método HTTP não aceito nessa rota | Não |
 | 422 | `regra_de_negocio` | O corpo está bem formado, mas o conteúdo não passa numa regra (ex.: CPF/CNPJ inválido, data que não existe, parcela com movimentação reenviada com outro valor, número de título já usado por outro cliente). A `mensagem` diz qual | Não: corrija o dado |
@@ -335,16 +475,9 @@ programa; a `mensagem` é para leitura humana e pode mudar.
 
 ## O que ainda não existe na v1
 
-- **Cancelar ou encerrar um título pelo ERP** (ex.: nota devolvida). Hoje o
-  cancelamento é feito pela equipe de cobrança, e o ERP fica sabendo pela
-  consulta (`situacao: "cancelado"`).
-- **Baixa avulsa** com valor parcial, data e meio de pagamento. Hoje o pagamento
-  entra pelo reenvio do título com `pago: true` na parcela, sempre pelo valor
-  restante.
 - **Avisos automáticos** (webhooks: nós chamarmos o ERP quando algo muda). Por
   enquanto o caminho é consultar `GET /titulos?atualizado_apos=…` de tempos em
   tempos.
-- **Envio em lote** de vários títulos numa só chamada.
 - **Detalhe dos acordos.** A renegociação acontece do nosso lado e aparece na
   consulta como `situacao` do título (`em_acordo`, `acordo_quebrado`,
   `acordo_cumprido`); o valor e as parcelas do acordo ainda não são mostrados.
@@ -361,3 +494,8 @@ deve ignorar campos que não conhece**, em vez de falhar. Mudança incompatível
 vai para uma v2, e a v1 continua funcionando por um prazo combinado.
 
 - **2026-11** — Versão inicial.
+- **2026-11** — Acréscimos: envio em lote (`POST /titulos/lote`), pagamento com
+  valor, data e meio (`POST /titulos/{numero_documento}/parcelas/{numero}/pagamentos`)
+  e cancelamento pelo ERP (`POST /titulos/{numero_documento}/cancelar`). Códigos
+  de erro novos: `titulos_obrigatorios`, `lote_grande_demais`,
+  `id_pagamento_obrigatorio`, `pagamento_invalido`, `parcela_nao_encontrada`.
